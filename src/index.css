@@ -1,0 +1,167 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+/* -------------------------
+   THEME TOKENS
+--------------------------*/
+@theme inline {
+  --font-heading: var(--font-geist);
+  --font-text: var(--font-inter);
+  --font-geist: "Geist", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  --radius: 0.75rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* -------------------------
+   LIGHT MODE — Violet & Slate
+--------------------------*/
+:root {
+  --background: #f5f4ff;
+  --foreground: #0e0c1a;
+
+  --card: #ffffff;
+  --card-foreground: #0e0c1a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0e0c1a;
+
+  /* PRIMARY (Deep Violet) */
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+
+  /* SECONDARY */
+  --secondary: #1e1b2e;
+  --secondary-foreground: #ffffff;
+
+  /* ACCENT (soft violet tint) */
+  --accent: #ede9fe;
+  --accent-foreground: #3b0764;
+
+  /* MUTED */
+  --muted: #f1f0ff;
+  --muted-foreground: #6b6b8a;
+
+  /* DESTRUCTIVE */
+  --destructive: #f43f5e;
+
+  /* BORDER */
+  --border: #e0ddf7;
+  --input: #e0ddf7;
+  --ring: #7c3aed;
+
+  /* SIDEBAR */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e0c1a;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f0ff;
+  --sidebar-accent-foreground: #0e0c1a;
+  --sidebar-border: #e0ddf7;
+  --sidebar-ring: #7c3aed;
+}
+
+/* -------------------------
+   DARK MODE — Violet & Slate
+--------------------------*/
+.dark {
+  --background: #0f0f1a;
+  --foreground: #ececf4;
+
+  --card: #1a1a2e;
+  --card-foreground: #ececf4;
+
+  --popover: #1a1a2e;
+  --popover-foreground: #ececf4;
+
+  /* PRIMARY */
+  --primary: #a78bfa;
+  --primary-foreground: #0f0f1a;
+
+  /* SECONDARY */
+  --secondary: #2a2a3e;
+  --secondary-foreground: #ececf4;
+
+  /* ACCENT */
+  --accent: #2e1f52;
+  --accent-foreground: #ddd6fe;
+
+  /* MUTED */
+  --muted: #1e1e30;
+  --muted-foreground: #8888aa;
+
+  /* DESTRUCTIVE */
+  --destructive: #fb7185;
+
+  /* BORDER */
+  --border: #2a2a3e;
+  --input: #2a2a3e;
+  --ring: #a78bfa;
+
+  /* SIDEBAR */
+  --sidebar: #1a1a2e;
+  --sidebar-foreground: #ececf4;
+  --sidebar-primary: #a78bfa;
+  --sidebar-primary-foreground: #0f0f1a;
+  --sidebar-accent: #2a2a3e;
+  --sidebar-accent-foreground: #ececf4;
+  --sidebar-border: #2a2a3e;
+  --sidebar-ring: #a78bfa;
+}
+
+/* -------------------------
+   BASE STYLES
+--------------------------*/
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  html {
+    font-family: var(--font-inter);
+  }
+}
