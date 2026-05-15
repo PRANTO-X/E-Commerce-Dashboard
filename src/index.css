@@ -56,50 +56,46 @@
 /* -------------------------
    LIGHT MODE — Violet & Slate
 --------------------------*/
+/* -------------------------
+   LIGHT MODE — Violet & Slate
+--------------------------*/
 :root {
-  --background: #f5f4ff;
-  --foreground: #0e0c1a;
+  --background: #eeedf8;        /* slightly darker page bg so cards pop */
 
-  --card: #ffffff;
+  --card: #ffffff;              /* pure white cards */
   --card-foreground: #0e0c1a;
 
   --popover: #ffffff;
   --popover-foreground: #0e0c1a;
 
-  /* PRIMARY (Deep Violet) */
   --primary: #7c3aed;
   --primary-foreground: #ffffff;
 
-  /* SECONDARY */
   --secondary: #1e1b2e;
   --secondary-foreground: #ffffff;
 
-  /* ACCENT (soft violet tint) */
   --accent: #ede9fe;
   --accent-foreground: #3b0764;
 
-  /* MUTED */
   --muted: #f1f0ff;
   --muted-foreground: #6b6b8a;
 
-  /* DESTRUCTIVE */
   --destructive: #f43f5e;
 
-  /* BORDER */
-  --border: #e0ddf7;
-  --input: #e0ddf7;
+  --border: #d4d0f0;            
+  --input: #d4d0f0;
   --ring: #7c3aed;
 
-  /* SIDEBAR */
   --sidebar: #ffffff;
   --sidebar-foreground: #0e0c1a;
   --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f0ff;
   --sidebar-accent-foreground: #0e0c1a;
-  --sidebar-border: #e0ddf7;
+  --sidebar-border: #d4d0f0;
   --sidebar-ring: #7c3aed;
 }
+
 
 /* -------------------------
    DARK MODE — Violet & Slate
@@ -158,7 +154,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
   }
 
   html {
