@@ -47,7 +47,7 @@ const Navbar = () => {
   }
   return (
     <header className="border-b border-border">
-      <nav className="px-4 md:px-8 py-2 flex justify-between items-center">
+      <nav className="px-4 md:px-8 py-4 flex justify-between items-center">
         <div>
           <SidebarTrigger className="cursor-pointer" />
         </div>

@@ -60,9 +60,10 @@
    LIGHT MODE — Violet & Slate
 --------------------------*/
 :root {
-  --background: #eeedf8;        /* slightly darker page bg so cards pop */
+  --background: #eeedf8;  
+  --foreground: #0e0c1a;
 
-  --card: #ffffff;              /* pure white cards */
+  --card: #ffffff;              
   --card-foreground: #0e0c1a;
 
   --popover: #ffffff;
@@ -160,4 +161,37 @@
   html {
     font-family: var(--font-inter);
   }
+}
+
+/* -------------------------
+   CUSTOM SCROLLBAR
+--------------------------*/
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 999px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-foreground);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 60%, transparent);
 }

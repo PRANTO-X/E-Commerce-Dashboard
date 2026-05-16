@@ -48,7 +48,7 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon" variant="floating">
+    <Sidebar collapsible="icon" className="z-50" variant="floating">
       <SidebarHeader className="flex mt-2.5 items-center gap-3 p-4 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:justify-center">
         <LayoutDashboard className=" h-6 w-6 shrink-0 group-data-[collapsible=icon]:ml-2.5" />
         <h1 className="text-xl font-bold whitespace-nowrap overflow-hidden transition-all duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
