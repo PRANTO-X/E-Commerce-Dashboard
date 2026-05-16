@@ -156,7 +156,7 @@ const Dashboard = () => {
   ]
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 mx-auto space-y-4">
-      {/* Metric Cards */}
+      
       <div className="flex md:justify-between md:items-center flex-col md:flex-row gap-4">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl  font-bold">
@@ -168,21 +168,24 @@ const Dashboard = () => {
         </div>
 
         <div className="space-x-2.5">
-          <button className="bg-popover border border-border p-2 rounded-lg cursor-pointer">
+          <button className="bg-popover hover:bg-accent transition duration-300  border border-border py-2 px-3 rounded-lg cursor-pointer">
             Download Report
           </button>
-          <button className="bg-primary text-secondary border border-border p-2 rounded-lg cursor-pointer">
+          <button className="bg-accent border hover:bg-primary transition duration-300 border-primary py-2 px-3 rounded-lg cursor-pointer">
             Create New Order
           </button>
         </div>
       </div>
 
-      {/* Chart Area */}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric Cards */}
         {metrics.map((metric) => (
           <MetricCard key={metric.id} {...metric} />
         ))}
       </div>
+
+      {/* Chart Area */}
       <div>
         <ChartAreaDefault />
       </div>
