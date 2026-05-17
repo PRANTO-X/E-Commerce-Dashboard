@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -56,14 +56,11 @@
 /* -------------------------
    LIGHT MODE — Violet & Slate
 --------------------------*/
-/* -------------------------
-   LIGHT MODE — Violet & Slate
---------------------------*/
 :root {
-  --background: #eeedf8;  
+  --background: #eeedf8;
   --foreground: #0e0c1a;
 
-  --card: #ffffff;              
+  --card: #ffffff;
   --card-foreground: #0e0c1a;
 
   --popover: #ffffff;
@@ -75,28 +72,33 @@
   --secondary: #1e1b2e;
   --secondary-foreground: #ffffff;
 
-  --accent: #ede9fe;
-  --accent-foreground: #3b0764;
+  --accent: #e0dbf7;
+  --accent-foreground: #1a1640;
 
-  --muted: #f1f0ff;
-  --muted-foreground: #6b6b8a;
+  --muted: #e0dbf7;
+  --muted-foreground: #4a4680;
 
   --destructive: #f43f5e;
 
-  --border: #d4d0f0;            
-  --input: #d4d0f0;
+  --border: #9b8fd4;
+  --input: #e0dbf7;
   --ring: #7c3aed;
 
   --sidebar: #ffffff;
   --sidebar-foreground: #0e0c1a;
   --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f0ff;
-  --sidebar-accent-foreground: #0e0c1a;
-  --sidebar-border: #d4d0f0;
+  --sidebar-accent: #e0dbf7;
+  --sidebar-accent-foreground: #1a1640;
+  --sidebar-border: #9b8fd4;
   --sidebar-ring: #7c3aed;
-}
 
+  /* ---- Field tokens (input, combobox, date picker) ---- */
+  --field-bg: #e0dbf7;
+  --field-border: #9b8fd4;
+  --field-text: #1a1640;
+  --field-placeholder: #8b84c4;
+}
 
 /* -------------------------
    DARK MODE — Violet & Slate
@@ -111,31 +113,24 @@
   --popover: #1a1a2e;
   --popover-foreground: #ececf4;
 
-  /* PRIMARY */
   --primary: #a78bfa;
   --primary-foreground: #0f0f1a;
 
-  /* SECONDARY */
   --secondary: #2a2a3e;
   --secondary-foreground: #ececf4;
 
-  /* ACCENT */
   --accent: #2e1f52;
   --accent-foreground: #ddd6fe;
 
-  /* MUTED */
   --muted: #1e1e30;
   --muted-foreground: #8888aa;
 
-  /* DESTRUCTIVE */
   --destructive: #fb7185;
 
-  /* BORDER */
   --border: #2a2a3e;
-  --input: #2a2a3e;
+--input: #1e1b2e;
   --ring: #a78bfa;
 
-  /* SIDEBAR */
   --sidebar: #1a1a2e;
   --sidebar-foreground: #ececf4;
   --sidebar-primary: #a78bfa;
@@ -144,6 +139,12 @@
   --sidebar-accent-foreground: #ececf4;
   --sidebar-border: #2a2a3e;
   --sidebar-ring: #a78bfa;
+
+  /* ---- Field tokens (dark mode) ---- */
+  --field-bg: #2a2a3e;
+  --field-border: #3d3a5c;
+  --field-text: #ececf4;
+  --field-placeholder: #8888aa;
 }
 
 /* -------------------------
@@ -161,13 +162,23 @@
   html {
     font-family: var(--font-inter);
   }
+
+  .btn,
+  .apply-btn,
+  .reset-btn {
+    @apply bg-accent border hover:bg-primary transition duration-300 border-primary py-2 px-4 rounded-lg cursor-pointer;
+  }
+  .apply-btn {
+    @apply bg-primary text-white border-primary hover:bg-primary/90 shadow-sm;
+  }
+  .reset-btn {
+    @apply bg-red-600 text-white text-foreground border-red-700 hover:bg-red-600/50;
+  }
 }
 
 /* -------------------------
    CUSTOM SCROLLBAR
 --------------------------*/
-
-/* Chrome, Edge, Safari */
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -177,7 +188,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 60%, transparent);
   border-radius: 999px;
   border: 2px solid var(--background);
 }
@@ -186,12 +197,7 @@
   background: var(--accent-foreground);
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--primary) var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--primary) 60%, transparent);
 }

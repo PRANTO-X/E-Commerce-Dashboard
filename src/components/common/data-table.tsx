@@ -29,9 +29,9 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="overflow-hidden rounded-b-lg">
+    <div className="overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-card/40">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
               key={headerGroup.id}
