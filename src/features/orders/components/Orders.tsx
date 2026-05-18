@@ -3,8 +3,11 @@ import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/common/data-table"
-import { EyeIcon } from "lucide-react"
+import { DownloadIcon, EyeIcon } from "lucide-react"
 import { Link } from "react-router-dom"
+import FilterToolbar from "@/components/common/FilterToolBar"
+import { ActionButton } from "@/components/common/ActionButton"
+
 
 const Orders = () => {
   const paymentStatus = [
@@ -24,40 +27,43 @@ const Orders = () => {
     { label: "Delivered", value: "delivered" },
     { label: "Returned", value: "returned" },
   ]
-  interface Order {
-    id: string
-    customer: string
-    product: string
-    amount: number
-    paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded"
-    fulfillmentStatus:
-      | "Shipped"
-      | "Processing"
-      | "Cancelled"
-      | "Delivered"
-      | "Unfulfilled"
-      | "Returned"
-    date: string
-  }
+  
 
-  const statusStyles = {
+  const paymentStatusStyle ={
     Paid: "bg-green-500/10 text-green-500",
     Pending: "bg-yellow-500/10 text-yellow-500",
     Failed: "bg-red-500/10 text-red-500",
     Refunded: "bg-purple-500/10 text-purple-500",
+  } as const
+
+  type PaymentStatus = keyof typeof paymentStatusStyle;
+
+  const fulfillmentStatusStyles = {
     Shipped: "bg-green-500/10 text-green-500",
     Processing: "bg-blue-500/10 text-blue-500",
     Cancelled: "bg-red-500/10 text-red-500",
     Delivered: "bg-emerald-500/10 text-emerald-500",
     Unfulfilled: "bg-gray-500/10 text-gray-500",
   } as const
+  
+  type FulfillmentStatus = keyof typeof fulfillmentStatusStyles
 
+  interface Order {
+    id: string
+    customer: string
+    product: string
+    amount: number
+    paymentStatus: PaymentStatus
+    fulfillmentStatus: FulfillmentStatus
+    date: string
+  }
+  
   const columns: ColumnDef<Order>[] = [
     {
       accessorKey: "id",
       header: "ORDER ID",
       cell: ({ row }) => (
-        <span className="font-mono text-sm font-medium text-primary">
+        <span className="font-inter text-sm font-medium text-primary">
           {row.getValue("id")}
         </span>
       ),
@@ -100,10 +106,10 @@ const Orders = () => {
       cell: ({ row }) => {
         const status = row.getValue(
           "paymentStatus",
-        ) as keyof typeof statusStyles
+        ) as PaymentStatus
         return (
           <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${statusStyles[status] || "bg-gray-500/10 text-gray-500"}`}
+            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}"}`}
           >
             {status}
           </span>
@@ -116,10 +122,10 @@ const Orders = () => {
       cell: ({ row }) => {
         const status = row.getValue(
           "fulfillmentStatus",
-        ) as keyof typeof statusStyles
+        ) as FulfillmentStatus
         return (
           <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${statusStyles[status] || "bg-gray-500/10 text-gray-500"}`}
+            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}"}`}
           >
             {status}
           </span>
@@ -616,7 +622,7 @@ const Orders = () => {
   ]
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 space-y-6">
+    <div className="section-container">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
@@ -629,93 +635,34 @@ const Orders = () => {
           </p>
         </div>
 
-        <button className="btn whitespace-nowrap">Export CSV</button>
+        <ActionButton variant="download" icon={DownloadIcon}>Export CSV</ActionButton>
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-4">
-        {/* Desktop */}
-        <div className="hidden xl:flex items-center gap-3">
-          {/* Search */}
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="search"
-              className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-border" />
-
-          {/* Date */}
-          <div>
-            <DatePicker />
-          </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-border" />
-
-          {/* Payment */}
-          <div className="w-auto">
-            <ExampleComboboxCustomItems
-              frameworks={paymentStatus}
-              placeholder="Payment Status"
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-border" />
-
-          {/* Fulfillment */}
-          <div className="w-auto">
-            <ExampleComboboxCustomItems
-              frameworks={fulfillmentStatus}
-              placeholder="Fulfillment Status"
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="ml-auto flex items-center gap-3">
-            <button className="apply-btn h-11 px-6">Apply</button>
-
-            <button className="reset-btn h-11 px-6">Reset</button>
-          </div>
-        </div>
-
-        {/* Tablet + Mobile */}
-        <div className="grid grid-cols-1 gap-3 xl:hidden">
-          {/* Search */}
-          <input
-            type="text"
-            placeholder="search"
-            className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none transition-all focus:border-primary "
-          />
-
-          {/* Date */}
-          <DatePicker />
-
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <ExampleComboboxCustomItems
-              frameworks={paymentStatus}
-              placeholder="Filter Payment Status"
-            />
-
-            <ExampleComboboxCustomItems
-              frameworks={fulfillmentStatus}
-              placeholder="Filter Fulfillment Status"
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <button className="apply-btn h-11 w-full">Apply</button>
-
-            <button className="reset-btn h-11 w-full">Reset</button>
-          </div>
-        </div>
-      </div>
+      <FilterToolbar
+        searchPlaceholder="Search Orders..."
+        datePicker = {<DatePicker/>}
+        filters={[
+          {
+            component: (
+              <ExampleComboboxCustomItems
+                frameworks={paymentStatus}
+                placeholder="Payment Status"
+              />
+            ),
+          },
+          {
+            component: (
+              <ExampleComboboxCustomItems
+                frameworks={fulfillmentStatus}
+                placeholder="Fulfillment Status"
+              />
+            ),
+          },
+        ]}
+        onApply={() => console.log("apply")}
+        onReset={() => console.log("reset")}
+      />
 
       <div>
         <DataTable

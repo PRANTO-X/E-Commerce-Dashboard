@@ -37,21 +37,22 @@ const Dashboard = () => {
       icon: Package,
     },
   ]
-  type OrderStatus = "Paid" | "Pending" | "Failed"
+
 
   type Order = {
     id: string
     customer: string
     amount: string
-    status: OrderStatus
+    status: keyof typeof statusStyles
     date: string
   }
 
-  const statusStyles: Record<OrderStatus, string> = {
+  const statusStyles = {
     Paid: "bg-green-500/10 text-green-400 border border-green-500/20",
     Pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
     Failed: "bg-red-500/10 text-red-400 border border-red-500/20",
-  }
+  } as const
+
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -85,7 +86,7 @@ const Dashboard = () => {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.getValue("status") as OrderStatus
+        const status = row.getValue("status") as keyof typeof statusStyles
         return (
           <span
             className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusStyles[status]}`}
@@ -155,7 +156,7 @@ const Dashboard = () => {
     { name: "Biometric Gateway", percentage: 21 },
   ]
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 mx-auto space-y-4">
+    <div className="section-container">
       
       <div className="flex md:justify-between md:items-center flex-col md:flex-row gap-4">
         <div>
