@@ -193,7 +193,7 @@ const Dashboard = () => {
         {/* Table & ProgressBar  */}
       <div className=" grid grid-cols-1 md:grid-cols-12 gap-4">
         {/* Order Table */}
-        <div className="rounded-xl border border-border bg-card md:col-span-8">
+        <div className="rounded-xl  bg-card md:col-span-8">
           <div className="flex items-center justify-between py-4 px-5">
             <h2 className="font-geist text-xl md:text-2xl font-semibold text-foreground">
               Recent Orders
@@ -202,7 +202,9 @@ const Dashboard = () => {
               View All
             </Link>
           </div>
-          <DataTable columns={columns} data={recentOrders} />
+          <div className=" overflow-hidden">
+            <DataTable columns={columns} data={recentOrders} showPagination={false}/>
+          </div>
         </div>
 
         {/* Progress Bar */}
