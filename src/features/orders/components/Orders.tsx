@@ -30,7 +30,7 @@ const Orders = () => {
   
 
   const paymentStatusStyle ={
-    Paid: "bg-green-500/10 text-green-500",
+    Paid: "bg-green-500/20 text-green-40",
     Pending: "bg-yellow-500/10 text-yellow-500",
     Failed: "bg-red-500/10 text-red-500",
     Refunded: "bg-purple-500/10 text-purple-500",
