@@ -11,6 +11,7 @@ const Customers = () => {
   const statusStyles = {
     Active: "bg-green-500/10 text-green-400 border border-green-500/20",
     Inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
+    
   } as const
 
   type CustomerStatus = keyof typeof statusStyles
