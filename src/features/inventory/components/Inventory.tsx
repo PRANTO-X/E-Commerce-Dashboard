@@ -1,6 +1,6 @@
 import React from "react"
 import { ActionButton } from "@/components/common/ActionButton"
-import { EditIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { DownloadIcon, EditIcon, Trash2Icon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -173,7 +173,6 @@ const Inventory = () => {
 
           if (confirmDelete) {
             console.log("Deleting:", product.id)
-            // call API or remove from state here
           }
         }
 
@@ -182,7 +181,7 @@ const Inventory = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link to={`/product_edit/${product.id}`}>
+                  <Link to={`/product_detail/${product.id}`}>
                     <EditIcon className="size-4 text-primary" />
                   </Link>
                 </TooltipTrigger>
@@ -444,8 +443,8 @@ const Inventory = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={PlusIcon}>
-          Add Product
+        <ActionButton variant="download" icon={DownloadIcon}>
+          Export Csv
         </ActionButton>
       </div>
 
