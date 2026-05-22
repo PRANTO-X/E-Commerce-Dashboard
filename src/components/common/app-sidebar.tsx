@@ -20,7 +20,6 @@ import {
   Boxes,
   ShoppingCart,
   Users,
-  TicketPercent,
   BarChart3,
   Settings,
   ChevronDown,
@@ -168,8 +167,7 @@ export function AppSidebar() {
 
               {/* SUBMENU */}
               <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out
-                  group-data-[collapsible=icon]:hidden
+                className={`overflow-hidden transition-all duration-200 ease-in-out
                   ${isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}
                 `}
               >
