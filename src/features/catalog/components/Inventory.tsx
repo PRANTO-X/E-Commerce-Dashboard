@@ -1,18 +1,13 @@
 import React from "react"
 import { ActionButton } from "@/components/common/ActionButton"
-import { DownloadIcon, EditIcon, Trash2Icon } from "lucide-react"
+import { DownloadIcon,Trash2Icon, EyeIcon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
-import { Link } from "react-router-dom"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { categoryOptions } from "@/assets/Data"
+import { TableActions } from "@/components/common/TableActions"
 const Inventory = () => {
   const statusOptions = [
     { label: "In Stock", value: "in_stock" },
@@ -20,24 +15,7 @@ const Inventory = () => {
     { label: "Out of Stock", value: "out_of_stock" },
   ]
 
-  const categoryOptions = [
-    { label: "Electronics", value: "electronics" },
-    { label: "Smartphones", value: "smartphones" },
-    { label: "Laptops", value: "laptops" },
-    { label: "Audio Devices", value: "audio" },
-    { label: "Wearables", value: "wearables" },
-
-    { label: "Clothing", value: "clothing" },
-    { label: "Shoes", value: "shoes" },
-    { label: "Accessories", value: "accessories" },
-
-    { label: "Gaming", value: "gaming" },
-    { label: "Home Appliances", value: "home_appliances" },
-
-    { label: "Cameras", value: "cameras" },
-    { label: "Furniture", value: "furniture" },
-    { label: "Beauty & Health", value: "beauty_health" },
-  ]
+ 
 
   const statusStyles = {
     "In Stock": "bg-green-500/10 text-green-400 border border-green-500/20",
@@ -69,7 +47,7 @@ const Inventory = () => {
   const columns: ColumnDef<InventoryItem>[] = [
     {
       accessorKey: "id",
-      header: "CUSTOMER ID",
+      header: "PRODUCT ID",
       cell: ({ row }) => (
         <span className="font-medium text-primary text-sm">
           {row.getValue("id")}
@@ -177,31 +155,7 @@ const Inventory = () => {
         }
 
         return (
-          <div className="flex items-center gap-3 sm:ml-1 md:ml-1.5">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to={`/product_detail/${product.id}`}>
-                    <EditIcon className="size-4 text-primary" />
-                  </Link>
-                </TooltipTrigger>
-
-                <TooltipContent>Edit</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button onClick={handleDelete}>
-                    <Trash2Icon className="size-4 cursor-pointer text-red-500" />
-                  </button>
-                </TooltipTrigger>
-
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <TableActions viewUrl="/product_detail/id" onDelete={handleDelete}/>
         )
       },
     },

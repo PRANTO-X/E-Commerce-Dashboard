@@ -54,7 +54,7 @@ const sidebarItems = [
     icon: Users,
     items: [
       { title: "Customers", url: "/customers" },
-      { title: "Staff", url: "/staff" },
+      { title: "Staffs", url: "/staffs" },
     ],
   },
   {
