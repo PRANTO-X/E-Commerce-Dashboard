@@ -16,7 +16,8 @@ type Props = {
 export function TableActions({ viewUrl, onDelete, editUrl }: Props) {
   return (
     <div className="flex items-center gap-3 sm:ml-1 md:ml-1.5">
-      <TooltipProvider>
+      {viewUrl && (
+        <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <Link to={viewUrl || "#"}>
@@ -26,6 +27,7 @@ export function TableActions({ viewUrl, onDelete, editUrl }: Props) {
           <TooltipContent>View</TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      )}
 
       {editUrl && (
         <TooltipProvider>

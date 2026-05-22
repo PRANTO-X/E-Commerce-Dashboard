@@ -12,10 +12,12 @@ const Dashboard = lazy(
 )
 
 const Products = lazy(() => import("../features/catalog/components/Products"))
+const ProductForm = lazy(() => import("../features/catalog/components/ProductForm"))
 
 const Categories = lazy(
   () => import("../features/catalog/components/Categories"),
 )
+const CategoryForm= lazy(() => import("../features/catalog/components/CategoryForm"))
 
 const Inventory = lazy(() => import("../features/catalog/components/Inventory"))
 const ProductDetail = lazy(
@@ -54,8 +56,10 @@ export const router = createBrowserRouter([
       { index: true, element: Load(Dashboard) },
       { path: "inventory", element: Load(Inventory) },
       { path: "products", element: Load(Products) },
-      { path: "categories", element: Load(Categories) },
       { path: "product_detail/:id", element: Load(ProductDetail) },
+      { path: "product_form/:id", element: Load(ProductForm) },
+      { path: "categories", element: Load(Categories) },
+      { path: "category_form/:id", element: Load(CategoryForm) },
       { path: "orders", element: Load(Orders) },
       { path: "order_detail/:id", element: Load(OrderDetail) },
       { path: "transactions", element: Load(Transactions) },

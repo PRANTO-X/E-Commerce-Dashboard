@@ -50,7 +50,7 @@ const sidebarItems = [
     ],
   },
   {
-    label: "Users & Access",
+    label: "Users",
     icon: Users,
     items: [
       { title: "Customers", url: "/customers" },
@@ -79,10 +79,12 @@ export function AppSidebar() {
 
   const isCollapsed = state === "collapsed"
 
-  const [openSections, setOpenSections] = useState<string[]>(["Dashboard"])
+  const [openSections, setOpenSections] = useState<string[]>([])
 
   // auto open active section
   useEffect(() => {
+    if (isCollapsed) return
+
     const active = sidebarItems.find((section) =>
       section.items.some((item) => item.url === location.pathname),
     )
@@ -92,7 +94,7 @@ export function AppSidebar() {
         prev.includes(active.label) ? prev : [...prev, active.label],
       )
     }
-  }, [location.pathname])
+  }, [location.pathname, isCollapsed])
 
   // close all when collapsed
   useEffect(() => {
@@ -119,7 +121,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* CONTENT */}
-      <SidebarContent>
+      <SidebarContent className="overflow-x-hidden group-data-[collapsible=icon]:mt-2">
         {sidebarItems.map((section) => {
           const isOpen = openSections.includes(section.label)
           const isActive = section.items.some(
@@ -167,6 +169,7 @@ export function AppSidebar() {
               {/* SUBMENU */}
               <div
                 className={`overflow-hidden transition-all duration-300 ease-in-out
+                  group-data-[collapsible=icon]:hidden
                   ${isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}
                 `}
               >
