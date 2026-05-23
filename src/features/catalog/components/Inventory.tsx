@@ -155,7 +155,7 @@ const Inventory = () => {
         }
 
         return (
-          <TableActions viewUrl="/product_detail/id" onDelete={handleDelete}/>
+          <TableActions viewUrl={`/product_detail/${product.id  }`} onDelete={handleDelete}/>
         )
       },
     },
@@ -398,7 +398,7 @@ const Inventory = () => {
         </div>
 
         <ActionButton variant="download" icon={DownloadIcon}>
-          Export Csv
+          Export CSV
         </ActionButton>
       </div>
 

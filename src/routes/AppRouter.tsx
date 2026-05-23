@@ -31,6 +31,9 @@ const OrderDetail = lazy(
 const Transactions = lazy(
   () => import("../features/sales/components/Transactions"),
 )
+const TransactionDetail = lazy(
+  () => import("../features/sales/components/TransactionDetail"),
+)
 
 const Customers = lazy(() => import("../features/users/components/Customers"))
 const CustomerDetail = lazy(
@@ -63,6 +66,7 @@ export const router = createBrowserRouter([
       { path: "orders", element: Load(Orders) },
       { path: "order_detail/:id", element: Load(OrderDetail) },
       { path: "transactions", element: Load(Transactions) },
+      { path: "transaction_detail/:id", element: Load(TransactionDetail) },
       { path: "customers", element: Load(Customers) },
       { path: "customer_detail/:id", element: Load(CustomerDetail) },
       { path: "staffs", element: Load(Staffs) },

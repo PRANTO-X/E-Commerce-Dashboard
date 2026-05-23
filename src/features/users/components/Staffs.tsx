@@ -2,7 +2,9 @@ import React from 'react'
 
 const Staffs = () => {
   return (
-    <div>Staffs</div>
+    <div className='section-container'>
+      
+    </div>
   )
 }
 
