@@ -41,6 +41,7 @@ const CustomerDetail = lazy(
 )
 
 const Staffs = lazy(() => import("../features/users/components/Staffs"))
+const StaffForm = lazy(() => import("../features/users/components/StaffForm"))
 
 const Reports = lazy(() => import("../features/analytics/components/Reports"))
 
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
       { path: "customers", element: Load(Customers) },
       { path: "customer_detail/:id", element: Load(CustomerDetail) },
       { path: "staffs", element: Load(Staffs) },
+      { path: "staff_form/:id", element: Load(StaffForm) },
       { path: "reports", element: Load(Reports) },
       { path: "settings", element: Load(Settings) },
       { path: "auth-settings", element: Load(Authentication) },
