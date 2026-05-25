@@ -6,6 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ProgressBar } from "./ProgressBar"
 import { Link } from "react-router-dom"
+import { ActionButton } from "@/components/common/ActionButton"
 const Dashboard = () => {
   const metrics = [
     {
@@ -166,15 +167,6 @@ const Dashboard = () => {
           <p className="font-text text-accent-foreground text-sm">
             Real-time performance metrics for your enterprise.
           </p>
-        </div>
-
-        <div className="space-x-2.5">
-          <button className="bg-popover hover:bg-accent transition duration-300  border border-border py-2 px-3 rounded-lg cursor-pointer">
-            Download Report
-          </button>
-          <button className="bg-accent border hover:bg-primary transition duration-300 border-primary py-2 px-3 rounded-lg cursor-pointer">
-            Create New Order
-          </button>
         </div>
       </div>
 
