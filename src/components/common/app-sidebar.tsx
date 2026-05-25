@@ -74,11 +74,17 @@ const sidebarItems = [
 
 export function AppSidebar() {
   const location = useLocation()
-  const { state } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
 
   const isCollapsed = state === "collapsed"
 
   const [openSections, setOpenSections] = useState<string[]>([])
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   // auto open active section
   useEffect(() => {
@@ -112,11 +118,16 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" variant="floating" className="z-50">
       {/* HEADER */}
       <SidebarHeader className="mt-2 flex items-center gap-2 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
-        <LayoutDashboard className="h-6 w-6 shrink-0" />
-
-        <span className="font-bold text-xl group-data-[collapsible=icon]:hidden">
-          Dahsbord
-        </span>
+        <NavLink 
+          to="/" 
+          onClick={handleLinkClick}
+          className="flex items-center gap-2"
+        >
+          <LayoutDashboard className="h-6 w-6 shrink-0" />
+          <span className="font-bold text-xl group-data-[collapsible=icon]:hidden">
+            Dahsbord
+          </span>
+        </NavLink>
       </SidebarHeader>
 
       {/* CONTENT */}
@@ -175,7 +186,7 @@ export function AppSidebar() {
                   <SidebarMenu>
                     {section.items.map((item) => (
                       <SidebarMenuItem key={item.title}>
-                        <NavLink to={item.url} end>
+                        <NavLink to={item.url} end onClick={handleLinkClick}>
                           {({ isActive }) => (
                             <SidebarMenuButton
                               isActive={isActive}
