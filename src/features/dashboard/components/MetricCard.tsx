@@ -10,7 +10,7 @@ function MetricCard({ title, value, change, icon: Icon }: typeof metrics[0]) {
       transition-all duration-300">
 
       {/* soft glow blob */}
-      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
+      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-accent blur-2xl pointer-events-none" />
 
       {/* top row */}
       <div className="flex items-center justify-between">
