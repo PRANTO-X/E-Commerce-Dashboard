@@ -220,7 +220,7 @@ const ProductDetail = () => {
                       {[40, 60, 45, 70, 55, 80, 65].map((h, i) => (
                          <div 
                             key={i} 
-                            className="flex-1 bg-primary/20 hover:bg-primary rounded-t-sm transition-colors cursor-pointer" 
+                            className="flex-1 bg-primary hover:bg-primary rounded-t-sm transition-colors cursor-pointer" 
                             style={{ height: `${h}%` }}
                          />
                       ))}

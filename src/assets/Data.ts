@@ -323,3 +323,119 @@ export const categoryOptions = [
       stock: 35,
     },
   ]
+
+  export interface TimelineEvent {
+    label: string
+    date: string
+    status: "completed" | "active" | "pending"
+  }
+
+  export interface ActivityLog {
+    type: "system" | "staff"
+    message: string
+    date: string
+  }
+
+  export interface Order {
+    id: string
+    customer: string
+    customerId: string
+    email?: string
+    phone?: string
+    product: string
+    amount: number
+    discount: number
+    shippingFee: number
+    tax: number
+    paymentMethod: string
+    paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded"
+    fulfillmentStatus: "Shipped" | "Processing" | "Cancelled" | "Delivered" | "Unfulfilled"
+    date: string
+    shippingAddress?: string
+    billingAddress?: string
+    items?: Array<{
+      id: string
+      name: string
+      price: number
+      quantity: number
+      image: string
+    }>
+    timeline: TimelineEvent[]
+    activityLog: ActivityLog[]
+  }
+
+  export const orders: Order[] = [
+    {
+      id: "ORD-0012",
+      customer: "Helena Hills",
+      customerId: "CUST-8821",
+      email: "helena.hills@example.com",
+      phone: "+1 (555) 000-1111",
+      product: "Cloud Core Subscription",
+      amount: 299.0,
+      discount: 0,
+      shippingFee: 0,
+      tax: 14.95,
+      paymentMethod: "Visa Card ending in •••• 4242",
+      paymentStatus: "Paid",
+      fulfillmentStatus: "Shipped",
+      date: "Oct 24, 2023",
+      shippingAddress: "123 Tech Lane, Silicon Valley, CA 94025",
+      billingAddress: "123 Tech Lane, Silicon Valley, CA 94025",
+      items: [
+        {
+          id: "P1001",
+          name: "Cloud Core Subscription",
+          price: 299.0,
+          quantity: 1,
+          image: "/images/product-1.jpg",
+        }
+      ],
+      timeline: [
+        { label: "Order Placed", date: "Oct 24, 2023 - 10:30 AM", status: "completed" },
+        { label: "Payment Verified", date: "Oct 24, 2023 - 10:35 AM", status: "completed" },
+        { label: "Processing", date: "Oct 24, 2023 - 02:15 PM", status: "completed" },
+        { label: "Shipped", date: "Oct 25, 2023 - 09:00 AM", status: "active" },
+        { label: "Delivered", date: "TBD", status: "pending" },
+      ],
+      activityLog: [
+        { type: "system", message: "Order status changed from 'Processing' to 'Shipped' by Admin.", date: "Oct 25, 2023 - 09:00 AM" },
+        { type: "staff", message: "Customer requested to leave the package at the front porch.", date: "Oct 24, 2023 - 11:20 AM" },
+      ]
+    },
+    {
+      id: "ORD-0013",
+      customer: "James Wilson",
+      customerId: "CUST-4423",
+      email: "james.wilson@example.com",
+      phone: "+1 (555) 000-2222",
+      product: "API Gateway Pro",
+      amount: 850.0,
+      discount: 50.0,
+      shippingFee: 15.0,
+      tax: 42.5,
+      paymentMethod: "MasterCard ending in •••• 5521",
+      paymentStatus: "Pending",
+      fulfillmentStatus: "Processing",
+      date: "Oct 23, 2023",
+      shippingAddress: "456 Developer St, Seattle, WA 98101",
+      billingAddress: "456 Developer St, Seattle, WA 98101",
+      items: [
+        {
+          id: "P1002",
+          name: "API Gateway Pro",
+          price: 850.0,
+          quantity: 1,
+          image: "/images/product-2.jpg",
+        }
+      ],
+      timeline: [
+        { label: "Order Placed", date: "Oct 23, 2023 - 11:00 AM", status: "completed" },
+        { label: "Payment Pending", date: "Oct 23, 2023 - 11:05 AM", status: "active" },
+        { label: "Processing", date: "TBD", status: "pending" },
+      ],
+      activityLog: [
+        { type: "system", message: "Order created.", date: "Oct 23, 2023 - 11:00 AM" },
+      ]
+    },
+  ]

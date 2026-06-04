@@ -8,8 +8,10 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { categoryOptions, products, statusStyles, type ProductItem, type ProductStatus } from "@/assets/Data"
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
+import { useNavigate } from "react-router-dom"
 
 const Products = () => {
+  const navigate = useNavigate()
   const statusOptions = [
     { label: "Active", value: "active" },
     { label: "Draft", value: "draft" },
@@ -178,7 +180,11 @@ const Products = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={PlusIcon}>
+        <ActionButton 
+          variant="download" 
+          icon={PlusIcon} 
+          onClick={() => navigate("/product_form/new")}
+        >
           Add Product
         </ActionButton>
       </div>
