@@ -1,4 +1,4 @@
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -274,12 +274,12 @@ const Staffs = () => {
         </div>
 
         <div className="flex items-center gap-3">
-            <ActionButton variant="download" icon={DownloadIcon}>
-            Export CSV
-            </ActionButton>
-            <ActionButton variant="apply" icon={PlusIcon} onClick={() => navigate("/staff_form/new")}>
-            Add Staff
-            </ActionButton>
+            <Button variant="primary" size="action">
+            <DownloadIcon className="size-5" /> Export CSV
+            </Button>
+            <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
+            <PlusIcon className="size-5" /> Add Staff
+            </Button>
         </div>
       </div>
 

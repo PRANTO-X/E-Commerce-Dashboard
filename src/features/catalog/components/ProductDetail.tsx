@@ -4,7 +4,6 @@ import { products, statusStyles, type ProductStatus } from "@/assets/Data"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ActionButton } from "@/components/common/ActionButton"
 import {
   ArrowLeft,
   Edit,
@@ -55,7 +54,10 @@ const ProductDetail = () => {
             </p>
           </div>
         </div>
-        <ActionButton onClick={()=> navigate(`/product_form/${product.id}`)} variant="apply" icon={Edit}>Edit Product</ActionButton>
+        <Button onClick={()=> navigate(`/product_form/${product.id}`)} variant="apply" size="action">
+          <Edit className="size-5" />
+          Edit Product
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

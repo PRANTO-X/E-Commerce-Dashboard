@@ -1,5 +1,5 @@
 import React from "react"
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
@@ -180,13 +180,13 @@ const Products = () => {
           </p>
         </div>
 
-        <ActionButton 
-          variant="download" 
-          icon={PlusIcon} 
+        <Button 
+          variant="primary" 
+          size="action"
           onClick={() => navigate("/product_form/new")}
         >
-          Add Product
-        </ActionButton>
+          <PlusIcon className="size-5" /> Add Product
+        </Button>
       </div>
 
       <FilterToolbar

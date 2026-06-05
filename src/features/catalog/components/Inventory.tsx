@@ -1,5 +1,5 @@
 import React from "react"
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { DownloadIcon,Trash2Icon, EyeIcon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -397,9 +397,10 @@ const Inventory = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={DownloadIcon}>
+        <Button variant="primary" size="action">
+          <DownloadIcon className="size-5" />
           Export CSV
-        </ActionButton>
+        </Button>
       </div>
 
       <InventoryStatsCards />

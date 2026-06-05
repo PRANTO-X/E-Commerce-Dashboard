@@ -1,5 +1,5 @@
 import React from "react"
-import { ActionButton } from "./ActionButton"
+import { Button } from "@/components/ui/button"
 import { Check, RotateCcw } from "lucide-react"
 
 interface FilterItem {
@@ -52,8 +52,14 @@ const FilterToolbar = ({
 
         {/* Buttons */}
         <div className="ml-auto flex items-center gap-3">
-          <ActionButton variant="apply" icon={Check}>Apply</ActionButton>
-          <ActionButton variant="reset" icon={RotateCcw}>Reset</ActionButton>
+          <Button variant="apply" size="action" onClick={onApply}>
+            <Check className="size-5" />
+            Apply
+          </Button>
+          <Button variant="reset" size="action" onClick={onReset}>
+            <RotateCcw className="size-5" />
+            Reset
+          </Button>
         </div>
       </div>
 
@@ -76,8 +82,14 @@ const FilterToolbar = ({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <ActionButton variant="apply" icon={Check}>Apply</ActionButton>
-          <ActionButton variant="reset" icon={RotateCcw}>Reset</ActionButton>
+          <Button variant="apply" size="action" onClick={onApply}>
+            <Check className="size-5" />
+            Apply
+          </Button>
+          <Button variant="reset" size="action" onClick={onReset}>
+            <RotateCcw className="size-5" />
+            Reset
+          </Button>
         </div>
       </div>
     </div>

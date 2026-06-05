@@ -1,6 +1,6 @@
 import { DownloadIcon } from "lucide-react"
 import React from "react"
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { TableActions } from "@/components/common/TableActions"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -337,9 +337,9 @@ const Transactions = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={DownloadIcon}>
-          Export CSV
-        </ActionButton>
+        <Button variant="primary" size="action">
+          <DownloadIcon className="size-5" /> Export CSV
+        </Button>
       </div>
 
       <FilterToolbar

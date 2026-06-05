@@ -1,4 +1,4 @@
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -415,9 +415,9 @@ const Customers = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={DownloadIcon}>
-          Export CSV
-        </ActionButton>
+        <Button variant="primary" size="action">
+          <DownloadIcon className="size-5" /> Export CSV
+        </Button>
       </div>
 
       {/* Filter */}

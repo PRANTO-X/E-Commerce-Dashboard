@@ -6,7 +6,6 @@ import { DataTable } from "@/components/common/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ProgressBar } from "./ProgressBar"
 import { Link } from "react-router-dom"
-import { ActionButton } from "@/components/common/ActionButton"
 const Dashboard = () => {
   const metrics = [
     {

@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/data-table"
 import { DownloadIcon, EyeIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 
 
 const Orders = () => {
@@ -635,7 +635,7 @@ const Orders = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={DownloadIcon}>Export CSV</ActionButton>
+        <Button variant="primary" size="action"><DownloadIcon className="size-5" /> Export CSV</Button>
       </div>
 
       {/* Filters */}

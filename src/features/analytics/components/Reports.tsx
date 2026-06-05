@@ -1,5 +1,5 @@
 import { DownloadIcon } from 'lucide-react'
-import { ActionButton } from '@/components/common/ActionButton'
+import { Button } from '@/components/ui/button'
 import React from 'react'
 import { RevenueOrdersChart } from './RevenueOrdersChart'
 import { SalesByCategoryChart } from './SalesByCategoryChart'
@@ -22,9 +22,10 @@ const Reports = () => {
         </div>
 
         <div className="flex items-center gap-3">
-            <ActionButton variant="download" icon={DownloadIcon}>
+            <Button variant="primary" size="action">
+              <DownloadIcon className="size-5" />
               Download Report
-            </ActionButton>
+            </Button>
         </div>
       </div>
 

@@ -23,6 +23,8 @@ const buttonVariants = cva(
           "border-border bg-accent hover:bg-primary hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-primary dark:bg-accent dark:hover:bg-primary",
         back:
           "hover:bg-muted border border-border hover:text-foreground border aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        apply: "bg-primary text-white hover:bg-primary/90 shadow-sm",
+        reset: "bg-red-600 text-white border-red-700 hover:bg-red-600/50",
       },
       size: {
         default:
@@ -30,6 +32,7 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        action: "h-9 px-4 gap-1",
         icon: "size-8",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",

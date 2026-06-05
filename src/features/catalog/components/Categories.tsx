@@ -1,5 +1,5 @@
 import React from "react"
-import { ActionButton } from "@/components/common/ActionButton"
+import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
@@ -320,9 +320,10 @@ const Categories = () => {
           </p>
         </div>
 
-        <ActionButton variant="download" icon={PlusIcon}>
+        <Button variant="primary" size="action">
+          <PlusIcon className="size-5" />
           Add Category
-        </ActionButton>
+        </Button>
       </div>
 
       <FilterToolbar
