@@ -39,10 +39,10 @@ const ProductDetail = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="back"
             size="icon"
             onClick={() => navigate("/products")}
-            className="rounded-full cursor-pointer"
+            className="rounded-lg cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

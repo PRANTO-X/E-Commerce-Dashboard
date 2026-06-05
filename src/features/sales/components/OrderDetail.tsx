@@ -1,5 +1,5 @@
 import React from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { orders } from "@/assets/Data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +29,7 @@ import {
   Clock,
   Ban,
   RotateCcw,
+  ArrowLeft
 } from "lucide-react"
 
 const paymentStatusStyles = {
@@ -49,6 +50,7 @@ const fulfillmentStatusStyles = {
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
   const order = orders.find((o) => o.id === id)
+  const navigate = useNavigate();
 
   if (!order) {
     return (
@@ -70,16 +72,25 @@ const OrderDetail = () => {
   const total = subtotal - order.discount + order.shippingFee + order.tax
 
   return (
-    <div className="section-container py-6 space-y-6">
-      {/* Back Button */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link to="/orders">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Orders
-          </Link>
-        </Button>
-      </div>
+    <div className="section-container py-6 space-y-6 ">
+      <div className="flex items-center gap-4">
+          <Button
+            variant="back"
+            size="icon"
+            onClick={() => navigate("/orders")}
+            className="rounded-lg cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Ordetails Details
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Detailed information about {order.id}
+            </p>
+          </div>
+        </div>
 
       {/* Row 1: Order Summary & Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -120,19 +131,19 @@ const OrderDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="primary" size="sm" onClick={() => window.print()}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print Order
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="primary" size="sm">
                 <Mail className="h-4 w-4 mr-2" />
                 Email Customer
               </Button>
-              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+              <Button variant="primary" size="sm" className="text-destructive hover:text-destructive">
                 <Ban className="h-4 w-4 mr-2" />
                 Cancel Order
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="primary" size="sm">
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Refund Order
               </Button>
