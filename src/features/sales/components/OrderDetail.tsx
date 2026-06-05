@@ -78,7 +78,6 @@ const OrderDetail = () => {
             variant="back"
             size="icon"
             onClick={() => navigate("/orders")}
-            className="rounded-lg cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

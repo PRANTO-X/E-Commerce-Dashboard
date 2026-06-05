@@ -104,7 +104,6 @@ const TransactionDetail = () => {
             variant="back"
             size="icon"
             onClick={() => navigate("/orders")}
-            className="rounded-lg cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -127,16 +126,13 @@ const TransactionDetail = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="default" size="action" className="gap-2">
             <Printer className="h-4 w-4" />
             Print
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="primary" size="action" className="gap-2">
             <Download className="h-4 w-4" />
             Export
-          </Button>
-          <Button variant="outline" size="icon">
-            <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -193,7 +189,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" />
+                <User className="size-5 text-primary" />
                 Customer Info
               </CardTitle>
             </CardHeader>
@@ -224,7 +220,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
+                <CreditCard className="size-5 text-primary" />
                 Payment Info
               </CardTitle>
             </CardHeader>
@@ -263,7 +259,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+                <MapPin className="size-5 text-primary" />
                 Billing Info
               </CardTitle>
             </CardHeader>
@@ -280,7 +276,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
+                <ShoppingBag className="size-5 text-primary" />
                 Order Info
               </CardTitle>
             </CardHeader>
@@ -294,7 +290,7 @@ const TransactionDetail = () => {
                 <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">Processing</Badge>
               </div>
               <Separator />
-              <Button variant="outline" size="sm" className="w-full" asChild>
+              <Button variant="default" size="sm" className="w-full" asChild>
                 <Link to={`/order_detail/${transaction.orderId}`}>View Full Order</Link>
               </Button>
             </CardContent>
@@ -306,7 +302,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
+                <DollarSign className="size-5 text-primary" />
                 Financial Info
               </CardTitle>
             </CardHeader>
@@ -334,7 +330,7 @@ const TransactionDetail = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
+                <ShieldCheck className="size-5 text-primary" />
                 Security Info
               </CardTitle>
             </CardHeader>
@@ -421,9 +417,6 @@ const TransactionDetail = () => {
             <div className="p-4 rounded-md bg-muted/50 border italic text-sm text-muted-foreground">
               "{transaction.notes}"
             </div>
-            <Button variant="outline" size="sm" className="mt-4">
-              Add Note
-            </Button>
           </CardContent>
         </Card>
       </div>
