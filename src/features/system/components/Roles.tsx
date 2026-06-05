@@ -1,5 +1,14 @@
 import { useState } from "react"
-import { Shield, ShieldAlert, ShieldCheck, UserCog, Plus, Search, Edit2, Trash2 } from "lucide-react"
+import {
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  UserCog,
+  PlusIcon,
+  Search,
+  Edit2,
+  Trash2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -27,7 +36,7 @@ const rolesData = [
     usersCount: 2,
     type: "System",
     permissions: ["Full Access"],
-    level: "High"
+    level: "High",
   },
   {
     id: "2",
@@ -36,7 +45,7 @@ const rolesData = [
     usersCount: 5,
     type: "Custom",
     permissions: ["Products", "Orders", "Reports", "Customers"],
-    level: "Medium"
+    level: "Medium",
   },
   {
     id: "3",
@@ -45,7 +54,7 @@ const rolesData = [
     usersCount: 8,
     type: "Custom",
     permissions: ["Orders (View)", "Customers (View)", "Chat"],
-    level: "Low"
+    level: "Low",
   },
   {
     id: "4",
@@ -54,32 +63,44 @@ const rolesData = [
     usersCount: 3,
     type: "Custom",
     permissions: ["Products", "Categories", "Blog"],
-    level: "Medium"
-  }
+    level: "Medium",
+  },
 ]
 
 const Roles = () => {
   const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredRoles = rolesData.filter(role => 
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRoles = rolesData.filter(
+    (role) =>
+      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      role.description.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const tableHeaders = ["Role Name", "Description", "Permissions", "Users", "Actions"]
+  const tableHeaders = [
+    "Role Name",
+    "Description",
+    "Permissions",
+    "Users",
+    "Actions",
+  ]
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Roles & Permissions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Roles & Permissions
+          </h1>
           <p className="text-muted-foreground">
             Define and manage user roles and their associated access levels.
           </p>
         </div>
-        <Button className="w-fit">
-          <Plus className="mr-2 h-4 w-4" />
-          Create New Role
+        <Button
+          variant="primary"
+          size="action"
+        >
+          <PlusIcon className="size-5" />
+          Create Role
         </Button>
       </div>
 
@@ -108,7 +129,18 @@ const Roles = () => {
             <TableHeader>
               <TableRow>
                 {tableHeaders.map((header) => (
-                  <TableHead key={header} className={header === "Role Name" ? "w-[200px]" : header === "Users" ? "text-center" : header === "Actions" ? "text-right" : ""}>
+                  <TableHead
+                    key={header}
+                    className={
+                      header === "Role Name"
+                        ? "w-[200px]"
+                        : header === "Users"
+                          ? "text-center"
+                          : header === "Actions"
+                            ? "text-right"
+                            : ""
+                    }
+                  >
                     {header}
                   </TableHead>
                 ))}
@@ -151,13 +183,13 @@ const Roles = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <div className="flex justify-end">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-500">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         disabled={role.type === "System"}
                       >
@@ -171,25 +203,44 @@ const Roles = () => {
           </Table>
         </CardContent>
       </Card>
-      
+
       {/* PERMISSION MATRIX HINT */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Quick Permission Overview</CardTitle>
-            <CardDescription>Most common permission groups assigned to roles.</CardDescription>
+            <CardDescription>
+              Most common permission groups assigned to roles.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[
-                { name: "Catalog Management", desc: "View, create, edit and delete products and categories.", roles: 3 },
-                { name: "Order Processing", desc: "Manage order status, payments and shipping.", roles: 2 },
-                { name: "Customer Support", desc: "Access customer profiles and communication tools.", roles: 2 }
+                {
+                  name: "Catalog Management",
+                  desc: "View, create, edit and delete products and categories.",
+                  roles: 3,
+                },
+                {
+                  name: "Order Processing",
+                  desc: "Manage order status, payments and shipping.",
+                  roles: 2,
+                },
+                {
+                  name: "Customer Support",
+                  desc: "Access customer profiles and communication tools.",
+                  roles: 2,
+                },
               ].map((group, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-accent/30">
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-accent/30"
+                >
                   <div className="space-y-1">
                     <p className="font-medium">{group.name}</p>
-                    <p className="text-sm text-muted-foreground">{group.desc}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {group.desc}
+                    </p>
                   </div>
                   <Badge variant="outline">{group.roles} Roles</Badge>
                 </div>
@@ -197,19 +248,24 @@ const Roles = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Security Tip</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <p>
-              Always follow the <strong>Principle of Least Privilege</strong> (PoLP). Users should only have the permissions necessary to perform their jobs.
+              Always follow the <strong>Principle of Least Privilege</strong>{" "}
+              (PoLP). Users should only have the permissions necessary to
+              perform their jobs.
             </p>
             <p className="text-muted-foreground">
-              Review roles and permissions quarterly to ensure your system remains secure.
+              Review roles and permissions quarterly to ensure your system
+              remains secure.
             </p>
-            <Button variant="link" className="px-0 h-auto">View security docs</Button>
+            <Button variant="link" className="px-0 h-auto">
+              View security docs
+            </Button>
           </CardContent>
         </Card>
       </div>

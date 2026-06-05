@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Save, Bell, Store, ShieldCheck, Cog,  } from "lucide-react"
+import { Save, Bell, Store, ShieldCheck, Cog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -36,11 +36,37 @@ const Settings = () => {
   }
 
   const generalFields = [
-    { id: "store-name", label: "Store Name", defaultValue: "My Awesome Store", type: "input" },
-    { id: "store-email", label: "Support Email", defaultValue: "support@mystore.com", type: "input" },
-    { id: "store-address", label: "Store Address", defaultValue: "123 Commerce St, Tech City, 54321, US", type: "textarea", fullWidth: true },
-    { id: "store-phone", label: "Phone Number", defaultValue: "+1 (555) 000-0000", type: "input" },
-    { id: "store-vat", label: "VAT/Tax ID", defaultValue: "US123456789", type: "input" },
+    {
+      id: "store-name",
+      label: "Store Name",
+      defaultValue: "My Awesome Store",
+      type: "input",
+    },
+    {
+      id: "store-email",
+      label: "Support Email",
+      defaultValue: "support@mystore.com",
+      type: "input",
+    },
+    {
+      id: "store-address",
+      label: "Store Address",
+      defaultValue: "123 Commerce St, Tech City, 54321, US",
+      type: "textarea",
+      fullWidth: true,
+    },
+    {
+      id: "store-phone",
+      label: "Phone Number",
+      defaultValue: "+1 (555) 000-0000",
+      type: "input",
+    },
+    {
+      id: "store-vat",
+      label: "VAT/Tax ID",
+      defaultValue: "US123456789",
+      type: "input",
+    },
   ]
 
   const GeneralSettings = (
@@ -54,7 +80,10 @@ const Settings = () => {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {generalFields.map((field) => (
-            <div key={field.id} className={`space-y-2 ${field.fullWidth ? "md:col-span-2" : ""}`}>
+            <div
+              key={field.id}
+              className={`space-y-2 ${field.fullWidth ? "md:col-span-2" : ""}`}
+            >
               <Label htmlFor={field.id}>{field.label}</Label>
               {field.type === "textarea" ? (
                 <Textarea
@@ -71,8 +100,8 @@ const Settings = () => {
       </CardContent>
       <CardFooter className="justify-end border-t p-4">
         <Button onClick={handleSave} disabled={isSaving}>
+          {!isSaving && <Save className="h-4 w-4" />}
           {isSaving ? "Saving..." : "Save Changes"}
-          {!isSaving && <Save className="ml-2 h-4 w-4" />}
         </Button>
       </CardFooter>
     </Card>
@@ -88,9 +117,21 @@ const Settings = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {[
-          { label: "Order Updates", desc: "Receive email when a new order is placed.", checked: true },
-          { label: "Inventory Alerts", desc: "Receive email when products are low on stock.", checked: true },
-          { label: "Customer Reviews", desc: "Receive email when a customer leaves a review.", checked: false },
+          {
+            label: "Order Updates",
+            desc: "Receive email when a new order is placed.",
+            checked: true,
+          },
+          {
+            label: "Inventory Alerts",
+            desc: "Receive email when products are low on stock.",
+            checked: true,
+          },
+          {
+            label: "Customer Reviews",
+            desc: "Receive email when a customer leaves a review.",
+            checked: false,
+          },
         ].map((item, index) => (
           <div key={item.label}>
             <SettingToggle
@@ -104,8 +145,8 @@ const Settings = () => {
       </CardContent>
       <CardFooter className="justify-end border-t p-4">
         <Button onClick={handleSave} disabled={isSaving}>
+          {!isSaving && <Save className="h-4 w-4" />}
           {isSaving ? "Saving..." : "Save Changes"}
-          {!isSaving && <Save className="ml-2 h-4 w-4" />}
         </Button>
       </CardFooter>
     </Card>
@@ -173,7 +214,9 @@ const Settings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Clear System Cache</p>
-                <p className="text-sm text-muted-foreground">Delete all temporary files and cached data.</p>
+                <p className="text-sm text-muted-foreground">
+                  Delete all temporary files and cached data.
+                </p>
               </div>
               <Button variant="outline">Clear Cache</Button>
             </div>
@@ -181,7 +224,10 @@ const Settings = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-destructive">Factory Reset</p>
-                <p className="text-sm text-muted-foreground">Reset all settings to their original values. This action cannot be undone.</p>
+                <p className="text-sm text-muted-foreground">
+                  Reset all settings to their original values. This action
+                  cannot be undone.
+                </p>
               </div>
               <Button variant="destructive">Reset All</Button>
             </div>
@@ -192,10 +238,30 @@ const Settings = () => {
   )
 
   const SETTING_TABS: SettingTab[] = [
-    { value: "general", label: "General", icon: Store, component: GeneralSettings },
-    { value: "notifications", label: "Notifications", icon: Bell, component: NotificationsSettings },
-    { value: "security", label: "Security", icon: ShieldCheck, component: SecuritySettings },
-    { value: "advanced", label: "Advanced", icon: Cog, component: AdvancedSettings },
+    {
+      value: "general",
+      label: "General",
+      icon: Store,
+      component: GeneralSettings,
+    },
+    {
+      value: "notifications",
+      label: "Notifications",
+      icon: Bell,
+      component: NotificationsSettings,
+    },
+    {
+      value: "security",
+      label: "Security",
+      icon: ShieldCheck,
+      component: SecuritySettings,
+    },
+    {
+      value: "advanced",
+      label: "Advanced",
+      icon: Cog,
+      component: AdvancedSettings,
+    },
   ]
 
   return (

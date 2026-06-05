@@ -224,8 +224,9 @@ const Authentication = () => {
           </CardContent>
           <CardFooter className="justify-end border-t p-4">
             <Button onClick={handleSave} disabled={isSaving}>
+              {!isSaving && <Save className="h-4 w-4" />}
               {isSaving ? "Saving..." : "Save All Changes"}
-              {!isSaving && <Save className="ml-2 h-4 w-4" />}
+              
             </Button>
           </CardFooter>
         </Card>

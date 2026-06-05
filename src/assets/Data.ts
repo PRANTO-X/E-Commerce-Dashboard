@@ -364,29 +364,97 @@ export const categoryOptions = [
     activityLog: ActivityLog[]
   }
 
+  export interface Customer {
+    id: string
+    name: string
+    email: string
+    phone?: string
+    avatar?: string
+    totalOrders: number
+    totalSpent: number
+    status: "Active" | "Inactive"
+    createdAt: string
+    lastOrderAt?: string
+    address?: string
+    city?: string
+    country?: string
+    zipCode?: string
+  }
+
+  export const customers: Customer[] = [
+    {
+      id: "CUST-001",
+      name: "John Doe",
+      email: "john@example.com",
+      phone: "+8801712345678",
+      avatar: "",
+      totalOrders: 5,
+      totalSpent: 320.5,
+      status: "Active",
+      createdAt: "2025-01-10",
+      lastOrderAt: "2026-05-12",
+      address: "123 Main St",
+      city: "New York",
+      country: "USA",
+      zipCode: "10001"
+    },
+    {
+      id: "CUST-002",
+      name: "Sarah Khan",
+      email: "sarah@example.com",
+      phone: "+8801812345678",
+      avatar: "",
+      totalOrders: 2,
+      totalSpent: 120.0,
+      status: "Active",
+      createdAt: "2025-02-14",
+      lastOrderAt: "2026-04-20",
+      address: "456 Oak Ave",
+      city: "Los Angeles",
+      country: "USA",
+      zipCode: "90001"
+    },
+    {
+      id: "CUST-004",
+      name: "Ayesha Rahman",
+      email: "ayesha@example.com",
+      phone: "+8801612345678",
+      avatar: "",
+      totalOrders: 12,
+      totalSpent: 980.75,
+      status: "Active",
+      createdAt: "2024-12-25",
+      lastOrderAt: "2026-05-15",
+      address: "789 Pine Rd",
+      city: "Chicago",
+      country: "USA",
+      zipCode: "60601"
+    }
+  ]
+
   export const orders: Order[] = [
     {
       id: "ORD-0012",
-      customer: "Helena Hills",
-      customerId: "CUST-8821",
-      email: "helena.hills@example.com",
-      phone: "+1 (555) 000-1111",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      discount: 0,
+      customer: "John Doe",
+      customerId: "CUST-001",
+      email: "john@example.com",
+      phone: "+8801712345678",
+      product: "iPhone 15 Pro",
+      amount: 1199.0,
+      discount: 100,
       shippingFee: 0,
-      tax: 14.95,
+      tax: 54.95,
       paymentMethod: "Visa Card ending in •••• 4242",
       paymentStatus: "Paid",
       fulfillmentStatus: "Shipped",
       date: "Oct 24, 2023",
-      shippingAddress: "123 Tech Lane, Silicon Valley, CA 94025",
-      billingAddress: "123 Tech Lane, Silicon Valley, CA 94025",
+      shippingAddress: "123 Main St, New York, NY 10001",
+      billingAddress: "123 Main St, New York, NY 10001",
       items: [
         {
           id: "P1001",
-          name: "Cloud Core Subscription",
-          price: 299.0,
+          name: "iPhone 15 Pro",
+          price: 1199.0,
           quantity: 1,
           image: "/images/product-1.jpg",
         }
@@ -405,28 +473,28 @@ export const categoryOptions = [
     },
     {
       id: "ORD-0013",
-      customer: "James Wilson",
-      customerId: "CUST-4423",
-      email: "james.wilson@example.com",
-      phone: "+1 (555) 000-2222",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      discount: 50.0,
+      customer: "Sarah Khan",
+      customerId: "CUST-002",
+      email: "sarah@example.com",
+      phone: "+8801812345678",
+      product: "Sony WH-1000XM5",
+      amount: 399.0,
+      discount: 0,
       shippingFee: 15.0,
-      tax: 42.5,
+      tax: 19.95,
       paymentMethod: "MasterCard ending in •••• 5521",
       paymentStatus: "Pending",
       fulfillmentStatus: "Processing",
       date: "Oct 23, 2023",
-      shippingAddress: "456 Developer St, Seattle, WA 98101",
-      billingAddress: "456 Developer St, Seattle, WA 98101",
+      shippingAddress: "456 Oak Ave, Los Angeles, CA 90001",
+      billingAddress: "456 Oak Ave, Los Angeles, CA 90001",
       items: [
         {
-          id: "P1002",
-          name: "API Gateway Pro",
-          price: 850.0,
+          id: "P1005",
+          name: "Sony WH-1000XM5",
+          price: 399.0,
           quantity: 1,
-          image: "/images/product-2.jpg",
+          image: "/images/product-5.jpg",
         }
       ],
       timeline: [
