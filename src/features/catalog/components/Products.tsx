@@ -1,6 +1,6 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { PlusIcon } from "lucide-react"
+import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -9,7 +9,7 @@ import { categoryOptions, products, statusStyles, type ProductItem, type Product
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
-
+import { exportToCSV } from "@/utility/ExportToCsv"
 const Products = () => {
   const navigate = useNavigate()
   const statusOptions = [
@@ -166,6 +166,17 @@ const Products = () => {
       },
     },
   ]
+  const csvData = products.map((product) => ({
+  ID: product.id,
+  Product: product.product,
+  SKU: product.sku,
+  Category: product.category,
+  Price: product.price,
+  Status: product.status,
+  Rating: product.rating,
+  Sales: product.sales,
+  CreatedAt: product.createdAt,
+}))
 
   return (
     <div className="section-container">
@@ -180,13 +191,23 @@ const Products = () => {
           </p>
         </div>
 
-        <Button 
-          variant="primary" 
+        <div className="flex gap-2">
+          <Button 
+          variant="default" 
           size="action"
           onClick={() => navigate("/product_form/new")}
         >
           <PlusIcon className="size-5" /> Add Product
         </Button>
+
+        <Button 
+          variant="primary" 
+          size="action"
+          onClick={() => exportToCSV(csvData,'Products')}
+        >
+          <DownloadIcon className="size-5" /> Export CSV
+        </Button>
+        </div>
       </div>
 
       <FilterToolbar

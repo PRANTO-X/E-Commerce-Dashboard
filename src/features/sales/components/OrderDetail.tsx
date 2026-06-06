@@ -72,7 +72,7 @@ const OrderDetail = () => {
   const total = subtotal - order.discount + order.shippingFee + order.tax
 
   return (
-    <div className="section-container py-6 space-y-6 ">
+    <div className="section-container py-6 space-y-6 print-area">
       <div className="flex items-center gap-4">
           <Button
             variant="back"
@@ -336,15 +336,15 @@ const OrderDetail = () => {
             ))}
           </div>
 
-          <div className="pt-4 border-t">
-            <label className="text-sm font-medium mb-2 block">Add Internal Note</label>
-            <div className="flex flex-col gap-3">
-              <Textarea placeholder="Type your note here..." className="resize-none min-h-[100px]" />
-              <div className="flex justify-end">
-                <Button size="sm">Save Note</Button>
+              <div className="pt-4 border-t no-print">
+                <label className="text-sm font-medium mb-2 block">Add Internal Note</label>
+                <div className="flex flex-col gap-3">
+                  <Textarea placeholder="Type your note here..." className="resize-none min-h-[100px]" />
+                  <div className="flex justify-end">
+                    <Button size="sm">Save Note</Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

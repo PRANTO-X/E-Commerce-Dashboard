@@ -7,6 +7,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
+import  { exportToCSV } from "@/utility/ExportToCsv"
 
 const Transactions = () => {
   const statusOptions = [
@@ -337,7 +338,7 @@ const Transactions = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action">
+        <Button variant="primary" size="action" onClick={()=> exportToCSV(transactions,"Transactions")}>
           <DownloadIcon className="size-5" /> Export CSV
         </Button>
       </div>

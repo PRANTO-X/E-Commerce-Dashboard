@@ -1,6 +1,6 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon,Trash2Icon, EyeIcon } from "lucide-react"
+import { DownloadIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -8,14 +8,13 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { categoryOptions } from "@/assets/Data"
 import { TableActions } from "@/components/common/TableActions"
+import { exportToCSV } from "@/utility/ExportToCsv"
 const Inventory = () => {
   const statusOptions = [
     { label: "In Stock", value: "in_stock" },
     { label: "Low Stock", value: "low_stock" },
     { label: "Out of Stock", value: "out_of_stock" },
   ]
-
- 
 
   const statusStyles = {
     "In Stock": "bg-green-500/10 text-green-400 border border-green-500/20",
@@ -155,7 +154,10 @@ const Inventory = () => {
         }
 
         return (
-          <TableActions viewUrl={`/product_detail/${product.id  }`} onDelete={handleDelete}/>
+          <TableActions
+            viewUrl={`/product_detail/${product.id}`}
+            onDelete={handleDelete}
+          />
         )
       },
     },
@@ -397,7 +399,11 @@ const Inventory = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action">
+        <Button
+          variant="primary"
+          size="action"
+          onClick={() => exportToCSV(inventory, "Inventory")}
+        >
           <DownloadIcon className="size-5" />
           Export CSV
         </Button>

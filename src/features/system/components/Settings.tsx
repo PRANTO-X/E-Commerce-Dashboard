@@ -273,12 +273,16 @@ const Settings = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="bg-muted p-1">
+      <Tabs defaultValue="general" className="space-y-4 ">
+        <TabsList className="w-full md:w-fit bg-muted p-1">
           {SETTING_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="flex-1 gap-2"
+            >
+              <tab.icon className="size-5 md:size-4" />
+              <span className="hidden md:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>

@@ -7,7 +7,8 @@ import { DownloadIcon, EyeIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Button } from "@/components/ui/button"
-
+import { exportToCSV } from "@/utility/ExportToCsv"
+import { orders } from "@/assets/Data"
 
 const Orders = () => {
   const paymentStatus = [
@@ -27,16 +28,15 @@ const Orders = () => {
     { label: "Delivered", value: "delivered" },
     { label: "Returned", value: "returned" },
   ]
-  
 
-  const paymentStatusStyle ={
+  const paymentStatusStyle = {
     Paid: "bg-green-500/20 text-green-40",
     Pending: "bg-yellow-500/10 text-yellow-500",
     Failed: "bg-red-500/10 text-red-500",
     Refunded: "bg-purple-500/10 text-purple-500",
   } as const
 
-  type PaymentStatus = keyof typeof paymentStatusStyle;
+  type PaymentStatus = keyof typeof paymentStatusStyle
 
   const fulfillmentStatusStyles = {
     Shipped: "bg-green-500/10 text-green-500",
@@ -45,7 +45,7 @@ const Orders = () => {
     Delivered: "bg-emerald-500/10 text-emerald-500",
     Unfulfilled: "bg-gray-500/10 text-gray-500",
   } as const
-  
+
   type FulfillmentStatus = keyof typeof fulfillmentStatusStyles
 
   interface Order {
@@ -57,7 +57,7 @@ const Orders = () => {
     fulfillmentStatus: FulfillmentStatus
     date: string
   }
-  
+
   const columns: ColumnDef<Order>[] = [
     {
       accessorKey: "id",
@@ -104,9 +104,7 @@ const Orders = () => {
       accessorKey: "paymentStatus",
       header: "PAYMENT",
       cell: ({ row }) => {
-        const status = row.getValue(
-          "paymentStatus",
-        ) as PaymentStatus
+        const status = row.getValue("paymentStatus") as PaymentStatus
         return (
           <span
             className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}"}`}
@@ -120,9 +118,7 @@ const Orders = () => {
       accessorKey: "fulfillmentStatus",
       header: "FULFILLMENT",
       cell: ({ row }) => {
-        const status = row.getValue(
-          "fulfillmentStatus",
-        ) as FulfillmentStatus
+        const status = row.getValue("fulfillmentStatus") as FulfillmentStatus
         return (
           <span
             className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}"}`}
@@ -635,13 +631,19 @@ const Orders = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action"><DownloadIcon className="size-5" /> Export CSV</Button>
+        <Button
+          variant="primary"
+          size="action"
+          onClick={() => exportToCSV(ordersData, "Orders")}
+        >
+          <DownloadIcon className="size-5" /> Export CSV
+        </Button>
       </div>
 
       {/* Filters */}
       <FilterToolbar
         searchPlaceholder="Search Orders..."
-        datePicker = {<DatePicker/>}
+        datePicker={<DatePicker />}
         filters={[
           {
             component: (

@@ -7,7 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import React from "react"
 import { useNavigate } from "react-router-dom"
 import { TableActions } from "@/components/common/TableActions"
-
+import { exportToCSV } from "@/utility/ExportToCsv"
 const Staffs = () => {
   const navigate = useNavigate()
   
@@ -258,6 +258,15 @@ const Staffs = () => {
       },
     },
   ]
+  const csvData = staffs.map((staff)=>({
+    id: staff.id,
+    name: staff.name,
+    email: staff.email,
+    role: staff.role,
+    phone: staff.phone,
+    status: staff.status,
+    joined_date: staff.joinedAt,
+  }));
 
   return (
     <div className="section-container">
@@ -274,7 +283,7 @@ const Staffs = () => {
         </div>
 
         <div className="flex items-center gap-3">
-            <Button variant="primary" size="action">
+            <Button variant="primary" size="action" onClick={() => exportToCSV(csvData,'Staffs')}>
             <DownloadIcon className="size-5" /> Export CSV
             </Button>
             <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>

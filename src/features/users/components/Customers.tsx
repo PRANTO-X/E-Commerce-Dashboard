@@ -7,6 +7,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import React from "react"
 import { Link } from "react-router-dom"
 import { customers, type Customer } from "@/assets/Data"
+import  { exportToCSV } from "@/utility/ExportToCsv"
+import { custom } from "zod"
 
 const Customers = () => {
   const statusStyles = {
@@ -152,6 +154,19 @@ const Customers = () => {
     },
   ]
 
+  const csvData = customers.map((customer)=>({
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    address: customer.address,
+    orders: customer.totalOrders,
+    spent: customer.totalSpent,
+    status: customer.status,
+    joined: customer.createdAt,
+    last_order: customer.lastOrderAt,
+  }))
+
   return (
     <div className="section-container">
       {/* Header */}
@@ -166,7 +181,7 @@ const Customers = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action">
+        <Button variant="primary" size="action" onClick={()=> exportToCSV(csvData,"Customers")}>
           <DownloadIcon className="size-5" /> Export CSV
         </Button>
       </div>

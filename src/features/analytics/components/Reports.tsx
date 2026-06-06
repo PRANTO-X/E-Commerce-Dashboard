@@ -1,15 +1,15 @@
-import { DownloadIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import React from 'react'
-import { RevenueOrdersChart } from './RevenueOrdersChart'
-import { SalesByCategoryChart } from './SalesByCategoryChart'
-import { OrderStatusChart } from './OrderStatusChart'
-import { AnalyticsSummary } from './AnalyticsSummary'
-import { PaymentMethodChart } from './PaymentMethodChart'
+import { DownloadIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import React from "react"
+import { RevenueOrdersChart } from "./RevenueOrdersChart"
+import { SalesByCategoryChart } from "./SalesByCategoryChart"
+import { OrderStatusChart } from "./OrderStatusChart"
+import { AnalyticsSummary } from "./AnalyticsSummary"
+import { PaymentMethodChart } from "./PaymentMethodChart"
 
 const Reports = () => {
   return (
-    <div className='section-container space-y-8'>
+    <div className="section-container space-y-8 print-area">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
@@ -21,12 +21,10 @@ const Reports = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-            <Button variant="primary" size="action">
-              <DownloadIcon className="size-5" />
-              Download Report
-            </Button>
-        </div>
+        <Button variant="primary" size="action" onClick={()=> window.print()}>
+          <DownloadIcon className="size-5" />
+          Download Report
+        </Button>
       </div>
 
       {/* Summary Metrics */}
@@ -44,12 +42,12 @@ const Reports = () => {
 
       {/* Secondary Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-         <div className="lg:col-span-1">
-            <OrderStatusChart />
-         </div>
-         <div className="md:col-span-1 lg:col-span-2">
-            <PaymentMethodChart />
-         </div>
+        <div className="lg:col-span-1">
+          <OrderStatusChart />
+        </div>
+        <div className="md:col-span-1 lg:col-span-2">
+          <PaymentMethodChart />
+        </div>
       </div>
     </div>
   )
