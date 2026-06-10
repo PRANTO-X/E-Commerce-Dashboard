@@ -155,6 +155,7 @@ const Inventory = () => {
 
         return (
           <TableActions
+            itemName={product.product}
             viewUrl={`/product_detail/${product.id}`}
             onDelete={handleDelete}
           />

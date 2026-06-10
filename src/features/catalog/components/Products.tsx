@@ -158,6 +158,7 @@ const Products = () => {
 
         return (
           <TableActions
+            itemName={product.product}
             onDelete={handleDelete}
             editUrl={`/product_form/${product.id}`}
             viewUrl={`/product_detail/${product.id}`}

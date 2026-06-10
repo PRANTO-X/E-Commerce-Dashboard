@@ -119,7 +119,7 @@ const Categories = () => {
           }
         }
 
-        return <TableActions onDelete={handleDelete} editUrl="/category_form/id"/>
+        return <TableActions itemName={category.name} onDelete={handleDelete} editUrl={`/category_form/${category.id}`}/>
       },
     },
   ]

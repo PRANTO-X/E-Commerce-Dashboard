@@ -253,7 +253,7 @@ const Staffs = () => {
           }
         }
         return (
-          <TableActions onDelete={handleDelete} editUrl={`/staff_form/${staff.id}`}/>
+          <TableActions itemName={staff.name} onDelete={handleDelete} editUrl={`/staff_form/${staff.id}`}/>
         )
       },
     },

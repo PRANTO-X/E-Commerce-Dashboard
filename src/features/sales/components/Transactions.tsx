@@ -7,7 +7,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
-import  { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/utility/ExportToCsv"
 
 const Transactions = () => {
   const statusOptions = [
@@ -135,6 +135,7 @@ const Transactions = () => {
 
         return (
           <TableActions
+            itemName={`Transaction ${transaction.id}`}
             viewUrl={`/transaction_detail/${transaction.id}`}
             onDelete={handleDelete}
           />
@@ -338,7 +339,11 @@ const Transactions = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action" onClick={()=> exportToCSV(transactions,"Transactions")}>
+        <Button
+          variant="primary"
+          size="action"
+          onClick={() => exportToCSV(transactions, "Transactions")}
+        >
           <DownloadIcon className="size-5" /> Export CSV
         </Button>
       </div>
