@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/common/app-sidebar";
 import { Outlet } from "react-router-dom";
 import Navbar from "@/components/common/Navbar";
 import type React from "react";
+import ScrollToTop from "@/components/common/ScrollToTop";
 
 
 
@@ -20,6 +21,7 @@ const DashboardLayout = () => {
 
           {/* scrollable content */}
           <main className="flex-1 overflow-y-auto">
+            <ScrollToTop/>
             <Outlet />
           </main>
         </div>
