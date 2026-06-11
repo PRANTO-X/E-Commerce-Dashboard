@@ -13,6 +13,7 @@ import {
   Calendar,
   Tag,
   Hash,
+  PackageSearch,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
@@ -24,17 +25,33 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
-        <h2 className="text-2xl font-bold text-foreground">Product not found</h2>
-        <Button variant="ghost" onClick={() => navigate("/products")} className="mt-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Products
+      <div className="section-container space-y-0 flex flex-col items-center justify-center h-[80vh] text-center">
+        <div className="mb-6 rounded-full bg-muted p-6">
+          <PackageSearch className="h-12 w-12 text-muted-foreground" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-foreground font-heading">
+          Product Not Found
+        </h2>
+
+        <p className="mt-2 max-w-md text-sm text-muted-foreground font-text">
+          The product you're looking for doesn't exist or may have been removed.
+        </p>
+
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="mt-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Return to Previous Page
         </Button>
       </div>
     )
   }
 
   return (
-    <div className="section-container animate-in fade-in duration-500">
+    <div className="section-container ">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -53,7 +70,11 @@ const ProductDetail = () => {
             </p>
           </div>
         </div>
-        <Button onClick={()=> navigate(`/product_form/${product.id}`)} variant="apply" size="action">
+        <Button
+          onClick={() => navigate(`/product_form/${product.id}`)}
+          variant="apply"
+          size="action"
+        >
           <Edit className="size-5" />
           Edit Product
         </Button>
@@ -117,7 +138,9 @@ const ProductDetail = () => {
                   <p className="text-xs text-muted-foreground uppercase font-semibold flex items-center">
                     <Package className="h-3 w-3 mr-1" /> Stock Available
                   </p>
-                  <p className="text-lg font-bold">{product.stock || 0} Units</p>
+                  <p className="text-lg font-bold">
+                    {product.stock || 0} Units
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold flex items-center">
@@ -212,40 +235,55 @@ const ProductDetail = () => {
 
           {/* Optional: Add more sections like Pricing History, Recent Activity, or Related Products */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                   <CardTitle className="text-sm font-medium">Monthly Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                   <div className="flex items-end gap-2 h-20 pt-4">
-                      {[40, 60, 45, 70, 55, 80, 65].map((h, i) => (
-                         <div 
-                            key={i} 
-                            className="flex-1 bg-primary hover:bg-primary rounded-t-sm transition-colors cursor-pointer" 
-                            style={{ height: `${h}%` }}
-                         />
-                      ))}
-                   </div>
-                   <p className="text-xs text-muted-foreground mt-4 text-center">Sales trend over the last 7 months</p>
-                </CardContent>
-             </Card>
+            <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Monthly Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end gap-2 h-20 pt-4">
+                  {[40, 60, 45, 70, 55, 80, 65].map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 bg-primary hover:bg-primary rounded-t-sm transition-colors cursor-pointer"
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                  Sales trend over the last 7 months
+                </p>
+              </CardContent>
+            </Card>
 
-             <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                   <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 pt-2">
-                   <Button variant="outline" className="w-full justify-start text-xs h-8">
-                      Duplicate Product
-                   </Button>
-                   <Button variant="outline" className="w-full justify-start text-xs h-8">
-                      View on Storefront
-                   </Button>
-                   <Button variant="outline" className="w-full justify-start text-xs h-8 text-red-500 hover:text-red-500">
-                      Archive Product
-                   </Button>
-                </CardContent>
-             </Card>
+            <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs h-8"
+                >
+                  Duplicate Product
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs h-8"
+                >
+                  View on Storefront
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs h-8 text-red-500 hover:text-red-500"
+                >
+                  Archive Product
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
