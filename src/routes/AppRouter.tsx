@@ -1,9 +1,10 @@
 import { createBrowserRouter } from "react-router-dom"
 import { lazy, Suspense, type JSX } from "react"
 import DashboardLayout from "@/layouts/DashboardLayout"
+import Loader from "@/components/common/Loader"
 
 const Load = (Component: React.LazyExoticComponent<() => JSX.Element>) => (
-  <Suspense fallback={<div className="p-6">Loading...</div>}>
+  <Suspense fallback={<Loader />}>
     <Component />
   </Suspense>
 )
