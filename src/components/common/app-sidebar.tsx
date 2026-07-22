@@ -74,7 +74,7 @@ const sidebarItems = [
 
 export function AppSidebar() {
   const location = useLocation()
-  const { state, isMobile, setOpenMobile } = useSidebar()
+  const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
 
   const isCollapsed = state === "collapsed"
 
@@ -107,7 +107,11 @@ export function AppSidebar() {
   }, [isCollapsed])
 
   const toggleSection = (label: string) => {
-    if (isCollapsed) return
+    if (isCollapsed) {
+      setOpen(true)
+      setOpenSections([label])
+      return
+    }
 
     setOpenSections((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
