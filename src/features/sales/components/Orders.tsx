@@ -643,6 +643,7 @@ const Orders = () => {
       {/* Filters */}
       <FilterToolbar
         searchPlaceholder="Search Orders..."
+        stacked
         datePicker={<DatePicker />}
         filters={[
           {

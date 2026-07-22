@@ -213,6 +213,7 @@ const Products = () => {
 
       <FilterToolbar
         searchPlaceholder="search product..."
+        stacked
         filters={[
           {
             component: (
