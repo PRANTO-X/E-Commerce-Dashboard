@@ -38,7 +38,7 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
         placeholder="Min"
         value={range.min}
         onChange={(e) => handleChange("min", e.target.value)}
-        className="w-24"
+        className="w-24 h-9"
       />
 
       <span className="text-muted-foreground">-</span>
@@ -49,7 +49,7 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
         placeholder="Max"
         value={range.max}
         onChange={(e) => handleChange("max", e.target.value)}
-        className="w-24"
+        className="w-24 h-9"
       />
     </div>
   )

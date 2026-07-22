@@ -25,7 +25,7 @@ export function DatePicker() {
           <Button
             variant="outline"
             id="date-picker-range"
-            className="justify-start px-2.5 font-normal bg-accent"
+            className="justify-start px-2.5 font-normal bg-accent h-9"
           >
             <CalendarIcon />
             {date?.from ? (

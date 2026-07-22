@@ -1,6 +1,6 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { Check, RotateCcw } from "lucide-react"
+import { Check, RotateCcw, Search } from "lucide-react"
 
 interface FilterItem {
   component: React.ReactNode
@@ -26,11 +26,12 @@ const FilterToolbar = ({
       {/* Desktop */}
       <div className="hidden xl:flex items-center gap-3">
         {/* Search */}
-        <div className="flex-1">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={searchPlaceholder}
-            className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="h-9 w-full rounded-xl border border-field-border bg-field-bg pl-10 pr-4 text-sm text-field-text placeholder:text-field-placeholder outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -65,11 +66,14 @@ const FilterToolbar = ({
 
       {/* Mobile + Tablet */}
       <div className="grid grid-cols-1 gap-3 xl:hidden">
-        <input
-          type="text"
-          placeholder={searchPlaceholder}
-          className="h-11 w-full rounded-xl border border-border bg-transparent px-4 text-sm outline-none transition-all focus:border-primary"
-        />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            className="h-9 w-full rounded-xl border border-field-border bg-field-bg pl-10 pr-4 text-sm text-field-text placeholder:text-field-placeholder outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
 
         {datePicker}
 
