@@ -41,11 +41,11 @@ const FilterToolbar = ({
       {/* Desktop */}
       <div className="hidden xl:block">
         {stacked ? (
-          <div className="flex flex-col gap-3">
-            {/* Search full width on top */}
-            {searchInput}
+          <div className="flex flex-col gap-3 min-[1550px]:flex-row min-[1550px]:items-center">
+            {/* Search full width on top, inline at 1550px+ */}
+            <div className="w-full min-[1550px]:flex-1">{searchInput}</div>
 
-            {/* Filters + buttons row below */}
+            {/* Filters + buttons row below, flex-1 at 1550px+ */}
             <div className="flex items-center gap-3">
               {/* Date Picker */}
               {datePicker && <>{datePicker}</>}
