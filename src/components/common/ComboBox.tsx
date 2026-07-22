@@ -23,8 +23,9 @@ export function ExampleComboboxCustomItems({
     <Combobox
       items={frameworks}
       itemToStringValue={(item) => item.label}
+      className="w-full"
     >
-      <ComboboxInput placeholder={placeholder} showClear />
+      <ComboboxInput placeholder={placeholder} showClear className="w-full" />
       <ComboboxContent>
         <ComboboxEmpty>No items found.</ComboboxEmpty>
         <ComboboxList>
