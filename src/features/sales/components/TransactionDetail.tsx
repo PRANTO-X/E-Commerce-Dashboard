@@ -1,10 +1,7 @@
-import React from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import {
-  ChevronLeft,
   Download,
   Printer,
-  MoreVertical,
   User,
   CreditCard,
   MapPin,

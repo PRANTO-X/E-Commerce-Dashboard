@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { statusStyles, type ProductStatus } from "@/assets/Data"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"

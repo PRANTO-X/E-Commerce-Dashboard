@@ -1,6 +1,5 @@
 import { DownloadIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import React from "react"
 import { RevenueOrdersChart } from "./RevenueOrdersChart"
 import { SalesByCategoryChart } from "./SalesByCategoryChart"
 import { OrderStatusChart } from "./OrderStatusChart"

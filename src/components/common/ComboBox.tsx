@@ -1,4 +1,3 @@
-import * as React from "react"
 import {
   Combobox,
   ComboboxContent,
@@ -22,7 +21,7 @@ export function ExampleComboboxCustomItems({
   return (
     <Combobox
       items={frameworks}
-      itemToStringValue={(item) => item.label}
+      itemToStringValue={(item: Framework) => item.label}
     >
       <ComboboxInput placeholder={placeholder} showClear />
       <ComboboxContent>

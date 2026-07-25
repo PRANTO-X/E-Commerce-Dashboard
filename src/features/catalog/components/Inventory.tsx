@@ -1,6 +1,6 @@
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon, Trash2Icon, EyeIcon } from "lucide-react"
+import { DownloadIcon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"

@@ -34,8 +34,6 @@ const FilterToolbar = ({
     </div>
   )
 
-  const hasFilters = datePicker || filters.length > 0
-
   return (
     <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-sm">
       {/* Desktop */}

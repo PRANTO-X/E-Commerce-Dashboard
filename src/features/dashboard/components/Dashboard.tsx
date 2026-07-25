@@ -1,4 +1,3 @@
-import React from "react"
 import { ShoppingCart, Users, Package, DollarSign } from "lucide-react"
 import MetricCard from "@/features/dashboard/components/MetricCard"
 import { ChartAreaDefault } from "./AreaChart"

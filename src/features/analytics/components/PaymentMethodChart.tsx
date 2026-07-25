@@ -23,7 +23,7 @@ const chartData = [
   { method: "Other", percentage: 5, fill: "var(--color-other)" },
 ]
 
-const chartConfig = {
+const chartConfig: Record<string, { label: string; color?: string }> = {
   percentage: {
     label: "Usage",
   },
@@ -93,7 +93,7 @@ export function PaymentMethodChart() {
                 position="top"
                 offset={12}
                 className="fill-foreground font-mono text-xs"
-                formatter={(value: number) => `${value}%`}
+                formatter={(value) => `${value}%`}
               />
             </Bar>
           </BarChart>

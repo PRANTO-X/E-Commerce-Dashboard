@@ -1,6 +1,3 @@
-
-
-import * as React from "react"
 import { Pie, PieChart } from "recharts"
 
 import {
@@ -73,7 +70,7 @@ export function OrderStatusChart() {
               strokeWidth={2}
               stroke="var(--card)"
               labelLine={false}
-              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+              label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
             />
             <ChartLegend
               content={<ChartLegendContent nameKey="status" />}

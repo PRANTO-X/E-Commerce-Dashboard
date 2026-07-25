@@ -1,5 +1,13 @@
-import { TrendingUp,TrendingDown } from "lucide-react"
-function MetricCard({ title, value, change, icon: Icon }: typeof metrics[0]) {
+import { TrendingUp, TrendingDown, type LucideIcon } from "lucide-react"
+
+interface MetricCardProps {
+  title: string
+  value: string
+  change: number
+  icon: LucideIcon
+}
+
+function MetricCard({ title, value, change, icon: Icon }: MetricCardProps) {
   const isPositive = change >= 0
 
   return (

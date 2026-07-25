@@ -1,4 +1,3 @@
-import React from "react"
 import { DollarSign, ShoppingBag, Users, Activity } from "lucide-react"
 import MetricCard from "@/features/dashboard/components/MetricCard"
 

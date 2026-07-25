@@ -2,7 +2,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { Outlet } from "react-router-dom";
 import Navbar from "@/components/common/Navbar";
-import type React from "react";
 import ScrollToTop from "@/components/common/ScrollToTop";
 
 

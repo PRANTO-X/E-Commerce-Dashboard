@@ -1,5 +1,5 @@
 import { DownloadIcon } from "lucide-react"
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TableActions } from "@/components/common/TableActions"
 import type { ColumnDef } from "@tanstack/react-table"

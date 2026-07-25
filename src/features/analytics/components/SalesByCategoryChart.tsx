@@ -1,6 +1,3 @@
-
-
-import * as React from "react"
 import { Pie, PieChart } from "recharts"
 
 import {
@@ -76,7 +73,7 @@ export function SalesByCategoryChart() {
               innerRadius={60}
               strokeWidth={5}
               labelLine={false}
-              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+              label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
             />
             <ChartLegend
               content={<ChartLegendContent nameKey="category" />}
