@@ -1,6 +1,7 @@
-import React from "react"
+import React, { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { customers, orders, type Customer } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -39,8 +40,27 @@ import { Textarea } from "@/components/ui/textarea"
 const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { getCustomerById, updateCustomer, orders } = useAppData()
+  const [note, setNote] = useState("")
 
-  const customer = customers.find((c) => c.id === id)
+  const customer = getCustomerById(id ?? "")
+
+  const handleResetPassword = () => {
+    if (!customer) return
+    toast.success(`Password reset email sent to ${customer.email}`)
+  }
+
+  const handleSendEmail = () => {
+    if (!customer) return
+    toast.success(`Email sent to ${customer.email}`)
+  }
+
+  const handleSaveNote = () => {
+    if (!customer || !note.trim()) return
+    updateCustomer(customer.id, { notes: [note.trim(), ...(customer.notes ?? [])] })
+    setNote("")
+    toast.success("Note added")
+  }
 
   if (!customer) {
     return (
@@ -94,11 +114,11 @@ const CustomerDetail = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="action">
+          <Button variant="outline" size="action" onClick={handleResetPassword}>
             <Lock className="size-4" />
             Reset Password
           </Button>
-          <Button variant="default" size="action">
+          <Button variant="default" size="action" onClick={handleSendEmail}>
             <Mail className="size-4" />
             Send Email
           </Button>
@@ -400,16 +420,27 @@ const CustomerDetail = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Textarea 
-            placeholder="Add a private note about this customer..." 
+          <Textarea
+            placeholder="Add a private note about this customer..."
             className="min-h-[120px] bg-muted/20 border-border/50 resize-none"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
           />
           <div className="flex justify-end">
-            <Button variant="default" size="lg">
+            <Button variant="default" size="lg" onClick={handleSaveNote} disabled={!note.trim()}>
               <Save/>
               Save Note
             </Button>
           </div>
+          {customer.notes && customer.notes.length > 0 && (
+            <div className="space-y-2 pt-2">
+              {customer.notes.map((n, idx) => (
+                <div key={idx} className="text-sm bg-muted/30 p-3 rounded-lg">
+                  {n}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

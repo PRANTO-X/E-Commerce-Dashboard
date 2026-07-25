@@ -8,9 +8,13 @@ import React from "react"
 import { useNavigate } from "react-router-dom"
 import { TableActions } from "@/components/common/TableActions"
 import { exportToCSV } from "@/utility/ExportToCsv"
+import { type Staff } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 const Staffs = () => {
   const navigate = useNavigate()
-  
+  const { staffs, deleteStaff } = useAppData()
+
   const statusStyles = {
     Active: "bg-green-500/10 text-green-400 border border-green-500/20",
     Inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
@@ -31,120 +35,6 @@ const Staffs = () => {
     { label: "Sales", value: "sales" },
     { label: "Support", value: "support" },
     { label: "Editor", value: "editor" },
-  ]
-
-  interface Staff {
-    id: string
-    name: string
-    email: string
-    phone?: string
-    avatar?: string
-    role: string
-    status: StaffStatus
-    joinedAt: string
-  }
-
-  const staffs: Staff[] = [
-    {
-      id: "STAFF-001",
-      name: "Alice Johnson",
-      email: "alice@example.com",
-      phone: "+8801712345671",
-      avatar: "",
-      role: "Admin",
-      status: "Active",
-      joinedAt: "2024-01-15",
-    },
-    {
-      id: "STAFF-002",
-      name: "Bob Smith",
-      email: "bob@example.com",
-      phone: "+8801812345672",
-      avatar: "",
-      role: "Manager",
-      status: "Active",
-      joinedAt: "2024-02-20",
-    },
-    {
-      id: "STAFF-003",
-      name: "Charlie Davis",
-      email: "charlie@example.com",
-      phone: "+8801912345673",
-      avatar: "",
-      role: "Sales",
-      status: "Inactive",
-      joinedAt: "2024-03-05",
-    },
-    {
-      id: "STAFF-004",
-      name: "Diana Prince",
-      email: "diana@example.com",
-      phone: "+8801612345674",
-      avatar: "",
-      role: "Support",
-      status: "Active",
-      joinedAt: "2024-04-10",
-    },
-    {
-      id: "STAFF-005",
-      name: "Edward Norton",
-      email: "edward@example.com",
-      phone: "+8801512345675",
-      avatar: "",
-      role: "Editor",
-      status: "On Leave",
-      joinedAt: "2024-05-12",
-    },
-    {
-      id: "STAFF-006",
-      name: "Fiona Gallagher",
-      email: "fiona@example.com",
-      phone: "+8801711122231",
-      avatar: "",
-      role: "Sales",
-      status: "Active",
-      joinedAt: "2024-06-18",
-    },
-    {
-      id: "STAFF-007",
-      name: "George Miller",
-      email: "george@example.com",
-      phone: "+8801811122232",
-      avatar: "",
-      role: "Manager",
-      status: "Active",
-      joinedAt: "2024-07-22",
-    },
-    {
-      id: "STAFF-008",
-      name: "Hannah Abbott",
-      email: "hannah@example.com",
-      phone: "+8801911122233",
-      avatar: "",
-      role: "Support",
-      status: "Inactive",
-      joinedAt: "2024-08-05",
-    },
-    {
-      id: "STAFF-009",
-      name: "Ian Wright",
-      email: "ian@example.com",
-      phone: "+8801611122234",
-      avatar: "",
-      role: "Editor",
-      status: "Active",
-      joinedAt: "2024-09-15",
-    },
-    {
-      id: "STAFF-010",
-      name: "Julia Roberts",
-      email: "julia@example.com",
-      phone: "+8801511122235",
-      avatar: "",
-      role: "Sales",
-      status: "Active",
-      joinedAt: "2024-10-01",
-    },
   ]
 
   const columns: ColumnDef<Staff>[] = [
@@ -243,14 +133,9 @@ const Staffs = () => {
       header: "ACTION",
       cell: ({ row }) => {
         const staff = row.original
-         const handleDelete = () => {
-          const confirmDelete = window.confirm(
-            `Are you sure you want to delete ${staff.name}?`,
-          )
-
-          if (confirmDelete) {
-            console.log("Deleting:", staff.name)
-          }
+        const handleDelete = () => {
+          deleteStaff(staff.id)
+          toast.success(`${staff.name} deleted`)
         }
         return (
           <TableActions itemName={staff.name} onDelete={handleDelete} editUrl={`/staff_form/${staff.id}`}/>

@@ -23,6 +23,8 @@ import {
   BarChart3,
   Settings,
   ChevronDown,
+  Megaphone,
+  Store,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -54,6 +56,23 @@ const sidebarItems = [
     items: [
       { title: "Customers", url: "/customers" },
       { title: "Staffs", url: "/staffs" },
+    ],
+  },
+  {
+    label: "Marketing",
+    icon: Megaphone,
+    items: [
+      { title: "Coupons", url: "/coupons" },
+      { title: "Campaigns", url: "/campaigns" },
+      { title: "Reviews", url: "/reviews" },
+    ],
+  },
+  {
+    label: "Marketplace",
+    icon: Store,
+    items: [
+      { title: "Vendors", url: "/vendors" },
+      { title: "Commission Rules", url: "/commission-rules" },
     ],
   },
   {

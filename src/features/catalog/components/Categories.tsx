@@ -5,10 +5,16 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { categoryOptions } from "@/assets/Data"
+import { categoryOptions, type Category } from "@/assets/Data"
 import { DataTable } from "@/components/common/data-table"
+import { useNavigate } from "react-router-dom"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 
 const Categories = () => {
+  const navigate = useNavigate()
+  const { categories, deleteCategory } = useAppData()
+
   const statusOptions = [
     { label: "Active", value: "active" },
     { label: "Draft", value: "draft" },
@@ -21,15 +27,7 @@ const Categories = () => {
   } as const
 
   type categoryStatus = keyof typeof statusStyles
-  interface CategoryItem {
-    id: string
-    name: string
-    slug: string
-    parent?: string | null
-    products: number
-    status: categoryStatus
-    createdAt: string
-  }
+  type CategoryItem = Category
   const columns: ColumnDef<CategoryItem>[] = [
     {
       accessorKey: "id",
@@ -114,9 +112,8 @@ const Categories = () => {
         const category = row.original
 
         const handleDelete = () => {
-          if (confirm(`Delete ${category.name}?`)) {
-            console.log("Deleting:", category.id)
-          }
+          deleteCategory(category.id)
+          toast.success(`${category.name} deleted`)
         }
 
         return <TableActions itemName={category.name} onDelete={handleDelete} editUrl={`/category_form/${category.id}`}/>
@@ -124,188 +121,6 @@ const Categories = () => {
     },
   ]
 
-  const categories: CategoryItem[] = [
-    {
-      id: "C1001",
-      name: "Electronics",
-      slug: "electronics",
-      parent: null,
-      products: 120,
-      status: "active",
-      createdAt: "2025-01-10",
-    },
-    {
-      id: "C1002",
-      name: "Smartphones",
-      slug: "smartphones",
-      parent: "Electronics",
-      products: 45,
-      status: "active",
-      createdAt: "2025-01-12",
-    },
-    {
-      id: "C1003",
-      name: "Laptops",
-      slug: "laptops",
-      parent: "Electronics",
-      products: 32,
-      status: "active",
-      createdAt: "2025-01-15",
-    },
-    {
-      id: "C1004",
-      name: "Audio Devices",
-      slug: "audio-devices",
-      parent: "Electronics",
-      products: 28,
-      status: "active",
-      createdAt: "2025-02-01",
-    },
-    {
-      id: "C1005",
-      name: "Wearables",
-      slug: "wearables",
-      parent: "Electronics",
-      products: 18,
-      status: "active",
-      createdAt: "2025-02-05",
-    },
-    {
-      id: "C1006",
-      name: "Gaming",
-      slug: "gaming",
-      parent: null,
-      products: 60,
-      status: "active",
-      createdAt: "2025-02-10",
-    },
-    {
-      id: "C1007",
-      name: "Consoles",
-      slug: "consoles",
-      parent: "Gaming",
-      products: 12,
-      status: "active",
-      createdAt: "2025-02-12",
-    },
-    {
-      id: "C1008",
-      name: "Accessories",
-      slug: "gaming-accessories",
-      parent: "Gaming",
-      products: 25,
-      status: "active",
-      createdAt: "2025-02-15",
-    },
-    {
-      id: "C1009",
-      name: "Clothing",
-      slug: "clothing",
-      parent: null,
-      products: 90,
-      status: "active",
-      createdAt: "2025-01-20",
-    },
-    {
-      id: "C1010",
-      name: "Men Fashion",
-      slug: "men-fashion",
-      parent: "Clothing",
-      products: 40,
-      status: "active",
-      createdAt: "2025-01-22",
-    },
-    {
-      id: "C1011",
-      name: "Women Fashion",
-      slug: "women-fashion",
-      parent: "Clothing",
-      products: 50,
-      status: "active",
-      createdAt: "2025-01-25",
-    },
-    {
-      id: "C1012",
-      name: "Shoes",
-      slug: "shoes",
-      parent: null,
-      products: 70,
-      status: "active",
-      createdAt: "2025-01-28",
-    },
-    {
-      id: "C1013",
-      name: "Sneakers",
-      slug: "sneakers",
-      parent: "Shoes",
-      products: 30,
-      status: "active",
-      createdAt: "2025-02-01",
-    },
-    {
-      id: "C1014",
-      name: "Formal Shoes",
-      slug: "formal-shoes",
-      parent: "Shoes",
-      products: 20,
-      status: "inactive",
-      createdAt: "2025-02-03",
-    },
-    {
-      id: "C1015",
-      name: "Home Appliances",
-      slug: "home-appliances",
-      parent: null,
-      products: 55,
-      status: "active",
-      createdAt: "2025-02-10",
-    },
-    {
-      id: "C1016",
-      name: "Kitchen Appliances",
-      slug: "kitchen-appliances",
-      parent: "Home Appliances",
-      products: 22,
-      status: "active",
-      createdAt: "2025-02-12",
-    },
-    {
-      id: "C1017",
-      name: "Furniture",
-      slug: "furniture",
-      parent: null,
-      products: 40,
-      status: "active",
-      createdAt: "2025-02-18",
-    },
-    {
-      id: "C1018",
-      name: "Office Furniture",
-      slug: "office-furniture",
-      parent: "Furniture",
-      products: 15,
-      status: "draft",
-      createdAt: "2025-02-20",
-    },
-    {
-      id: "C1019",
-      name: "Beauty & Health",
-      slug: "beauty-health",
-      parent: null,
-      products: 65,
-      status: "active",
-      createdAt: "2025-02-25",
-    },
-    {
-      id: "C1020",
-      name: "Skincare",
-      slug: "skincare",
-      parent: "Beauty & Health",
-      products: 28,
-      status: "active",
-      createdAt: "2025-02-28",
-    },
-  ]
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -320,7 +135,7 @@ const Categories = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action">
+        <Button variant="primary" size="action" onClick={() => navigate("/category_form/new")}>
           <PlusIcon className="size-5" />
           Add Category
         </Button>

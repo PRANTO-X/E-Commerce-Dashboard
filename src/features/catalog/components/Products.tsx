@@ -5,13 +5,16 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { categoryOptions, products, statusStyles, type ProductItem, type ProductStatus } from "@/assets/Data"
+import { categoryOptions, statusStyles, type ProductItem, type ProductStatus } from "@/assets/Data"
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 const Products = () => {
   const navigate = useNavigate()
+  const { products, deleteProduct } = useAppData()
   const statusOptions = [
     { label: "Active", value: "active" },
     { label: "Draft", value: "draft" },
@@ -151,9 +154,8 @@ const Products = () => {
         const product = row.original
 
         const handleDelete = () => {
-          if (confirm(`Delete ${product.product}?`)) {
-            console.log("Deleting:", product.id)
-          }
+          deleteProduct(product.id)
+          toast.success(`${product.product} deleted`)
         }
 
         return (

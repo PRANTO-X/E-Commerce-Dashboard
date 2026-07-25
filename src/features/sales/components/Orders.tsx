@@ -8,29 +8,29 @@ import { Link } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Button } from "@/components/ui/button"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { orders } from "@/assets/Data"
+import { type Order } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
 
 const Orders = () => {
+  const { orders } = useAppData()
+
   const paymentStatus = [
     { label: "Pending", value: "pending" },
     { label: "Paid", value: "paid" },
     { label: "Failed", value: "failed" },
     { label: "Refunded", value: "refunded" },
-    { label: "Partially Refunded", value: "partially_refunded" },
   ]
 
   const fulfillmentStatus = [
     { label: "Unfulfilled", value: "unfulfilled" },
     { label: "Processing", value: "processing" },
-    { label: "Packed", value: "packed" },
     { label: "Shipped", value: "shipped" },
-    { label: "In Transit", value: "in_transit" },
     { label: "Delivered", value: "delivered" },
-    { label: "Returned", value: "returned" },
+    { label: "Cancelled", value: "cancelled" },
   ]
 
   const paymentStatusStyle = {
-    Paid: "bg-green-500/20 text-green-40",
+    Paid: "bg-green-500/10 text-green-500",
     Pending: "bg-yellow-500/10 text-yellow-500",
     Failed: "bg-red-500/10 text-red-500",
     Refunded: "bg-purple-500/10 text-purple-500",
@@ -47,16 +47,6 @@ const Orders = () => {
   } as const
 
   type FulfillmentStatus = keyof typeof fulfillmentStatusStyles
-
-  interface Order {
-    id: string
-    customer: string
-    product: string
-    amount: number
-    paymentStatus: PaymentStatus
-    fulfillmentStatus: FulfillmentStatus
-    date: string
-  }
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -107,7 +97,7 @@ const Orders = () => {
         const status = row.getValue("paymentStatus") as PaymentStatus
         return (
           <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}"}`}
+            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}`}
           >
             {status}
           </span>
@@ -121,7 +111,7 @@ const Orders = () => {
         const status = row.getValue("fulfillmentStatus") as FulfillmentStatus
         return (
           <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}"}`}
+            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}`}
           >
             {status}
           </span>
@@ -155,467 +145,15 @@ const Orders = () => {
     },
   ]
 
-  const ordersData: Order[] = [
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-    {
-      id: "ORD-0012",
-      customer: "Helena Hills",
-      product: "Cloud Core Subscription",
-      amount: 299.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "ORD-0013",
-      customer: "James Wilson",
-      product: "API Gateway Pro",
-      amount: 850.0,
-      paymentStatus: "Pending",
-      fulfillmentStatus: "Processing",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "ORD-0014",
-      customer: "Aria Zhang",
-      product: "Enterprise Support Plan",
-      amount: 1200.0,
-      paymentStatus: "Failed",
-      fulfillmentStatus: "Cancelled",
-      date: "Oct 22, 2023",
-    },
-    {
-      id: "ORD-0015",
-      customer: "Marcus Reed",
-      product: "Network Monitoring Suite",
-      amount: 45.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 21, 2023",
-    },
-    {
-      id: "ORD-0016",
-      customer: "Sonia K.",
-      product: "Custom Domain Module",
-      amount: 12.0,
-      paymentStatus: "Paid",
-      fulfillmentStatus: "Shipped",
-      date: "Oct 20, 2023",
-    },
-  ]
+  const csvData = orders.map((order) => ({
+    id: order.id,
+    customer: order.customer,
+    product: order.product,
+    amount: order.amount,
+    payment_status: order.paymentStatus,
+    fulfillment_status: order.fulfillmentStatus,
+    date: order.date,
+  }))
 
   return (
     <div className="section-container">
@@ -634,7 +172,7 @@ const Orders = () => {
         <Button
           variant="primary"
           size="action"
-          onClick={() => exportToCSV(ordersData, "Orders")}
+          onClick={() => exportToCSV(csvData, "Orders")}
         >
           <DownloadIcon className="size-5" /> Export CSV
         </Button>
@@ -663,14 +201,12 @@ const Orders = () => {
             ),
           },
         ]}
-        onApply={() => console.log("apply")}
-        onReset={() => console.log("reset")}
       />
 
       <div>
         <DataTable
           columns={columns}
-          data={ordersData}
+          data={orders}
           columnWidths={[
             "120px",
             "150px",

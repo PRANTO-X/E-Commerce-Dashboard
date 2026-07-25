@@ -6,11 +6,12 @@ import { DownloadIcon, EyeIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import React from "react"
 import { Link } from "react-router-dom"
-import { customers, type Customer } from "@/assets/Data"
+import { type Customer } from "@/assets/Data"
 import  { exportToCSV } from "@/utility/ExportToCsv"
-import { custom } from "zod"
+import { useAppData } from "@/store/AppDataProvider"
 
 const Customers = () => {
+  const { customers } = useAppData()
   const statusStyles = {
     Active: "bg-green-500/10 text-green-400 border border-green-500/20",
     Inactive: "bg-red-500/10 text-red-400 border border-red-500/20",

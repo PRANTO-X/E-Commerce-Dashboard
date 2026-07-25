@@ -27,50 +27,35 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-
-const rolesData = [
-  {
-    id: "1",
-    name: "Administrator",
-    description: "Full access to all system features and settings.",
-    usersCount: 2,
-    type: "System",
-    permissions: ["Full Access"],
-    level: "High",
-  },
-  {
-    id: "2",
-    name: "Manager",
-    description: "Can manage products, orders, and view reports.",
-    usersCount: 5,
-    type: "Custom",
-    permissions: ["Products", "Orders", "Reports", "Customers"],
-    level: "Medium",
-  },
-  {
-    id: "3",
-    name: "Support",
-    description: "Can view orders and handle customer inquiries.",
-    usersCount: 8,
-    type: "Custom",
-    permissions: ["Orders (View)", "Customers (View)", "Chat"],
-    level: "Low",
-  },
-  {
-    id: "4",
-    name: "Editor",
-    description: "Can manage catalog content and blog posts.",
-    usersCount: 3,
-    type: "Custom",
-    permissions: ["Products", "Categories", "Blog"],
-    level: "Medium",
-  },
-]
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
+import { generateId } from "@/lib/utils"
 
 const Roles = () => {
   const [searchTerm, setSearchTerm] = useState("")
+  const { roles, addRole, deleteRole } = useAppData()
 
-  const filteredRoles = rolesData.filter(
+  const handleCreateRole = () => {
+    const name = window.prompt("New role name?")
+    if (!name) return
+    addRole({
+      id: generateId("ROLE"),
+      name,
+      description: "Custom role — configure permissions from the permission matrix.",
+      usersCount: 0,
+      type: "Custom",
+      permissions: [],
+      level: "Low",
+    })
+    toast.success(`Role "${name}" created`)
+  }
+
+  const handleDeleteRole = (id: string, name: string) => {
+    deleteRole(id)
+    toast.success(`Role "${name}" deleted`)
+  }
+
+  const filteredRoles = roles.filter(
     (role) =>
       role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       role.description.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -98,6 +83,7 @@ const Roles = () => {
         <Button
           variant="primary"
           size="action"
+          onClick={handleCreateRole}
         >
           <PlusIcon className="size-5" />
           Create Role
@@ -184,7 +170,12 @@ const Roles = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-500">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-500 hover:text-blue-500"
+                        onClick={() => toast.info("Role editing form isn't built yet — coming in a future update.")}
+                      >
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
@@ -192,6 +183,7 @@ const Roles = () => {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         disabled={role.type === "System"}
+                        onClick={() => handleDeleteRole(role.id, role.name)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

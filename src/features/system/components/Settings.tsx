@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { Save, Bell, Store, ShieldCheck, Cog } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 
 import { SettingToggle } from "@/components/common/SettingToggle"
+import { useAppData } from "@/store/AppDataProvider"
+import { defaultStoreSettings } from "@/assets/Data"
 
 interface SettingTab {
   value: string
@@ -25,48 +29,30 @@ interface SettingTab {
 }
 
 const Settings = () => {
+  const { settings, updateSettings } = useAppData()
   const [isSaving, setIsSaving] = useState(false)
+  const [form, setForm] = useState(settings)
 
   const handleSave = () => {
     setIsSaving(true)
     setTimeout(() => {
+      updateSettings(form)
       setIsSaving(false)
-      alert("Settings saved successfully!")
-    }, 1000)
+      toast.success("Settings saved successfully!")
+    }, 400)
   }
 
-  const generalFields = [
-    {
-      id: "store-name",
-      label: "Store Name",
-      defaultValue: "My Awesome Store",
-      type: "input",
-    },
-    {
-      id: "store-email",
-      label: "Support Email",
-      defaultValue: "support@mystore.com",
-      type: "input",
-    },
-    {
-      id: "store-address",
-      label: "Store Address",
-      defaultValue: "123 Commerce St, Tech City, 54321, US",
-      type: "textarea",
-      fullWidth: true,
-    },
-    {
-      id: "store-phone",
-      label: "Phone Number",
-      defaultValue: "+1 (555) 000-0000",
-      type: "input",
-    },
-    {
-      id: "store-vat",
-      label: "VAT/Tax ID",
-      defaultValue: "US123456789",
-      type: "input",
-    },
+  const generalFields: Array<{
+    id: keyof Omit<typeof settings, "notifications" | "maintenanceMode">
+    label: string
+    type: "input" | "textarea"
+    fullWidth?: boolean
+  }> = [
+    { id: "storeName", label: "Store Name", type: "input" },
+    { id: "supportEmail", label: "Support Email", type: "input" },
+    { id: "storeAddress", label: "Store Address", type: "textarea", fullWidth: true },
+    { id: "storePhone", label: "Phone Number", type: "input" },
+    { id: "vatId", label: "VAT/Tax ID", type: "input" },
   ]
 
   const GeneralSettings = (
@@ -89,10 +75,15 @@ const Settings = () => {
                 <Textarea
                   id={field.id}
                   placeholder={field.label}
-                  defaultValue={field.defaultValue}
+                  value={form[field.id]}
+                  onChange={(e) => setForm((prev) => ({ ...prev, [field.id]: e.target.value }))}
                 />
               ) : (
-                <Input id={field.id} defaultValue={field.defaultValue} />
+                <Input
+                  id={field.id}
+                  value={form[field.id]}
+                  onChange={(e) => setForm((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                />
               )}
             </div>
           ))}
@@ -107,6 +98,12 @@ const Settings = () => {
     </Card>
   )
 
+  const notificationItems = [
+    { key: "orderUpdates", label: "Order Updates", desc: "Receive email when a new order is placed." },
+    { key: "inventoryAlerts", label: "Inventory Alerts", desc: "Receive email when products are low on stock." },
+    { key: "customerReviews", label: "Customer Reviews", desc: "Receive email when a customer leaves a review." },
+  ] as const
+
   const NotificationsSettings = (
     <Card>
       <CardHeader>
@@ -116,30 +113,20 @@ const Settings = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {[
-          {
-            label: "Order Updates",
-            desc: "Receive email when a new order is placed.",
-            checked: true,
-          },
-          {
-            label: "Inventory Alerts",
-            desc: "Receive email when products are low on stock.",
-            checked: true,
-          },
-          {
-            label: "Customer Reviews",
-            desc: "Receive email when a customer leaves a review.",
-            checked: false,
-          },
-        ].map((item, index) => (
-          <div key={item.label}>
+        {notificationItems.map((item, index) => (
+          <div key={item.key}>
             <SettingToggle
               label={item.label}
               description={item.desc}
-              defaultChecked={item.checked}
+              checked={form.notifications[item.key]}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  notifications: { ...prev.notifications, [item.key]: checked },
+                }))
+              }
             />
-            {index < 2 && <Separator className="mt-4" />}
+            {index < notificationItems.length - 1 && <Separator className="mt-4" />}
           </div>
         ))}
       </CardContent>
@@ -183,11 +170,13 @@ const Settings = () => {
               Add an extra layer of security to your account.
             </p>
           </div>
-          <Button variant="outline">Enable</Button>
+          <Button variant="outline" onClick={() => toast.info("Configure 2FA methods from Authentication Settings.")}>
+            Enable
+          </Button>
         </div>
       </CardContent>
       <CardFooter className="justify-end border-t p-4">
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={() => toast.success("Password updated")} disabled={isSaving}>
           Update Security
         </Button>
       </CardFooter>
@@ -206,6 +195,8 @@ const Settings = () => {
         <SettingToggle
           label="Maintenance Mode"
           description="Disable the storefront for customers while making changes."
+          checked={form.maintenanceMode}
+          onCheckedChange={(checked) => setForm((prev) => ({ ...prev, maintenanceMode: checked }))}
         />
         <Separator />
         <div className="space-y-2">
@@ -218,7 +209,7 @@ const Settings = () => {
                   Delete all temporary files and cached data.
                 </p>
               </div>
-              <Button variant="outline">Clear Cache</Button>
+              <Button variant="outline" onClick={() => toast.success("Cache cleared")}>Clear Cache</Button>
             </div>
             <Separator className="bg-destructive/10" />
             <div className="flex items-center justify-between">
@@ -229,7 +220,17 @@ const Settings = () => {
                   cannot be undone.
                 </p>
               </div>
-              <Button variant="destructive">Reset All</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (!window.confirm("Reset all settings to their defaults?")) return
+                  updateSettings(defaultStoreSettings)
+                  setForm(defaultStoreSettings)
+                  toast.success("Settings reset to defaults")
+                }}
+              >
+                Reset All
+              </Button>
             </div>
           </div>
         </div>

@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { Shield, Key, Mail, Fingerprint, Save } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,65 +23,38 @@ import {
 } from "@/components/ui/select"
 
 import { SettingToggle } from "@/components/common/SettingToggle"
+import { useAppData } from "@/store/AppDataProvider"
 
-interface LoginMethod {
-  id: string
+interface LoginMethodMeta {
+  id: "email" | "google" | "apple"
   label: string
   description: string
   icon: LucideIcon
-  enabled: boolean
   disabled?: boolean
-  comingSoon?: boolean
-}
-
-interface PasswordPolicyItem {
-  id: string
-  label: string
-  description: string
-  defaultChecked: boolean
 }
 
 const Authentication = () => {
+  const { authSettings, updateAuthSettings } = useAppData()
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = () => {
     setIsSaving(true)
     setTimeout(() => {
       setIsSaving(false)
-      alert("Authentication settings saved!")
-    }, 1000)
+      toast.success("Authentication settings saved!")
+    }, 400)
   }
 
-  const loginMethods: LoginMethod[] = [
-    {
-      id: "email",
-      label: "Email & Password",
-      description: "Traditional sign in",
-      icon: Mail,
-      enabled: true,
-    },
-    {
-      id: "google",
-      label: "Google Social Login",
-      description: "Allow sign in with Google accounts",
-      icon: Fingerprint,
-      enabled: true,
-    },
-    {
-      id: "apple",
-      label: "Apple ID",
-      description: "Coming soon",
-      icon: Shield,
-      enabled: false,
-      disabled: true,
-      comingSoon: true,
-    },
+  const loginMethods: LoginMethodMeta[] = [
+    { id: "email", label: "Email & Password", description: "Traditional sign in", icon: Mail },
+    { id: "google", label: "Google Social Login", description: "Allow sign in with Google accounts", icon: Fingerprint },
+    { id: "apple", label: "Apple ID", description: "Coming soon", icon: Shield, disabled: true },
   ]
 
-  const passwordPolicies: PasswordPolicyItem[] = [
-    { id: "special", label: "Require Special Characters", description: "Require @, #, $, etc.", defaultChecked: true },
-    { id: "numbers", label: "Require Numbers", description: "Require at least one digit", defaultChecked: true },
-    { id: "uppercase", label: "Require Uppercase", description: "Require at least one uppercase letter", defaultChecked: true },
+  const passwordPolicies = [
+    { id: "special" as const, label: "Require Special Characters", description: "Require @, #, $, etc." },
+    { id: "numbers" as const, label: "Require Numbers", description: "Require at least one digit" },
+    { id: "uppercase" as const, label: "Require Uppercase", description: "Require at least one uppercase letter" },
   ]
 
   return (
@@ -114,7 +89,15 @@ const Authentication = () => {
                       <p className="text-xs text-muted-foreground">{method.description}</p>
                     </div>
                   </div>
-                  <Switch defaultChecked={method.enabled} disabled={method.disabled} />
+                  <Switch
+                    checked={authSettings.loginMethods[method.id]}
+                    disabled={method.disabled}
+                    onCheckedChange={(checked) =>
+                      updateAuthSettings({
+                        loginMethods: { ...authSettings.loginMethods, [method.id]: checked },
+                      })
+                    }
+                  />
                 </div>
                 {index < loginMethods.length - 1 && <Separator className="mt-4" />}
               </div>
@@ -133,7 +116,10 @@ const Authentication = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="min-length">Minimum Password Length</Label>
-              <Select defaultValue="8">
+              <Select
+                value={authSettings.minPasswordLength}
+                onValueChange={(value) => updateAuthSettings({ minPasswordLength: value })}
+              >
                 <SelectTrigger id="min-length">
                   <SelectValue />
                 </SelectTrigger>
@@ -149,7 +135,12 @@ const Authentication = () => {
                 key={policy.id}
                 label={policy.label}
                 description={policy.description}
-                defaultChecked={policy.defaultChecked}
+                checked={authSettings.passwordPolicies[policy.id]}
+                onCheckedChange={(checked) =>
+                  updateAuthSettings({
+                    passwordPolicies: { ...authSettings.passwordPolicies, [policy.id]: checked },
+                  })
+                }
               />
             ))}
           </CardContent>
@@ -166,7 +157,10 @@ const Authentication = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="session-timeout">Idle Session Timeout</Label>
-              <Select defaultValue="24h">
+              <Select
+                value={authSettings.sessionTimeout}
+                onValueChange={(value) => updateAuthSettings({ sessionTimeout: value })}
+              >
                 <SelectTrigger id="session-timeout">
                   <SelectValue />
                 </SelectTrigger>
@@ -186,7 +180,8 @@ const Authentication = () => {
             <SettingToggle
               label="Multi-device Login"
               description="Allow login from multiple devices simultaneously"
-              defaultChecked
+              checked={authSettings.multiDeviceLogin}
+              onCheckedChange={(checked) => updateAuthSettings({ multiDeviceLogin: checked })}
             />
           </CardContent>
         </Card>
@@ -203,10 +198,15 @@ const Authentication = () => {
             <SettingToggle
               label="Force 2FA for Admins"
               description="Mandatory for all staff with admin roles"
+              checked={authSettings.force2FA}
+              onCheckedChange={(checked) => updateAuthSettings({ force2FA: checked })}
             />
             <div className="space-y-2">
               <Label>Primary 2FA Method</Label>
-              <Select defaultValue="app">
+              <Select
+                value={authSettings.primary2FAMethod}
+                onValueChange={(value) => updateAuthSettings({ primary2FAMethod: value })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -226,7 +226,6 @@ const Authentication = () => {
             <Button onClick={handleSave} disabled={isSaving}>
               {!isSaving && <Save className="h-4 w-4" />}
               {isSaving ? "Saving..." : "Save All Changes"}
-              
             </Button>
           </CardFooter>
         </Card>

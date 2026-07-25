@@ -53,6 +53,17 @@ const Authentication = lazy(
 )
 const Roles = lazy(() => import("../features/system/components/Roles"))
 
+const Coupons = lazy(() => import("../features/marketing/components/Coupons"))
+const CouponForm = lazy(() => import("../features/marketing/components/CouponForm"))
+const Campaigns = lazy(() => import("../features/marketing/components/Campaigns"))
+const CampaignDetail = lazy(() => import("../features/marketing/components/CampaignDetail"))
+const CampaignForm = lazy(() => import("../features/marketing/components/CampaignForm"))
+const Reviews = lazy(() => import("../features/marketing/components/Reviews"))
+
+const Vendors = lazy(() => import("../features/vendors/components/Vendors"))
+const VendorDetail = lazy(() => import("../features/vendors/components/VendorDetail"))
+const CommissionRules = lazy(() => import("../features/vendors/components/CommissionRules"))
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -77,6 +88,15 @@ export const router = createBrowserRouter([
       { path: "settings", element: Load(Settings) },
       { path: "auth-settings", element: Load(Authentication) },
       { path: "roles", element: Load(Roles) },
+      { path: "coupons", element: Load(Coupons) },
+      { path: "coupon_form/:id", element: Load(CouponForm) },
+      { path: "campaigns", element: Load(Campaigns) },
+      { path: "campaign_detail/:id", element: Load(CampaignDetail) },
+      { path: "campaign_form/:id", element: Load(CampaignForm) },
+      { path: "reviews", element: Load(Reviews) },
+      { path: "vendors", element: Load(Vendors) },
+      { path: "vendor_detail/:id", element: Load(VendorDetail) },
+      { path: "commission-rules", element: Load(CommissionRules) },
     ],
   },
 ])

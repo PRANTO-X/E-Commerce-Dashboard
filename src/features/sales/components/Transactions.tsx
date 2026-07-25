@@ -8,8 +8,12 @@ import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { exportToCSV } from "@/utility/ExportToCsv"
+import { type TransactionItem, type TransactionPaymentMethod } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 
 const Transactions = () => {
+  const { transactions, deleteTransaction } = useAppData()
   const statusOptions = [
     { label: "Paid", value: "paid" },
     { label: "Pending", value: "pending" },
@@ -23,16 +27,7 @@ const Transactions = () => {
     refunded: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   } as const
   type TransactionStatus = keyof typeof statusStyles
-  type PaymentMethod = "card" | "paypal" | "stripe" | "cash"
-  interface TransactionItem {
-    id: string
-    customer: string
-    orderId: string
-    paymentMethod: PaymentMethod
-    amount: number
-    status: TransactionStatus
-    date: string
-  }
+  type PaymentMethod = TransactionPaymentMethod
 
   const columns: ColumnDef<TransactionItem>[] = [
     {
@@ -124,13 +119,8 @@ const Transactions = () => {
         const transaction = row.original
 
         const handleDelete = () => {
-          const confirmDelete = window.confirm(
-            `Delete transaction ${transaction.id}?`,
-          )
-
-          if (confirmDelete) {
-            console.log("Deleting:", transaction.id)
-          }
+          deleteTransaction(transaction.id)
+          toast.success(`Transaction ${transaction.id} deleted`)
         }
 
         return (
@@ -144,188 +134,6 @@ const Transactions = () => {
     },
   ]
 
-  const transactions: TransactionItem[] = [
-    {
-      id: "TXN1001",
-      customer: "John Smith",
-      orderId: "ORD5001",
-      paymentMethod: "card",
-      amount: 249.99,
-      status: "paid",
-      date: "2025-05-01 10:24 AM",
-    },
-    {
-      id: "TXN1002",
-      customer: "Emma Johnson",
-      orderId: "ORD5002",
-      paymentMethod: "paypal",
-      amount: 89.5,
-      status: "pending",
-      date: "2025-05-01 11:12 AM",
-    },
-    {
-      id: "TXN1003",
-      customer: "Michael Brown",
-      orderId: "ORD5003",
-      paymentMethod: "stripe",
-      amount: 520,
-      status: "paid",
-      date: "2025-05-02 09:18 AM",
-    },
-    {
-      id: "TXN1004",
-      customer: "Sophia Davis",
-      orderId: "ORD5004",
-      paymentMethod: "cash",
-      amount: 45,
-      status: "failed",
-      date: "2025-05-02 02:41 PM",
-    },
-    {
-      id: "TXN1005",
-      customer: "Daniel Wilson",
-      orderId: "ORD5005",
-      paymentMethod: "card",
-      amount: 1299.99,
-      status: "paid",
-      date: "2025-05-03 08:55 AM",
-    },
-    {
-      id: "TXN1006",
-      customer: "Olivia Martinez",
-      orderId: "ORD5006",
-      paymentMethod: "paypal",
-      amount: 72.49,
-      status: "refunded",
-      date: "2025-05-03 01:30 PM",
-    },
-    {
-      id: "TXN1007",
-      customer: "William Anderson",
-      orderId: "ORD5007",
-      paymentMethod: "stripe",
-      amount: 340,
-      status: "paid",
-      date: "2025-05-04 03:22 PM",
-    },
-    {
-      id: "TXN1008",
-      customer: "Ava Thomas",
-      orderId: "ORD5008",
-      paymentMethod: "card",
-      amount: 15.99,
-      status: "pending",
-      date: "2025-05-04 06:40 PM",
-    },
-    {
-      id: "TXN1009",
-      customer: "James Taylor",
-      orderId: "ORD5009",
-      paymentMethod: "cash",
-      amount: 230,
-      status: "paid",
-      date: "2025-05-05 10:05 AM",
-    },
-    {
-      id: "TXN1010",
-      customer: "Isabella Moore",
-      orderId: "ORD5010",
-      paymentMethod: "paypal",
-      amount: 480,
-      status: "failed",
-      date: "2025-05-05 12:11 PM",
-    },
-    {
-      id: "TXN1011",
-      customer: "Benjamin Jackson",
-      orderId: "ORD5011",
-      paymentMethod: "card",
-      amount: 999,
-      status: "paid",
-      date: "2025-05-06 09:44 AM",
-    },
-    {
-      id: "TXN1012",
-      customer: "Mia White",
-      orderId: "ORD5012",
-      paymentMethod: "stripe",
-      amount: 67.8,
-      status: "refunded",
-      date: "2025-05-06 04:15 PM",
-    },
-    {
-      id: "TXN1013",
-      customer: "Lucas Harris",
-      orderId: "ORD5013",
-      paymentMethod: "cash",
-      amount: 150,
-      status: "paid",
-      date: "2025-05-07 11:28 AM",
-    },
-    {
-      id: "TXN1014",
-      customer: "Charlotte Martin",
-      orderId: "ORD5014",
-      paymentMethod: "paypal",
-      amount: 820,
-      status: "pending",
-      date: "2025-05-07 01:08 PM",
-    },
-    {
-      id: "TXN1015",
-      customer: "Henry Thompson",
-      orderId: "ORD5015",
-      paymentMethod: "card",
-      amount: 39.99,
-      status: "paid",
-      date: "2025-05-08 08:18 AM",
-    },
-    {
-      id: "TXN1016",
-      customer: "Amelia Garcia",
-      orderId: "ORD5016",
-      paymentMethod: "stripe",
-      amount: 270,
-      status: "failed",
-      date: "2025-05-08 05:47 PM",
-    },
-    {
-      id: "TXN1017",
-      customer: "Ethan Clark",
-      orderId: "ORD5017",
-      paymentMethod: "cash",
-      amount: 560,
-      status: "paid",
-      date: "2025-05-09 10:55 AM",
-    },
-    {
-      id: "TXN1018",
-      customer: "Harper Lewis",
-      orderId: "ORD5018",
-      paymentMethod: "paypal",
-      amount: 110,
-      status: "refunded",
-      date: "2025-05-09 02:14 PM",
-    },
-    {
-      id: "TXN1019",
-      customer: "Alexander Walker",
-      orderId: "ORD5019",
-      paymentMethod: "card",
-      amount: 74.25,
-      status: "pending",
-      date: "2025-05-10 09:03 AM",
-    },
-    {
-      id: "TXN1020",
-      customer: "Ella Hall",
-      orderId: "ORD5020",
-      paymentMethod: "stripe",
-      amount: 1499,
-      status: "paid",
-      date: "2025-05-10 07:20 PM",
-    },
-  ]
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

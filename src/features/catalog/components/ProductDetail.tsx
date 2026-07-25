@@ -1,6 +1,7 @@
 import React from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { products, statusStyles, type ProductStatus } from "@/assets/Data"
+import { statusStyles, type ProductStatus } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,8 +21,9 @@ import { Separator } from "@/components/ui/separator"
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { getProductById } = useAppData()
 
-  const product = products.find((p) => p.id === id)
+  const product = getProductById(id ?? "")
 
   if (!product) {
     return (

@@ -1,6 +1,7 @@
-import React from "react"
+import React, { useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { orders } from "@/assets/Data"
+import { useAppData } from "@/store/AppDataProvider"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,8 +50,48 @@ const fulfillmentStatusStyles = {
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const order = orders.find((o) => o.id === id)
+  const { getOrderById, updateOrder } = useAppData()
+  const order = getOrderById(id ?? "")
   const navigate = useNavigate();
+  const [note, setNote] = useState("")
+
+  const logActivity = (message: string) => {
+    if (!order) return
+    updateOrder(order.id, {
+      activityLog: [
+        { type: "staff", message, date: new Date().toLocaleString() },
+        ...order.activityLog,
+      ],
+    })
+  }
+
+  const handleCancelOrder = () => {
+    if (!order) return
+    if (!window.confirm(`Cancel order ${order.id}? This cannot be undone.`)) return
+    updateOrder(order.id, { fulfillmentStatus: "Cancelled" })
+    logActivity("Order cancelled by Admin.")
+    toast.success(`Order ${order.id} cancelled`)
+  }
+
+  const handleRefundOrder = () => {
+    if (!order) return
+    if (!window.confirm(`Refund order ${order.id}?`)) return
+    updateOrder(order.id, { paymentStatus: "Refunded" })
+    logActivity("Order marked as refunded by Admin.")
+    toast.success(`Order ${order.id} refunded`)
+  }
+
+  const handleEmailCustomer = () => {
+    if (!order) return
+    toast.success(`Email sent to ${order.email || order.customer}`)
+  }
+
+  const handleSaveNote = () => {
+    if (!note.trim()) return
+    logActivity(note.trim())
+    setNote("")
+    toast.success("Note added")
+  }
 
   if (!order) {
     return (
@@ -134,15 +175,26 @@ const OrderDetail = () => {
                 <Printer className="h-4 w-4 mr-2" />
                 Print Order
               </Button>
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={handleEmailCustomer}>
                 <Mail className="h-4 w-4 mr-2" />
                 Email Customer
               </Button>
-              <Button variant="primary" size="sm" className="text-destructive hover:text-destructive">
+              <Button
+                variant="primary"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                disabled={order.fulfillmentStatus === "Cancelled"}
+                onClick={handleCancelOrder}
+              >
                 <Ban className="h-4 w-4 mr-2" />
                 Cancel Order
               </Button>
-              <Button variant="primary" size="sm">
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={order.paymentStatus === "Refunded"}
+                onClick={handleRefundOrder}
+              >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Refund Order
               </Button>
@@ -339,9 +391,14 @@ const OrderDetail = () => {
               <div className="pt-4 border-t no-print">
                 <label className="text-sm font-medium mb-2 block">Add Internal Note</label>
                 <div className="flex flex-col gap-3">
-                  <Textarea placeholder="Type your note here..." className="resize-none min-h-[100px]" />
+                  <Textarea
+                    placeholder="Type your note here..."
+                    className="resize-none min-h-[100px]"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
                   <div className="flex justify-end">
-                    <Button size="sm">Save Note</Button>
+                    <Button size="sm" onClick={handleSaveNote} disabled={!note.trim()}>Save Note</Button>
                   </div>
                 </div>
               </div>
