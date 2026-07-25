@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,7 +9,8 @@ import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type Coupon } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/marketing/slices/couponSlice"
 import { toast } from "sonner"
 
 const statusStyles = {
@@ -26,7 +28,12 @@ const typeLabels = {
 
 const Coupons = () => {
   const navigate = useNavigate()
-  const { coupons, deleteCoupon } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: coupons } = useAppSelector((state) => state.coupons)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Active", value: "active" },
@@ -104,7 +111,7 @@ const Coupons = () => {
       cell: ({ row }) => {
         const coupon = row.original
         const handleDelete = () => {
-          deleteCoupon(coupon.id)
+          dispatch(deleteData(coupon.id))
           toast.success(`Coupon ${coupon.code} deleted`)
         }
         return (

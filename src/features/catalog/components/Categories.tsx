@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,12 +8,18 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { categoryOptions, type Category } from "@/assets/Data"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/catalog/slices/categorySlice"
 import { toast } from "sonner"
 
 const Categories = () => {
   const navigate = useNavigate()
-  const { categories, deleteCategory } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: categories } = useAppSelector((state) => state.categories)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Active", value: "active" },
@@ -112,7 +118,7 @@ const Categories = () => {
         const category = row.original
 
         const handleDelete = () => {
-          deleteCategory(category.id)
+          dispatch(deleteData(category.id))
           toast.success(`${category.name} deleted`)
         }
 

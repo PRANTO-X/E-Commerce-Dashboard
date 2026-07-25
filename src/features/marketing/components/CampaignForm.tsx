@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -19,8 +20,9 @@ import {
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, postData, updateData } from "@/features/marketing/slices/campaignSlice"
+import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 
 const campaignSchema = z.object({
   name: z.string().min(2, "Campaign name must be at least 2 characters"),
@@ -38,31 +40,59 @@ type CampaignFormValues = z.infer<typeof campaignSchema>
 const CampaignForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getCampaignById, addCampaign, updateCampaign, products } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: existing, isLoading } = useAppSelector((state) => state.campaigns)
+  const { data: products } = useAppSelector((state) => state.products)
 
   const isEditing = id !== "new"
-  const existing = isEditing ? getCampaignById(id ?? "") : undefined
 
   const {
     control,
     register,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
-      name: existing?.name ?? "",
-      type: existing?.type ?? "flash_sale",
-      bannerImage: existing?.bannerImage ?? "",
-      startDate: existing?.startDate ?? "",
-      endDate: existing?.endDate ?? "",
-      status: existing?.status ?? "draft",
-      description: existing?.description ?? "",
-      productIds: existing?.productIds ?? [],
+      name: "",
+      type: "flash_sale",
+      bannerImage: "",
+      startDate: "",
+      endDate: "",
+      status: "draft",
+      description: "",
+      productIds: [],
     },
   })
 
-  if (isEditing && !existing) {
+  useEffect(() => {
+    dispatch(fetchAllProducts())
+    if (isEditing && id) {
+      dispatch(fetchSingle(id))
+    }
+  }, [dispatch, id, isEditing])
+
+  useEffect(() => {
+    if (isEditing && existing?.id === id) {
+      reset({
+        name: existing.name,
+        type: existing.type,
+        bannerImage: existing.bannerImage ?? "",
+        startDate: existing.startDate,
+        endDate: existing.endDate,
+        status: existing.status,
+        description: existing.description ?? "",
+        productIds: existing.productIds,
+      })
+    }
+  }, [existing, id, isEditing, reset])
+
+  if (isEditing && isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading campaign...</div>
+  }
+
+  if (isEditing && existing?.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Campaign not found</h2>
@@ -74,19 +104,21 @@ const CampaignForm = () => {
     )
   }
 
-  const onSubmit = (values: CampaignFormValues) => {
-    if (isEditing && existing) {
-      updateCampaign(existing.id, values)
-      toast.success(`Campaign "${values.name}" updated`)
-    } else {
-      addCampaign({
-        id: generateId("CMP"),
-        createdAt: new Date().toISOString().slice(0, 10),
-        ...values,
-      })
-      toast.success(`Campaign "${values.name}" created`)
+  const onSubmit = async (values: CampaignFormValues) => {
+    try {
+      if (isEditing && existing) {
+        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        toast.success(`Campaign "${values.name}" updated`)
+      } else {
+        await dispatch(
+          postData({ payload: { ...values, createdAt: new Date().toISOString().slice(0, 10) } })
+        ).unwrap()
+        toast.success(`Campaign "${values.name}" created`)
+      }
+      navigate("/campaigns")
+    } catch {
+      toast.error("Failed to save campaign")
     }
-    navigate("/campaigns")
   }
 
   return (

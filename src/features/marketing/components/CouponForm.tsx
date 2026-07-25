@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -17,8 +18,8 @@ import {
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, postData, updateData } from "@/features/marketing/slices/couponSlice"
 
 const couponSchema = z.object({
   code: z.string().min(3, "Code must be at least 3 characters").toUpperCase(),
@@ -35,33 +36,58 @@ type CouponFormValues = z.infer<typeof couponSchema>
 const CouponForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getCouponById, addCoupon, updateCoupon } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: existing, isLoading } = useAppSelector((state) => state.coupons)
 
   const isEditing = id !== "new"
-  const existing = isEditing ? getCouponById(id ?? "") : undefined
 
   const {
     control,
     register,
+    reset,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<CouponFormValues>({
     resolver: zodResolver(couponSchema),
     defaultValues: {
-      code: existing?.code ?? "",
-      type: existing?.type ?? "percent",
-      value: existing?.value ?? 10,
-      minOrderAmount: existing?.minOrderAmount,
-      usageLimit: existing?.usageLimit ?? 100,
-      expiryDate: existing?.expiryDate ?? "",
-      status: existing?.status ?? "active",
+      code: "",
+      type: "percent",
+      value: 10,
+      minOrderAmount: undefined,
+      usageLimit: 100,
+      expiryDate: "",
+      status: "active",
     },
   })
 
   const type = watch("type")
 
-  if (isEditing && !existing) {
+  useEffect(() => {
+    if (isEditing && id) {
+      dispatch(fetchSingle(id))
+    }
+  }, [dispatch, id, isEditing])
+
+  useEffect(() => {
+    if (isEditing && existing?.id === id) {
+      reset({
+        code: existing.code,
+        type: existing.type,
+        value: existing.value,
+        minOrderAmount: existing.minOrderAmount,
+        usageLimit: existing.usageLimit,
+        expiryDate: existing.expiryDate,
+        status: existing.status,
+      })
+    }
+  }, [existing, id, isEditing, reset])
+
+  if (isEditing && isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading coupon...</div>
+  }
+
+  if (isEditing && existing?.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Coupon not found</h2>
@@ -73,20 +99,23 @@ const CouponForm = () => {
     )
   }
 
-  const onSubmit = (values: CouponFormValues) => {
-    if (isEditing && existing) {
-      updateCoupon(existing.id, values)
-      toast.success(`Coupon ${values.code} updated`)
-    } else {
-      addCoupon({
-        id: generateId("CPN"),
-        usedCount: 0,
-        createdAt: new Date().toISOString().slice(0, 10),
-        ...values,
-      })
-      toast.success(`Coupon ${values.code} created`)
+  const onSubmit = async (values: CouponFormValues) => {
+    try {
+      if (isEditing && existing) {
+        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        toast.success(`Coupon ${values.code} updated`)
+      } else {
+        await dispatch(
+          postData({
+            payload: { ...values, usedCount: 0, createdAt: new Date().toISOString().slice(0, 10) },
+          })
+        ).unwrap()
+        toast.success(`Coupon ${values.code} created`)
+      }
+      navigate("/coupons")
+    } catch {
+      toast.error("Failed to save coupon")
     }
-    navigate("/coupons")
   }
 
   return (

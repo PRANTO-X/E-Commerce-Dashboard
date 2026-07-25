@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -10,11 +10,18 @@ import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/catalog/slices/productSlice"
 import { toast } from "sonner"
 const Products = () => {
   const navigate = useNavigate()
-  const { products, deleteProduct } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: products } = useAppSelector((state) => state.products)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
+
   const statusOptions = [
     { label: "Active", value: "active" },
     { label: "Draft", value: "draft" },
@@ -154,7 +161,7 @@ const Products = () => {
         const product = row.original
 
         const handleDelete = () => {
-          deleteProduct(product.id)
+          dispatch(deleteData(product.id))
           toast.success(`${product.product} deleted`)
         }
 

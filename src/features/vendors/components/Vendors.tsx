@@ -7,7 +7,9 @@ import { DataTable } from "@/components/common/data-table"
 import { Link } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type Vendor } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll } from "@/features/vendors/slices/vendorSlice"
+import { useEffect } from "react"
 
 const statusStyles = {
   approved: "bg-green-500/10 text-green-400 border border-green-500/20",
@@ -17,7 +19,12 @@ const statusStyles = {
 } as const
 
 const Vendors = () => {
-  const { vendors } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: vendors } = useAppSelector((state) => state.vendors)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Approved", value: "approved" },

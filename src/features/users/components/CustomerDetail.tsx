@@ -1,6 +1,8 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
+import { fetchSingle, updateData } from "@/features/users/slices/customerSlice"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,10 +42,15 @@ import { Textarea } from "@/components/ui/textarea"
 const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getCustomerById, updateCustomer, orders } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: customer, isLoading } = useAppSelector((state) => state.customers)
+  const { data: orders } = useAppSelector((state) => state.orders)
   const [note, setNote] = useState("")
 
-  const customer = getCustomerById(id ?? "")
+  useEffect(() => {
+    if (id) dispatch(fetchSingle(id))
+    dispatch(fetchAllOrders())
+  }, [dispatch, id])
 
   const handleResetPassword = () => {
     if (!customer) return
@@ -57,12 +64,16 @@ const CustomerDetail = () => {
 
   const handleSaveNote = () => {
     if (!customer || !note.trim()) return
-    updateCustomer(customer.id, { notes: [note.trim(), ...(customer.notes ?? [])] })
+    dispatch(updateData({ id: customer.id, payload: { ...customer, notes: [note.trim(), ...(customer.notes ?? [])] } }))
     setNote("")
     toast.success("Note added")
   }
 
-  if (!customer) {
+  if (isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading customer...</div>
+  }
+
+  if (!customer || customer.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />

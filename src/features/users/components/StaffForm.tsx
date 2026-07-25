@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -17,8 +18,8 @@ import {
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, postData, updateData } from "@/features/users/slices/staffSlice"
 
 const staffSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -36,28 +37,51 @@ const statusOptions = ["Active", "Inactive", "On Leave"] as const
 const StaffForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getStaffById, addStaff, updateStaff } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: existing, isLoading } = useAppSelector((state) => state.staffs)
 
   const isEditing = id !== "new"
-  const existing = isEditing ? getStaffById(id ?? "") : undefined
 
   const {
     control,
     register,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
     defaultValues: {
-      name: existing?.name ?? "",
-      email: existing?.email ?? "",
-      phone: existing?.phone ?? "",
-      role: (existing?.role as StaffFormValues["role"]) ?? "Support",
-      status: existing?.status ?? "Active",
+      name: "",
+      email: "",
+      phone: "",
+      role: "Support",
+      status: "Active",
     },
   })
 
-  if (isEditing && !existing) {
+  useEffect(() => {
+    if (isEditing && id) {
+      dispatch(fetchSingle(id))
+    }
+  }, [dispatch, id, isEditing])
+
+  useEffect(() => {
+    if (isEditing && existing?.id === id) {
+      reset({
+        name: existing.name,
+        email: existing.email,
+        phone: existing.phone ?? "",
+        role: existing.role as StaffFormValues["role"],
+        status: existing.status,
+      })
+    }
+  }, [existing, id, isEditing, reset])
+
+  if (isEditing && isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading staff member...</div>
+  }
+
+  if (isEditing && existing?.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Staff member not found</h2>
@@ -69,20 +93,23 @@ const StaffForm = () => {
     )
   }
 
-  const onSubmit = (values: StaffFormValues) => {
-    if (isEditing && existing) {
-      updateStaff(existing.id, values)
-      toast.success(`${values.name} updated`)
-    } else {
-      addStaff({
-        id: generateId("STAFF"),
-        avatar: "",
-        joinedAt: new Date().toISOString().slice(0, 10),
-        ...values,
-      })
-      toast.success(`${values.name} added`)
+  const onSubmit = async (values: StaffFormValues) => {
+    try {
+      if (isEditing && existing) {
+        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        toast.success(`${values.name} updated`)
+      } else {
+        await dispatch(
+          postData({
+            payload: { ...values, avatar: "", joinedAt: new Date().toISOString().slice(0, 10) },
+          })
+        ).unwrap()
+        toast.success(`${values.name} added`)
+      }
+      navigate("/staffs")
+    } catch {
+      toast.error("Failed to save staff member")
     }
-    navigate("/staffs")
   }
 
   return (

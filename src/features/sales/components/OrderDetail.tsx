@@ -1,6 +1,7 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, patchData } from "@/features/sales/slices/orderSlice"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -50,25 +51,32 @@ const fulfillmentStatusStyles = {
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const { getOrderById, updateOrder } = useAppData()
-  const order = getOrderById(id ?? "")
+  const dispatch = useAppDispatch()
+  const { singleData: order, isLoading } = useAppSelector((state) => state.orders)
   const navigate = useNavigate();
   const [note, setNote] = useState("")
 
+  useEffect(() => {
+    if (id) dispatch(fetchSingle(id))
+  }, [dispatch, id])
+
   const logActivity = (message: string) => {
     if (!order) return
-    updateOrder(order.id, {
-      activityLog: [
-        { type: "staff", message, date: new Date().toLocaleString() },
-        ...order.activityLog,
-      ],
-    })
+    dispatch(patchData({
+      id: order.id,
+      payload: {
+        activityLog: [
+          { type: "staff", message, date: new Date().toLocaleString() },
+          ...order.activityLog,
+        ],
+      },
+    }))
   }
 
   const handleCancelOrder = () => {
     if (!order) return
     if (!window.confirm(`Cancel order ${order.id}? This cannot be undone.`)) return
-    updateOrder(order.id, { fulfillmentStatus: "Cancelled" })
+    dispatch(patchData({ id: order.id, payload: { fulfillmentStatus: "Cancelled" } }))
     logActivity("Order cancelled by Admin.")
     toast.success(`Order ${order.id} cancelled`)
   }
@@ -76,7 +84,7 @@ const OrderDetail = () => {
   const handleRefundOrder = () => {
     if (!order) return
     if (!window.confirm(`Refund order ${order.id}?`)) return
-    updateOrder(order.id, { paymentStatus: "Refunded" })
+    dispatch(patchData({ id: order.id, payload: { paymentStatus: "Refunded" } }))
     logActivity("Order marked as refunded by Admin.")
     toast.success(`Order ${order.id} refunded`)
   }
@@ -93,7 +101,11 @@ const OrderDetail = () => {
     toast.success("Note added")
   }
 
-  if (!order) {
+  if (isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading order...</div>
+  }
+
+  if (!order || order.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />

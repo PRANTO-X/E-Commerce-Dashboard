@@ -2,15 +2,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { RouterProvider } from 'react-router-dom'
+import { Provider } from 'react-redux'
 import {router} from './routes/AppRouter.tsx'
-import { AppDataProvider } from './store/AppDataProvider.tsx'
+import { store } from './app/store.ts'
 import { Toaster } from '@/components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppDataProvider>
+    <Provider store={store}>
       <RouterProvider router={router} />
       <Toaster />
-    </AppDataProvider>
+    </Provider>
   </StrictMode>,
 )

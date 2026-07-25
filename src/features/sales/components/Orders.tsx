@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -9,10 +9,16 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { Button } from "@/components/ui/button"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type Order } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll } from "@/features/sales/slices/orderSlice"
 
 const Orders = () => {
-  const { orders } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: orders } = useAppSelector((state) => state.orders)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const paymentStatus = [
     { label: "Pending", value: "pending" },

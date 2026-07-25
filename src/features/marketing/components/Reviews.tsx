@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { CheckIcon, StarIcon, XIcon, MessageSquareIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -14,7 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { type Review } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, patchData } from "@/features/marketing/slices/reviewSlice"
 import { toast } from "sonner"
 
 const statusStyles = {
@@ -24,9 +25,14 @@ const statusStyles = {
 } as const
 
 const Reviews = () => {
-  const { reviews, updateReview } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: reviews } = useAppSelector((state) => state.reviews)
   const [replyTarget, setReplyTarget] = useState<Review | null>(null)
   const [replyText, setReplyText] = useState("")
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Pending", value: "pending" },
@@ -41,7 +47,7 @@ const Reviews = () => {
 
   const handleSaveReply = () => {
     if (!replyTarget) return
-    updateReview(replyTarget.id, { sellerReply: replyText.trim() || undefined })
+    dispatch(patchData({ id: replyTarget.id, payload: { sellerReply: replyText.trim() || undefined } }))
     toast.success("Reply saved")
     setReplyTarget(null)
   }
@@ -115,7 +121,7 @@ const Reviews = () => {
               className="disabled:opacity-30 cursor-pointer"
               disabled={review.status === "approved"}
               onClick={() => {
-                updateReview(review.id, { status: "approved" })
+                dispatch(patchData({ id: review.id, payload: { status: "approved" } }))
                 toast.success("Review approved")
               }}
             >
@@ -126,7 +132,7 @@ const Reviews = () => {
               className="disabled:opacity-30 cursor-pointer"
               disabled={review.status === "rejected"}
               onClick={() => {
-                updateReview(review.id, { status: "rejected" })
+                dispatch(patchData({ id: review.id, payload: { status: "rejected" } }))
                 toast.success("Review rejected")
               }}
             >

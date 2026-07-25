@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
@@ -9,10 +9,16 @@ import { DataTable } from "@/components/common/data-table"
 import { categoryOptions, type InventoryItem } from "@/assets/Data"
 import { TableActions } from "@/components/common/TableActions"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/catalog/slices/inventorySlice"
 import { toast } from "sonner"
 const Inventory = () => {
-  const { inventory, deleteInventoryItem } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: inventory } = useAppSelector((state) => state.inventory)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
   const statusOptions = [
     { label: "In Stock", value: "in_stock" },
     { label: "Low Stock", value: "low_stock" },
@@ -130,7 +136,7 @@ const Inventory = () => {
         const product = row.original
 
         const handleDelete = () => {
-          deleteInventoryItem(product.id)
+          dispatch(deleteData(product.id))
           toast.success(`${product.product} removed from inventory`)
         }
 

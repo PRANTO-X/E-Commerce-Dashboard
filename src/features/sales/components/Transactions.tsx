@@ -1,5 +1,5 @@
 import { DownloadIcon } from "lucide-react"
-import React from "react"
+import React, { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TableActions } from "@/components/common/TableActions"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -9,11 +9,17 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type TransactionItem, type TransactionPaymentMethod } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/sales/slices/transactionSlice"
 import { toast } from "sonner"
 
 const Transactions = () => {
-  const { transactions, deleteTransaction } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: transactions } = useAppSelector((state) => state.transactions)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
   const statusOptions = [
     { label: "Paid", value: "paid" },
     { label: "Pending", value: "pending" },
@@ -119,7 +125,7 @@ const Transactions = () => {
         const transaction = row.original
 
         const handleDelete = () => {
-          deleteTransaction(transaction.id)
+          dispatch(deleteData(transaction.id))
           toast.success(`Transaction ${transaction.id} deleted`)
         }
 

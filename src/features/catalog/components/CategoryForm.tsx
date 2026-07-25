@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -17,8 +18,8 @@ import {
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, fetchSingle, postData, updateData } from "@/features/catalog/slices/categorySlice"
 
 const categorySchema = z.object({
   name: z.string().min(2, "Category name must be at least 2 characters"),
@@ -40,29 +41,52 @@ const NO_PARENT = "none"
 const CategoryForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { categories, getCategoryById, addCategory, updateCategory } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: categories, singleData: existing, isLoading } = useAppSelector((state) => state.categories)
 
   const isEditing = id !== "new"
-  const existing = isEditing ? getCategoryById(id ?? "") : undefined
 
-  const topLevelCategories = categories.filter((c) => !c.parent && c.id !== existing?.id)
+  const topLevelCategories = categories.filter((c) => !c.parent && c.id !== (isEditing ? id : undefined))
 
   const {
     control,
     register,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
-      name: existing?.name ?? "",
-      slug: existing?.slug ?? "",
-      parent: existing?.parent ?? NO_PARENT,
-      status: existing?.status ?? "active",
+      name: "",
+      slug: "",
+      parent: NO_PARENT,
+      status: "active",
     },
   })
 
-  if (isEditing && !existing) {
+  useEffect(() => {
+    dispatch(fetchAll())
+    if (isEditing && id) {
+      dispatch(fetchSingle(id))
+    }
+  }, [dispatch, id, isEditing])
+
+  useEffect(() => {
+    if (isEditing && existing?.id === id) {
+      reset({
+        name: existing.name,
+        slug: existing.slug,
+        parent: existing.parent ?? NO_PARENT,
+        status: existing.status,
+      })
+    }
+  }, [existing, id, isEditing, reset])
+
+  if (isEditing && isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading category...</div>
+  }
+
+  if (isEditing && existing?.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Category not found</h2>
@@ -74,25 +98,32 @@ const CategoryForm = () => {
     )
   }
 
-  const onSubmit = (values: CategoryFormValues) => {
+  const onSubmit = async (values: CategoryFormValues) => {
     const parent = values.parent === NO_PARENT ? null : values.parent
 
-    if (isEditing && existing) {
-      updateCategory(existing.id, { ...values, parent })
-      toast.success(`${values.name} updated`)
-    } else {
-      addCategory({
-        id: generateId("C"),
-        name: values.name,
-        slug: values.slug,
-        parent,
-        status: values.status,
-        products: 0,
-        createdAt: new Date().toISOString().slice(0, 10),
-      })
-      toast.success(`${values.name} created`)
+    try {
+      if (isEditing && existing) {
+        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values, parent } })).unwrap()
+        toast.success(`${values.name} updated`)
+      } else {
+        await dispatch(
+          postData({
+            payload: {
+              name: values.name,
+              slug: values.slug,
+              parent,
+              status: values.status,
+              products: 0,
+              createdAt: new Date().toISOString().slice(0, 10),
+            },
+          })
+        ).unwrap()
+        toast.success(`${values.name} created`)
+      }
+      navigate("/categories")
+    } catch {
+      toast.error("Failed to save category")
     }
-    navigate("/categories")
   }
 
   return (

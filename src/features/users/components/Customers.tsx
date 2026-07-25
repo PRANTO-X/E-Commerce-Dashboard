@@ -4,14 +4,20 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { DownloadIcon, EyeIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import React from "react"
+import React, { useEffect } from "react"
 import { Link } from "react-router-dom"
 import { type Customer } from "@/assets/Data"
 import  { exportToCSV } from "@/utility/ExportToCsv"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll } from "@/features/users/slices/customerSlice"
 
 const Customers = () => {
-  const { customers } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: customers } = useAppSelector((state) => state.customers)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
   const statusStyles = {
     Active: "bg-green-500/10 text-green-400 border border-green-500/20",
     Inactive: "bg-red-500/10 text-red-400 border border-red-500/20",

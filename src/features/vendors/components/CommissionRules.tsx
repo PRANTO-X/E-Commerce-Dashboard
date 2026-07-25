@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,18 +28,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { PlusIcon, Trash2Icon } from "lucide-react"
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, postData, deleteData } from "@/features/vendors/slices/commissionRuleSlice"
+import { fetchAll as fetchAllVendors } from "@/features/vendors/slices/vendorSlice"
 import { toast } from "sonner"
 import { type CommissionRule } from "@/assets/Data"
 
 const CommissionRules = () => {
-  const { commissionRules, vendors, addCommissionRule, deleteCommissionRule } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: commissionRules } = useAppSelector((state) => state.commissionRules)
+  const { data: vendors } = useAppSelector((state) => state.vendors)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [scope, setScope] = useState<CommissionRule["scope"]>("global")
   const [target, setTarget] = useState("")
   const [rate, setRate] = useState("10")
+
+  useEffect(() => {
+    dispatch(fetchAll())
+    dispatch(fetchAllVendors())
+  }, [dispatch])
 
   const resetForm = () => {
     setName("")
@@ -50,15 +58,18 @@ const CommissionRules = () => {
 
   const handleCreate = () => {
     if (!name.trim() || !rate) return
-    addCommissionRule({
-      id: generateId("COM"),
-      name: name.trim(),
-      scope,
-      target: scope === "global" ? undefined : target,
-      rate: Number(rate),
-      status: "active",
-      createdAt: new Date().toISOString().slice(0, 10),
-    })
+    dispatch(
+      postData({
+        payload: {
+          name: name.trim(),
+          scope,
+          target: scope === "global" ? undefined : target,
+          rate: Number(rate),
+          status: "active",
+          createdAt: new Date().toISOString().slice(0, 10),
+        },
+      })
+    )
     toast.success("Commission rule created")
     resetForm()
     setOpen(false)
@@ -165,7 +176,7 @@ const CommissionRules = () => {
                     <TableCell className="text-right">
                       <button
                         onClick={() => {
-                          deleteCommissionRule(rule.id)
+                          dispatch(deleteData(rule.id))
                           toast.success("Rule deleted")
                         }}
                       >

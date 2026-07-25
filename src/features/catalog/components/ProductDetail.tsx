@@ -1,7 +1,8 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { statusStyles, type ProductStatus } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle } from "@/features/catalog/slices/productSlice"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,11 +22,18 @@ import { Separator } from "@/components/ui/separator"
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getProductById } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: product, isLoading } = useAppSelector((state) => state.products)
 
-  const product = getProductById(id ?? "")
+  useEffect(() => {
+    if (id) dispatch(fetchSingle(id))
+  }, [dispatch, id])
 
-  if (!product) {
+  if (isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading product...</div>
+  }
+
+  if (!product || product.id !== id) {
     return (
       <div className="section-container space-y-0 flex flex-col items-center justify-center h-[80vh] text-center">
         <div className="mb-6 rounded-full bg-muted p-6">

@@ -1,9 +1,12 @@
+import { useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, ArrowLeft, Calendar, Edit, Package } from "lucide-react"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle } from "@/features/marketing/slices/campaignSlice"
+import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 
 const statusStyles = {
   draft: "bg-gray-500/10 text-gray-400 border-gray-500/20",
@@ -21,11 +24,20 @@ const typeLabels = {
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getCampaignById, products } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: campaign, isLoading } = useAppSelector((state) => state.campaigns)
+  const { data: products } = useAppSelector((state) => state.products)
 
-  const campaign = getCampaignById(id ?? "")
+  useEffect(() => {
+    if (id) dispatch(fetchSingle(id))
+    dispatch(fetchAllProducts())
+  }, [dispatch, id])
 
-  if (!campaign) {
+  if (isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading campaign...</div>
+  }
+
+  if (!campaign || campaign.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />

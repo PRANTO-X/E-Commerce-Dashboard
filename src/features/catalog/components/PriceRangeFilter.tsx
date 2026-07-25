@@ -31,17 +31,17 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       {/* MIN */}
       <Input
         type="number"
         placeholder="Min"
         value={range.min}
         onChange={(e) => handleChange("min", e.target.value)}
-        className="w-24 h-9"
+        className="flex-1 h-9"
       />
 
-      <span className="text-muted-foreground">-</span>
+      <span className="text-muted-foreground shrink-0">-</span>
 
       {/* MAX */}
       <Input
@@ -49,7 +49,7 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
         placeholder="Max"
         value={range.max}
         onChange={(e) => handleChange("max", e.target.value)}
-        className="w-24 h-9"
+        className="flex-1 h-9"
       />
     </div>
   )

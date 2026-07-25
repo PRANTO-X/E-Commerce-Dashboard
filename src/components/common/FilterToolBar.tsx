@@ -46,7 +46,7 @@ const FilterToolbar = ({
             <div className="w-full min-[1550px]:flex-1">{searchInput}</div>
 
             {/* Filters + buttons row below, flex-1 at 1550px+ */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-[1550px]:flex-1 min-w-0">
               {/* Date Picker */}
               {datePicker && <>{datePicker}</>}
 
@@ -54,9 +54,9 @@ const FilterToolbar = ({
               {filters.map((filter, index) => (
                 <React.Fragment key={index}>
                   {index > 0 || datePicker ? (
-                    <div className="h-8 w-px bg-border" />
+                    <div className="h-8 w-px bg-border shrink-0" />
                   ) : null}
-                  <div>{filter.component}</div>
+                  <div className="min-w-0 flex-1">{filter.component}</div>
                 </React.Fragment>
               ))}
 

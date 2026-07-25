@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select"
 
 import { SettingToggle } from "@/components/common/SettingToggle"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { updateAuthSettings } from "@/features/system/slices/authSettingsSlice"
 
 interface LoginMethodMeta {
   id: "email" | "google" | "apple"
@@ -34,7 +35,8 @@ interface LoginMethodMeta {
 }
 
 const Authentication = () => {
-  const { authSettings, updateAuthSettings } = useAppData()
+  const dispatch = useAppDispatch()
+  const authSettings = useAppSelector((state) => state.authSettings)
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = () => {
@@ -93,9 +95,9 @@ const Authentication = () => {
                     checked={authSettings.loginMethods[method.id]}
                     disabled={method.disabled}
                     onCheckedChange={(checked) =>
-                      updateAuthSettings({
+                      dispatch(updateAuthSettings({
                         loginMethods: { ...authSettings.loginMethods, [method.id]: checked },
-                      })
+                      }))
                     }
                   />
                 </div>
@@ -118,7 +120,7 @@ const Authentication = () => {
               <Label htmlFor="min-length">Minimum Password Length</Label>
               <Select
                 value={authSettings.minPasswordLength}
-                onValueChange={(value) => updateAuthSettings({ minPasswordLength: value })}
+                onValueChange={(value) => dispatch(updateAuthSettings({ minPasswordLength: value }))}
               >
                 <SelectTrigger id="min-length">
                   <SelectValue />
@@ -137,9 +139,9 @@ const Authentication = () => {
                 description={policy.description}
                 checked={authSettings.passwordPolicies[policy.id]}
                 onCheckedChange={(checked) =>
-                  updateAuthSettings({
+                  dispatch(updateAuthSettings({
                     passwordPolicies: { ...authSettings.passwordPolicies, [policy.id]: checked },
-                  })
+                  }))
                 }
               />
             ))}
@@ -159,7 +161,7 @@ const Authentication = () => {
               <Label htmlFor="session-timeout">Idle Session Timeout</Label>
               <Select
                 value={authSettings.sessionTimeout}
-                onValueChange={(value) => updateAuthSettings({ sessionTimeout: value })}
+                onValueChange={(value) => dispatch(updateAuthSettings({ sessionTimeout: value }))}
               >
                 <SelectTrigger id="session-timeout">
                   <SelectValue />
@@ -181,7 +183,7 @@ const Authentication = () => {
               label="Multi-device Login"
               description="Allow login from multiple devices simultaneously"
               checked={authSettings.multiDeviceLogin}
-              onCheckedChange={(checked) => updateAuthSettings({ multiDeviceLogin: checked })}
+              onCheckedChange={(checked) => dispatch(updateAuthSettings({ multiDeviceLogin: checked }))}
             />
           </CardContent>
         </Card>
@@ -199,13 +201,13 @@ const Authentication = () => {
               label="Force 2FA for Admins"
               description="Mandatory for all staff with admin roles"
               checked={authSettings.force2FA}
-              onCheckedChange={(checked) => updateAuthSettings({ force2FA: checked })}
+              onCheckedChange={(checked) => dispatch(updateAuthSettings({ force2FA: checked }))}
             />
             <div className="space-y-2">
               <Label>Primary 2FA Method</Label>
               <Select
                 value={authSettings.primary2FAMethod}
-                onValueChange={(value) => updateAuthSettings({ primary2FAMethod: value })}
+                onValueChange={(value) => dispatch(updateAuthSettings({ primary2FAMethod: value }))}
               >
                 <SelectTrigger>
                   <SelectValue />

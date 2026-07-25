@@ -4,16 +4,22 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import React from "react"
+import React, { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { TableActions } from "@/components/common/TableActions"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type Staff } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/users/slices/staffSlice"
 import { toast } from "sonner"
 const Staffs = () => {
   const navigate = useNavigate()
-  const { staffs, deleteStaff } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: staffs } = useAppSelector((state) => state.staffs)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusStyles = {
     Active: "bg-green-500/10 text-green-400 border border-green-500/20",
@@ -134,7 +140,7 @@ const Staffs = () => {
       cell: ({ row }) => {
         const staff = row.original
         const handleDelete = () => {
-          deleteStaff(staff.id)
+          dispatch(deleteData(staff.id))
           toast.success(`${staff.name} deleted`)
         }
         return (

@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,7 +9,8 @@ import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { type Campaign } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/marketing/slices/campaignSlice"
 import { toast } from "sonner"
 
 const statusStyles = {
@@ -26,7 +28,12 @@ const typeLabels = {
 
 const Campaigns = () => {
   const navigate = useNavigate()
-  const { campaigns, deleteCampaign } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: campaigns } = useAppSelector((state) => state.campaigns)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Draft", value: "draft" },
@@ -88,7 +95,7 @@ const Campaigns = () => {
       cell: ({ row }) => {
         const campaign = row.original
         const handleDelete = () => {
-          deleteCampaign(campaign.id)
+          dispatch(deleteData(campaign.id))
           toast.success(`Campaign "${campaign.name}" deleted`)
         }
         return (

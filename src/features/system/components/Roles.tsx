@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Shield,
   ShieldAlert,
@@ -27,31 +27,39 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, postData, deleteData } from "@/features/system/slices/roleSlice"
 import { toast } from "sonner"
-import { generateId } from "@/lib/utils"
 
 const Roles = () => {
   const [searchTerm, setSearchTerm] = useState("")
-  const { roles, addRole, deleteRole } = useAppData()
+  const dispatch = useAppDispatch()
+  const { data: roles } = useAppSelector((state) => state.roles)
+
+  useEffect(() => {
+    dispatch(fetchAll())
+  }, [dispatch])
 
   const handleCreateRole = () => {
     const name = window.prompt("New role name?")
     if (!name) return
-    addRole({
-      id: generateId("ROLE"),
-      name,
-      description: "Custom role — configure permissions from the permission matrix.",
-      usersCount: 0,
-      type: "Custom",
-      permissions: [],
-      level: "Low",
-    })
+    dispatch(
+      postData({
+        payload: {
+          name,
+          description: "Custom role — configure permissions from the permission matrix.",
+          usersCount: 0,
+          type: "Custom",
+          permissions: [],
+          level: "Low",
+        },
+      })
+    )
     toast.success(`Role "${name}" created`)
   }
 
   const handleDeleteRole = (id: string, name: string) => {
-    deleteRole(id)
+    dispatch(deleteData(id))
     toast.success(`Role "${name}" deleted`)
   }
 

@@ -17,7 +17,10 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, patchData } from "@/features/vendors/slices/vendorSlice"
+import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
+import { useEffect } from "react"
 import { toast } from "sonner"
 
 const statusStyles = {
@@ -30,11 +33,20 @@ const statusStyles = {
 const VendorDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getVendorById, updateVendor, products } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: vendor, isLoading } = useAppSelector((state) => state.vendors)
+  const { data: products } = useAppSelector((state) => state.products)
 
-  const vendor = getVendorById(id ?? "")
+  useEffect(() => {
+    if (id) dispatch(fetchSingle(id))
+    dispatch(fetchAllProducts())
+  }, [dispatch, id])
 
-  if (!vendor) {
+  if (isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading vendor...</div>
+  }
+
+  if (!vendor || vendor.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -50,26 +62,26 @@ const VendorDetail = () => {
   }
 
   const handleApprove = () => {
-    updateVendor(vendor.id, { status: "approved" })
+    dispatch(patchData({ id: vendor.id, payload: { status: "approved" } }))
     toast.success(`${vendor.name} approved`)
   }
 
   const handleReject = () => {
     if (!window.confirm(`Reject ${vendor.name}'s vendor application?`)) return
-    updateVendor(vendor.id, { status: "rejected" })
+    dispatch(patchData({ id: vendor.id, payload: { status: "rejected" } }))
     toast.success(`${vendor.name} rejected`)
   }
 
   const handleSuspend = () => {
     if (!window.confirm(`Suspend ${vendor.name}? They will no longer be able to sell.`)) return
-    updateVendor(vendor.id, { status: "suspended" })
+    dispatch(patchData({ id: vendor.id, payload: { status: "suspended" } }))
     toast.success(`${vendor.name} suspended`)
   }
 
   const handlePayout = () => {
     if (vendor.payoutBalance <= 0) return
     if (!window.confirm(`Mark $${vendor.payoutBalance.toFixed(2)} as paid out to ${vendor.name}?`)) return
-    updateVendor(vendor.id, { payoutBalance: 0 })
+    dispatch(patchData({ id: vendor.id, payload: { payoutBalance: 0 } }))
     toast.success("Payout recorded")
   }
 

@@ -18,7 +18,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 
 import { SettingToggle } from "@/components/common/SettingToggle"
-import { useAppData } from "@/store/AppDataProvider"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { updateSettings, resetSettings } from "@/features/system/slices/settingsSlice"
 import { defaultStoreSettings } from "@/assets/Data"
 
 interface SettingTab {
@@ -29,14 +30,15 @@ interface SettingTab {
 }
 
 const Settings = () => {
-  const { settings, updateSettings } = useAppData()
+  const dispatch = useAppDispatch()
+  const settings = useAppSelector((state) => state.settings)
   const [isSaving, setIsSaving] = useState(false)
   const [form, setForm] = useState(settings)
 
   const handleSave = () => {
     setIsSaving(true)
     setTimeout(() => {
-      updateSettings(form)
+      dispatch(updateSettings(form))
       setIsSaving(false)
       toast.success("Settings saved successfully!")
     }, 400)
@@ -224,7 +226,7 @@ const Settings = () => {
                 variant="destructive"
                 onClick={() => {
                   if (!window.confirm("Reset all settings to their defaults?")) return
-                  updateSettings(defaultStoreSettings)
+                  dispatch(resetSettings())
                   setForm(defaultStoreSettings)
                   toast.success("Settings reset to defaults")
                 }}

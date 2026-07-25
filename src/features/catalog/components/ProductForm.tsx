@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -19,8 +20,8 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
 import { categoryOptions, type ProductStatus } from "@/assets/Data"
-import { useAppData } from "@/store/AppDataProvider"
-import { generateId } from "@/lib/utils"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchSingle, postData, updateData } from "@/features/catalog/slices/productSlice"
 
 const productSchema = z.object({
   product: z.string().min(2, "Product name must be at least 2 characters"),
@@ -42,34 +43,62 @@ const statusOptions: { label: string; value: ProductStatus }[] = [
   { label: "Inactive", value: "inactive" },
 ]
 
+const defaultFormValues: ProductFormValues = {
+  product: "",
+  sku: "",
+  category: "",
+  price: 0,
+  stock: 0,
+  status: "draft",
+  image: "/images/product-1.jpg",
+  description: "",
+}
+
 const ProductForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getProductById, addProduct, updateProduct } = useAppData()
+  const dispatch = useAppDispatch()
+  const { singleData: existing, isLoading } = useAppSelector((state) => state.products)
 
   const isEditing = id !== "new"
-  const existing = isEditing ? getProductById(id ?? "") : undefined
 
   const {
     control,
     register,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      product: existing?.product ?? "",
-      sku: existing?.sku ?? "",
-      category: existing?.category ?? "",
-      price: existing?.price ?? 0,
-      stock: existing?.stock ?? 0,
-      status: existing?.status ?? "draft",
-      image: existing?.image ?? "/images/product-1.jpg",
-      description: existing?.description ?? "",
-    },
+    defaultValues: defaultFormValues,
   })
 
-  if (isEditing && !existing) {
+  useEffect(() => {
+    if (isEditing && id) {
+      dispatch(fetchSingle(id))
+    }
+  }, [dispatch, id, isEditing])
+
+  useEffect(() => {
+    if (isEditing && existing?.id === id) {
+      reset({
+        product: existing.product,
+        sku: existing.sku,
+        category: existing.category,
+        price: existing.price,
+        stock: existing.stock ?? 0,
+        status: existing.status,
+        image: existing.image,
+        description: existing.description ?? "",
+      })
+    }
+  }, [existing, id, isEditing, reset])
+
+  if (isEditing && isLoading) {
+    return <div className="section-container py-12 text-center text-muted-foreground">Loading product...</div>
+  }
+
+  if (isEditing && existing?.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Product not found</h2>
@@ -81,21 +110,23 @@ const ProductForm = () => {
     )
   }
 
-  const onSubmit = (values: ProductFormValues) => {
-    if (isEditing && existing) {
-      updateProduct(existing.id, values)
-      toast.success(`${values.product} updated`)
-    } else {
-      addProduct({
-        id: generateId("P"),
-        rating: 0,
-        sales: 0,
-        createdAt: new Date().toISOString().slice(0, 10),
-        ...values,
-      })
-      toast.success(`${values.product} created`)
+  const onSubmit = async (values: ProductFormValues) => {
+    try {
+      if (isEditing && existing) {
+        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        toast.success(`${values.product} updated`)
+      } else {
+        await dispatch(
+          postData({
+            payload: { ...values, rating: 0, sales: 0, createdAt: new Date().toISOString().slice(0, 10) },
+          })
+        ).unwrap()
+        toast.success(`${values.product} created`)
+      }
+      navigate("/products")
+    } catch {
+      toast.error("Failed to save product")
     }
-    navigate("/products")
   }
 
   return (
