@@ -24,7 +24,6 @@ import {
   Settings,
   ChevronDown,
   Megaphone,
-  Store,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -65,14 +64,6 @@ const sidebarItems = [
       { title: "Coupons", url: "/coupons" },
       { title: "Campaigns", url: "/campaigns" },
       { title: "Reviews", url: "/reviews" },
-    ],
-  },
-  {
-    label: "Marketplace",
-    icon: Store,
-    items: [
-      { title: "Vendors", url: "/vendors" },
-      { title: "Commission Rules", url: "/commission-rules" },
     ],
   },
   {

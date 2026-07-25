@@ -762,45 +762,6 @@ export const campaigns: Campaign[] = [
   },
 ]
 
-export interface Vendor {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  logo?: string
-  status: "pending" | "approved" | "suspended" | "rejected"
-  commissionRate: number
-  joinedAt: string
-  totalSales: number
-  totalProducts: number
-  payoutBalance: number
-  kycDocUrl?: string
-}
-
-export const vendors: Vendor[] = [
-  { id: "VND-001", name: "TechHub BD", email: "contact@techhub.bd", phone: "+8801711000001", status: "approved", commissionRate: 12, joinedAt: "2025-11-02", totalSales: 84200, totalProducts: 156, payoutBalance: 3200.5 },
-  { id: "VND-002", name: "Fashion Forward", email: "hello@fashionforward.com", phone: "+8801711000002", status: "approved", commissionRate: 15, joinedAt: "2025-12-14", totalSales: 42150, totalProducts: 89, payoutBalance: 1580 },
-  { id: "VND-003", name: "Gadget Galaxy", email: "sales@gadgetgalaxy.com", phone: "+8801711000003", status: "pending", commissionRate: 12, joinedAt: "2026-07-10", totalSales: 0, totalProducts: 0, payoutBalance: 0, kycDocUrl: "/docs/gadget-galaxy-kyc.pdf" },
-  { id: "VND-004", name: "Home Essentials Co", email: "support@homeessentials.com", phone: "+8801711000004", status: "suspended", commissionRate: 10, joinedAt: "2025-08-22", totalSales: 15600, totalProducts: 34, payoutBalance: 0 },
-  { id: "VND-005", name: "Prime Sports Gear", email: "info@primesports.com", phone: "+8801711000005", status: "approved", commissionRate: 13, joinedAt: "2026-02-18", totalSales: 27800, totalProducts: 61, payoutBalance: 940.25 },
-]
-
-export interface CommissionRule {
-  id: string
-  name: string
-  scope: "global" | "category" | "vendor"
-  target?: string
-  rate: number
-  status: "active" | "inactive"
-  createdAt: string
-}
-
-export const commissionRules: CommissionRule[] = [
-  { id: "COM-001", name: "Platform Default", scope: "global", rate: 12, status: "active", createdAt: "2025-06-01" },
-  { id: "COM-002", name: "Electronics Category Rate", scope: "category", target: "electronics", rate: 8, status: "active", createdAt: "2025-09-10" },
-  { id: "COM-003", name: "TechHub BD Negotiated Rate", scope: "vendor", target: "VND-001", rate: 10, status: "active", createdAt: "2026-01-05" },
-]
-
 export interface Review {
   id: string
   productId: string

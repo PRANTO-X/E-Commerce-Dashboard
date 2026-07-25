@@ -60,10 +60,6 @@ const CampaignDetail = lazy(() => import("../features/marketing/components/Campa
 const CampaignForm = lazy(() => import("../features/marketing/components/CampaignForm"))
 const Reviews = lazy(() => import("../features/marketing/components/Reviews"))
 
-const Vendors = lazy(() => import("../features/vendors/components/Vendors"))
-const VendorDetail = lazy(() => import("../features/vendors/components/VendorDetail"))
-const CommissionRules = lazy(() => import("../features/vendors/components/CommissionRules"))
-
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -94,9 +90,7 @@ export const router = createBrowserRouter([
       { path: "campaign_detail/:id", element: Load(CampaignDetail) },
       { path: "campaign_form/:id", element: Load(CampaignForm) },
       { path: "reviews", element: Load(Reviews) },
-      { path: "vendors", element: Load(Vendors) },
-      { path: "vendor_detail/:id", element: Load(VendorDetail) },
-      { path: "commission-rules", element: Load(CommissionRules) },
+
     ],
   },
 ])

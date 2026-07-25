@@ -18,9 +18,6 @@ import couponReducer from "@/features/marketing/slices/couponSlice"
 import campaignReducer from "@/features/marketing/slices/campaignSlice"
 import reviewReducer from "@/features/marketing/slices/reviewSlice"
 
-import vendorReducer from "@/features/vendors/slices/vendorSlice"
-import commissionRuleReducer from "@/features/vendors/slices/commissionRuleSlice"
-
 export const store = configureStore({
   reducer: {
     products: productReducer,
@@ -41,8 +38,7 @@ export const store = configureStore({
     campaigns: campaignReducer,
     reviews: reviewReducer,
 
-    vendors: vendorReducer,
-    commissionRules: commissionRuleReducer,
+
   },
 })
 
