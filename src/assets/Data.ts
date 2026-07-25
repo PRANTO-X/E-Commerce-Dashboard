@@ -772,7 +772,7 @@ export interface Review {
   comment: string
   photoUrl?: string
   status: "pending" | "approved" | "rejected"
-  sellerReply?: string
+  storeReply?: string
   date: string
 }
 

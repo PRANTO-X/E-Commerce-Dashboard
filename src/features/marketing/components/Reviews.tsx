@@ -42,12 +42,12 @@ const Reviews = () => {
 
   const openReply = (review: Review) => {
     setReplyTarget(review)
-    setReplyText(review.sellerReply ?? "")
+    setReplyText(review.storeReply ?? "")
   }
 
   const handleSaveReply = () => {
     if (!replyTarget) return
-    dispatch(patchData({ id: replyTarget.id, payload: { sellerReply: replyText.trim() || undefined } }))
+    dispatch(patchData({ id: replyTarget.id, payload: { storeReply: replyText.trim() || undefined } }))
     toast.success("Reply saved")
     setReplyTarget(null)
   }
@@ -179,7 +179,7 @@ const Reviews = () => {
             <DialogTitle>Reply to {replyTarget?.customerName}'s review</DialogTitle>
           </DialogHeader>
           <Textarea
-            placeholder="Write a public seller reply..."
+            placeholder="Write a public store reply..."
             className="min-h-[120px] resize-none"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
