@@ -3,8 +3,10 @@ import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "./
 
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: API_BASE_URL,
 })
 
 api.interceptors.request.use((config) => {
@@ -24,7 +26,7 @@ async function performRefresh(): Promise<string> {
     throw new Error("No refresh token available")
   }
   const res = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL}/customer/auth/refresh/`,
+    `${API_BASE_URL}/customer/auth/refresh/`,
     { refresh: refreshToken }
   )
   const newAccessToken = res.data?.data?.access as string | undefined
