@@ -4,26 +4,39 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { DownloadIcon, EyeIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/users/slices/customerSlice"
 import type { AdminUser } from "@/features/users/types"
 
+const status = [
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+]
+
 const Customers = () => {
   const dispatch = useAppDispatch()
   const { data: users, isLoading } = useAppSelector((state) => state.customers)
-  const customers = users.filter((u) => u.role === "customer")
+  const allCustomers = users.filter((u) => u.role === "customer")
+
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
   useEffect(() => {
     dispatch(fetchAll())
   }, [dispatch])
 
-  const status = [
-    { label: "Active", value: "active" },
-    { label: "Inactive", value: "inactive" },
-  ]
+  const customers = allCustomers.filter((customer) => {
+    if (search) {
+      const q = search.toLowerCase()
+      const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ").toLowerCase()
+      if (!name.includes(q) && !customer.email.toLowerCase().includes(q)) return false
+    }
+    if (statusFilter && customer.is_active !== (statusFilter.value === "active")) return false
+    return true
+  })
 
   const columns: ColumnDef<AdminUser>[] = [
     {
@@ -112,9 +125,22 @@ const Customers = () => {
 
       <FilterToolbar
         searchPlaceholder="Search customer..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => {
+          setSearch("")
+          setStatusFilter(null)
+        }}
         filters={[
           {
-            component: <ExampleComboboxCustomItems frameworks={status} placeholder="Status" />,
+            component: (
+              <ExampleComboboxCustomItems
+                frameworks={status}
+                placeholder="Status"
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+            ),
           },
         ]}
       />

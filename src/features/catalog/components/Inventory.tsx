@@ -39,14 +39,21 @@ const Inventory = () => {
   const [quantityChanged, setQuantityChanged] = useState("")
   const [notes, setNotes] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
-    dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
+    dispatch(fetchAllVariants({ page: 1, page_size: 1000 }))
     dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
     dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch])
 
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "—"
+
+  const filteredVariants = variants.filter((v) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return v.name.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q)
+  })
 
   const handleAdjust = async () => {
     if (!adjustingVariant || !quantityChanged.trim()) return
@@ -137,7 +144,7 @@ const Inventory = () => {
     },
   ]
 
-  const csvData = variants.map((v) => ({
+  const csvData = filteredVariants.map((v) => ({
     Variant: v.name,
     Product: productName(v.product),
     SKU: v.sku,
@@ -164,11 +171,16 @@ const Inventory = () => {
 
       <InventoryStatsCards />
 
-      <FilterToolbar searchPlaceholder="search variant or SKU..." />
+      <FilterToolbar
+        searchPlaceholder="search variant or SKU..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => setSearch("")}
+      />
 
       <DataTable
         columns={columns}
-        data={variants}
+        data={filteredVariants}
         columnWidths={["220px", "180px", "140px", "100px", "110px", "110px", "120px"]}
       />
 

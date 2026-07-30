@@ -23,12 +23,14 @@ const statusStyles: Record<CampaignStatus, string> = {
 const Campaigns = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const [page, setPage] = useState(1)
-  const { data: campaigns, totalItems, meta } = useAppSelector((state) => state.campaigns)
+  const { data: allCampaigns } = useAppSelector((state) => state.campaigns)
+
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
   useEffect(() => {
-    dispatch(fetchAll({ page }))
-  }, [dispatch, page])
+    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+  }, [dispatch])
 
   const statusOptions = [
     { label: "Draft", value: "draft" },
@@ -36,6 +38,12 @@ const Campaigns = () => {
     { label: "Active", value: "active" },
     { label: "Ended", value: "ended" },
   ]
+
+  const campaigns = allCampaigns.filter((campaign) => {
+    if (search && !campaign.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter && campaign.status !== statusFilter.value) return false
+    return true
+  })
 
   const columns: ColumnDef<Campaign>[] = [
     {
@@ -131,9 +139,22 @@ const Campaigns = () => {
 
       <FilterToolbar
         searchPlaceholder="search campaign..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => {
+          setSearch("")
+          setStatusFilter(null)
+        }}
         filters={[
           {
-            component: <ExampleComboboxCustomItems placeholder="status" frameworks={statusOptions} />,
+            component: (
+              <ExampleComboboxCustomItems
+                placeholder="status"
+                frameworks={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+            ),
           },
         ]}
       />
@@ -141,11 +162,6 @@ const Campaigns = () => {
       <DataTable
         columns={columns}
         data={campaigns}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
         columnWidths={["220px", "140px", "220px", "120px", "110px"]}
       />
     </div>

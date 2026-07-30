@@ -12,20 +12,33 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/categorySlice"
 import { toast } from "sonner"
 
+const statusOptions = [
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+]
+
 const Categories = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const [page, setPage] = useState(1)
-  const { data: categories, totalItems, meta } = useAppSelector((state) => state.categories)
+  const { data: categories } = useAppSelector((state) => state.categories)
+
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
   useEffect(() => {
-    dispatch(fetchAll({ page }))
-  }, [dispatch, page])
+    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+  }, [dispatch])
 
-  const statusOptions = [
-    { label: "Active", value: "active" },
-    { label: "Inactive", value: "inactive" },
-  ]
+  const filteredCategories = categories.filter((category) => {
+    if (search && !category.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter && category.is_active !== (statusFilter.value === "active")) return false
+    return true
+  })
+
+  const handleReset = () => {
+    setSearch("")
+    setStatusFilter(null)
+  }
 
   const columns: ColumnDef<Category>[] = [
     {
@@ -141,12 +154,17 @@ const Categories = () => {
 
       <FilterToolbar
         searchPlaceholder="search category..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={handleReset}
         filters={[
           {
             component: (
               <ExampleComboboxCustomItems
                 placeholder="status"
                 frameworks={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
               />
             ),
           },
@@ -155,12 +173,7 @@ const Categories = () => {
 
       <DataTable
         columns={columns}
-        data={categories}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={filteredCategories}
         columnWidths={[
           "220px", // CATEGORY NAME
           "160px", // SLUG

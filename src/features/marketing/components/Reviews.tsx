@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { CheckIcon, StarIcon, XIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -18,8 +18,11 @@ const statusStyles: Record<ReviewStatus, string> = {
 
 const Reviews = () => {
   const dispatch = useAppDispatch()
-  const { data: reviews } = useAppSelector((state) => state.reviews)
+  const { data: allReviews } = useAppSelector((state) => state.reviews)
   const { data: products } = useAppSelector((state) => state.products)
+
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
   useEffect(() => {
     dispatch(fetchAll())
@@ -33,6 +36,15 @@ const Reviews = () => {
     { label: "Approved", value: "approved" },
     { label: "Rejected", value: "rejected" },
   ]
+
+  const reviews = allReviews.filter((review) => {
+    if (search) {
+      const q = search.toLowerCase()
+      if (!review.title.toLowerCase().includes(q) && !review.content.toLowerCase().includes(q)) return false
+    }
+    if (statusFilter && review.status !== statusFilter.value) return false
+    return true
+  })
 
   const handleApprove = async (review: Review) => {
     try {
@@ -153,9 +165,22 @@ const Reviews = () => {
 
       <FilterToolbar
         searchPlaceholder="search reviews..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => {
+          setSearch("")
+          setStatusFilter(null)
+        }}
         filters={[
           {
-            component: <ExampleComboboxCustomItems placeholder="status" frameworks={statusOptions} />,
+            component: (
+              <ExampleComboboxCustomItems
+                placeholder="status"
+                frameworks={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+            ),
           },
         ]}
       />

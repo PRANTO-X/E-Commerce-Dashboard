@@ -1,5 +1,5 @@
 import * as React from "react"
-import { addDays, format } from "date-fns"
+import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { type DateRange } from "react-day-picker"
 
@@ -12,11 +12,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function DatePicker() {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 20),
-    to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
-  })
+type DatePickerProps = {
+  value?: DateRange
+  onChange?: (range: DateRange | undefined) => void
+}
+
+export function DatePicker({ value, onChange }: DatePickerProps) {
+  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>(undefined)
+  const date = onChange ? value : internalDate
+  const setDate = onChange ?? setInternalDate
 
   return (
     <Field className="w-auto">

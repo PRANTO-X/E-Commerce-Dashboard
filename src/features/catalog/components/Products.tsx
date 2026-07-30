@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -23,19 +23,49 @@ import { toast } from "sonner"
 const Products = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const [page, setPage] = useState(1)
-  const { data: products, totalItems, meta } = useAppSelector((state) => state.products)
+  const { data: products } = useAppSelector((state) => state.products)
   const { data: categories } = useAppSelector((state) => state.categories)
 
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<{ label: string; value: string } | null>(null)
+  const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null })
+  const [resetSignal, setResetSignal] = useState(0)
+
   useEffect(() => {
-    dispatch(fetchAll({ page }))
-  }, [dispatch, page])
+    // Backend list endpoints don't support filter query params (confirmed live) —
+    // fetch everything once and filter/paginate client-side instead.
+    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+  }, [dispatch])
 
   useEffect(() => {
     dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch])
 
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—"
+
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({ label: c.name, value: c.id })),
+    [categories]
+  )
+
+  const filteredProducts = products.filter((product) => {
+    if (search && !product.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter && product.status !== statusFilter.value) return false
+    if (categoryFilter && product.category !== categoryFilter.value) return false
+    const price = Number(product.base_price)
+    if (priceRange.min !== null && price < priceRange.min) return false
+    if (priceRange.max !== null && price > priceRange.max) return false
+    return true
+  })
+
+  const handleReset = () => {
+    setSearch("")
+    setStatusFilter(null)
+    setCategoryFilter(null)
+    setPriceRange({ min: null, max: null })
+    setResetSignal((n) => n + 1)
+  }
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -145,7 +175,7 @@ const Products = () => {
     },
   ]
 
-  const csvData = products.map((product) => ({
+  const csvData = filteredProducts.map((product) => ({
     ID: product.id,
     Name: product.name,
     Slug: product.slug,
@@ -191,14 +221,16 @@ const Products = () => {
 
       <FilterToolbar
         searchPlaceholder="search product..."
+        searchValue={search}
+        onSearchChange={setSearch}
         stacked
+        onReset={handleReset}
         filters={[
           {
             component: (
               <PriceRangeFilter
-                onChange={(range) => {
-                  console.log("Price range:", range)
-                }}
+                key={resetSignal}
+                onChange={(range) => setPriceRange(range)}
               />
             ),
           },
@@ -207,6 +239,8 @@ const Products = () => {
               <ExampleComboboxCustomItems
                 placeholder="status"
                 frameworks={productStatusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
               />
             ),
           },
@@ -214,7 +248,9 @@ const Products = () => {
             component: (
               <ExampleComboboxCustomItems
                 placeholder="categories"
-                frameworks={categories.map((c) => ({ label: c.name, value: c.id }))}
+                frameworks={categoryOptions}
+                value={categoryFilter}
+                onValueChange={setCategoryFilter}
               />
             ),
           },
@@ -223,12 +259,7 @@ const Products = () => {
 
       <DataTable
         columns={columns}
-        data={products}
-        manualPagination
-        pageIndex={page - 1}
-        pageCount={meta?.totalPages ?? 1}
-        totalCount={totalItems}
-        onPageChange={(index) => setPage(index + 1)}
+        data={filteredProducts}
         columnWidths={[
           "220px", // PRODUCT
           "160px", // SLUG

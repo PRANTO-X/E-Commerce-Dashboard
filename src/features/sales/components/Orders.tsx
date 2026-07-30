@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import type { DateRange } from "react-day-picker"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -31,12 +32,40 @@ const fulfillmentStatusStyles: Record<OrderStatus, string> = {
 
 const Orders = () => {
   const dispatch = useAppDispatch()
-  const [page, setPage] = useState(1)
-  const { data: orders, totalItems, meta } = useAppSelector((state) => state.orders)
+  const { data: orders } = useAppSelector((state) => state.orders)
+
+  const [search, setSearch] = useState("")
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const [fulfillmentStatusFilter, setFulfillmentStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
   useEffect(() => {
-    dispatch(fetchAll({ page }))
-  }, [dispatch, page])
+    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+  }, [dispatch])
+
+  const filteredOrders = orders.filter((order) => {
+    if (
+      search &&
+      !order.order_number.toLowerCase().includes(search.toLowerCase()) &&
+      !order.customer.email.toLowerCase().includes(search.toLowerCase())
+    )
+      return false
+    if (paymentStatusFilter && order.payment_status !== paymentStatusFilter.value) return false
+    if (fulfillmentStatusFilter && order.status !== fulfillmentStatusFilter.value) return false
+    if (dateRange?.from || dateRange?.to) {
+      const created = new Date(order.created_at)
+      if (dateRange.from && created < dateRange.from) return false
+      if (dateRange.to && created > dateRange.to) return false
+    }
+    return true
+  })
+
+  const handleReset = () => {
+    setSearch("")
+    setPaymentStatusFilter(null)
+    setFulfillmentStatusFilter(null)
+    setDateRange(undefined)
+  }
 
   const paymentStatusOptions = [
     { label: "Pending", value: "pending" },
@@ -136,7 +165,7 @@ const Orders = () => {
     },
   ]
 
-  const csvData = orders.map((order) => ({
+  const csvData = filteredOrders.map((order) => ({
     order_number: order.order_number,
     customer: order.customer.email,
     total: order.total_amount,
@@ -171,14 +200,19 @@ const Orders = () => {
       {/* Filters */}
       <FilterToolbar
         searchPlaceholder="Search Orders..."
+        searchValue={search}
+        onSearchChange={setSearch}
         stacked
-        datePicker={<DatePicker />}
+        onReset={handleReset}
+        datePicker={<DatePicker value={dateRange} onChange={setDateRange} />}
         filters={[
           {
             component: (
               <ExampleComboboxCustomItems
                 frameworks={paymentStatusOptions}
                 placeholder="Payment Status"
+                value={paymentStatusFilter}
+                onValueChange={setPaymentStatusFilter}
               />
             ),
           },
@@ -187,6 +221,8 @@ const Orders = () => {
               <ExampleComboboxCustomItems
                 frameworks={fulfillmentStatusOptions}
                 placeholder="Fulfillment Status"
+                value={fulfillmentStatusFilter}
+                onValueChange={setFulfillmentStatusFilter}
               />
             ),
           },
@@ -196,12 +232,7 @@ const Orders = () => {
       <div>
         <DataTable
           columns={columns}
-          data={orders}
-          manualPagination
-          pageIndex={page - 1}
-          pageCount={meta?.totalPages ?? 1}
-          totalCount={totalItems}
-          onPageChange={(index) => setPage(index + 1)}
+          data={filteredOrders}
           columnWidths={[
             "140px",
             "180px",

@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -16,7 +16,10 @@ import { toast } from "sonner"
 const Coupons = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: coupons } = useAppSelector((state) => state.coupons)
+  const { data: allCoupons } = useAppSelector((state) => state.coupons)
+
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
   useEffect(() => {
     dispatch(fetchAll())
@@ -26,6 +29,12 @@ const Coupons = () => {
     { label: "Active", value: "active" },
     { label: "Inactive", value: "inactive" },
   ]
+
+  const coupons = allCoupons.filter((coupon) => {
+    if (search && !coupon.code.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter && coupon.is_active !== (statusFilter.value === "active")) return false
+    return true
+  })
 
   const columns: ColumnDef<Coupon>[] = [
     {
@@ -153,9 +162,22 @@ const Coupons = () => {
 
       <FilterToolbar
         searchPlaceholder="search coupon code..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => {
+          setSearch("")
+          setStatusFilter(null)
+        }}
         filters={[
           {
-            component: <ExampleComboboxCustomItems placeholder="status" frameworks={statusOptions} />,
+            component: (
+              <ExampleComboboxCustomItems
+                placeholder="status"
+                frameworks={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+            ),
           },
         ]}
       />

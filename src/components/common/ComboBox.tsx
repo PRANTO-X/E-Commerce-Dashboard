@@ -13,15 +13,22 @@ type Framework = {
 }
 
 export function ExampleComboboxCustomItems({
-  frameworks,placeholder
+  frameworks,
+  placeholder,
+  value,
+  onValueChange,
 }: {
   frameworks: Framework[]
   placeholder?: string
+  value?: Framework | null
+  onValueChange?: (value: Framework | null) => void
 }) {
   return (
     <Combobox
       items={frameworks}
       itemToStringValue={(item: Framework) => item.label}
+      value={value}
+      onValueChange={onValueChange}
     >
       <ComboboxInput placeholder={placeholder} showClear />
       <ComboboxContent>

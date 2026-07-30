@@ -32,6 +32,7 @@ import {
 import {
   fetchAll as fetchAllVariants,
   postData as postVariant,
+  patchData,
   deleteData as deleteVariant,
 } from "@/features/catalog/slices/variantSlice"
 import type { VariantStatus } from "@/features/catalog/types"
@@ -91,6 +92,30 @@ const ProductForm = () => {
   const [newVariantName, setNewVariantName] = useState("")
   const [newVariantPrice, setNewVariantPrice] = useState("")
   const [newVariantStock, setNewVariantStock] = useState("")
+
+  // Variants staged locally while creating a new product (not yet persisted —
+  // no product id exists to attach them to until the product is saved).
+  const [draftVariants, setDraftVariants] = useState<
+    { tempId: string; sku: string; name: string; price: string; stock_quantity: string; status: VariantStatus }[]
+  >([])
+
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
+  const [editSku, setEditSku] = useState("")
+  const [editName, setEditName] = useState("")
+  const [editPrice, setEditPrice] = useState("")
+  const [editStock, setEditStock] = useState("")
+  const [editStatus, setEditStatus] = useState<VariantStatus>("active")
+
+  const displayVariants = isEditing
+    ? variants.map((v) => ({
+        key: v.id,
+        sku: v.sku,
+        name: v.name,
+        price: v.price,
+        stock_quantity: String(v.stock_quantity),
+        status: v.status,
+      }))
+    : draftVariants.map((v) => ({ key: v.tempId, ...v }))
 
   const {
     control,
@@ -156,6 +181,29 @@ const ProductForm = () => {
         navigate("/products")
       } else {
         const created = await dispatch(postData({ payload })).unwrap()
+        if (draftVariants.length > 0) {
+          try {
+            await Promise.all(
+              draftVariants.map((v) =>
+                dispatch(
+                  postVariant({
+                    payload: {
+                      product: created.id,
+                      sku: v.sku,
+                      name: v.name,
+                      price: v.price.trim() || "0",
+                      stock_quantity: Number(v.stock_quantity) || 0,
+                      status: v.status,
+                      image: "",
+                    },
+                  })
+                ).unwrap()
+              )
+            )
+          } catch {
+            toast.error("Product created, but some variants failed to save")
+          }
+        }
         toast.success(`${values.name} created`)
         navigate(`/product_form/${created.id}`)
       }
@@ -196,7 +244,28 @@ const ProductForm = () => {
   }
 
   const handleAddVariant = async () => {
-    if (!existing?.id || !newVariantSku.trim() || !newVariantName.trim()) return
+    if (!newVariantSku.trim() || !newVariantName.trim()) return
+
+    if (!isEditing) {
+      setDraftVariants((prev) => [
+        ...prev,
+        {
+          tempId: crypto.randomUUID(),
+          sku: newVariantSku.trim(),
+          name: newVariantName.trim(),
+          price: newVariantPrice.trim() || "0",
+          stock_quantity: newVariantStock.trim() || "0",
+          status: "active",
+        },
+      ])
+      setNewVariantSku("")
+      setNewVariantName("")
+      setNewVariantPrice("")
+      setNewVariantStock("")
+      return
+    }
+
+    if (!existing?.id) return
     try {
       await dispatch(
         postVariant({
@@ -222,11 +291,61 @@ const ProductForm = () => {
   }
 
   const handleDeleteVariant = async (variantId: string) => {
+    if (!isEditing) {
+      setDraftVariants((prev) => prev.filter((v) => v.tempId !== variantId))
+      return
+    }
     try {
       await dispatch(deleteVariant(variantId)).unwrap()
       toast.success("Variant removed")
     } catch {
       toast.error("Failed to remove variant")
+    }
+  }
+
+  const startEditVariant = (v: { key: string; sku: string; name: string; price: string; stock_quantity: string; status: VariantStatus }) => {
+    setEditingVariantId(v.key)
+    setEditSku(v.sku)
+    setEditName(v.name)
+    setEditPrice(v.price)
+    setEditStock(v.stock_quantity)
+    setEditStatus(v.status)
+  }
+
+  const cancelEditVariant = () => setEditingVariantId(null)
+
+  const saveEditVariant = async () => {
+    if (!editingVariantId || !editSku.trim() || !editName.trim()) return
+
+    if (!isEditing) {
+      setDraftVariants((prev) =>
+        prev.map((v) =>
+          v.tempId === editingVariantId
+            ? { ...v, sku: editSku.trim(), name: editName.trim(), price: editPrice.trim() || "0", stock_quantity: editStock.trim() || "0", status: editStatus }
+            : v
+        )
+      )
+      setEditingVariantId(null)
+      return
+    }
+
+    try {
+      await dispatch(
+        patchData({
+          id: editingVariantId,
+          payload: {
+            sku: editSku.trim(),
+            name: editName.trim(),
+            price: editPrice.trim() || "0",
+            stock_quantity: Number(editStock) || 0,
+            status: editStatus,
+          },
+        })
+      ).unwrap()
+      toast.success("Variant updated")
+      setEditingVariantId(null)
+    } catch {
+      toast.error("Failed to update variant")
     }
   }
 
@@ -477,16 +596,57 @@ const ProductForm = () => {
         </Card>
       )}
 
-      {isEditing && existing?.id && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Variants</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {variants.length > 0 && (
-              <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
-                {variants.map((variant) => (
-                  <div key={variant.id} className="flex items-center justify-between gap-3 p-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>Variants</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {!isEditing && (
+            <p className="text-xs text-muted-foreground">
+              Variants added here are saved automatically once you create the product.
+            </p>
+          )}
+
+          {displayVariants.length > 0 && (
+            <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+              {displayVariants.map((variant) =>
+                editingVariantId === variant.key ? (
+                  <div key={variant.key} className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3 items-center">
+                    <Input placeholder="SKU" value={editSku} onChange={(e) => setEditSku(e.target.value)} />
+                    <Input placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                    <Input
+                      placeholder="Price"
+                      type="number"
+                      step="0.01"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Stock"
+                      type="number"
+                      value={editStock}
+                      onChange={(e) => setEditStock(e.target.value)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Select value={editStatus} onValueChange={(v) => setEditStatus(v as VariantStatus)}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" size="sm" onClick={saveEditVariant} disabled={!editSku.trim() || !editName.trim()}>
+                        Save
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={cancelEditVariant}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={variant.key} className="flex items-center justify-between gap-3 p-3">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{variant.name}</span>
                       <span className="text-xs text-muted-foreground">
@@ -497,45 +657,52 @@ const ProductForm = () => {
                       <span className="text-sm font-semibold">${Number(variant.price).toFixed(2)}</span>
                       <button
                         type="button"
-                        onClick={() => handleDeleteVariant(variant.id)}
+                        onClick={() => startEditVariant(variant)}
+                        className="text-muted-foreground hover:text-primary text-xs font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVariant(variant.key)}
                         className="text-muted-foreground hover:text-red-500"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Input placeholder="SKU" value={newVariantSku} onChange={(e) => setNewVariantSku(e.target.value)} />
-              <Input placeholder="Name" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
-              <Input
-                placeholder="Price"
-                type="number"
-                step="0.01"
-                value={newVariantPrice}
-                onChange={(e) => setNewVariantPrice(e.target.value)}
-              />
-              <Input
-                placeholder="Stock"
-                type="number"
-                value={newVariantStock}
-                onChange={(e) => setNewVariantStock(e.target.value)}
-              />
+                )
+              )}
             </div>
-            <Button
-              type="button"
-              onClick={handleAddVariant}
-              disabled={!newVariantSku.trim() || !newVariantName.trim()}
-              className="self-start"
-            >
-              Add Variant
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Input placeholder="SKU" value={newVariantSku} onChange={(e) => setNewVariantSku(e.target.value)} />
+            <Input placeholder="Name" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} />
+            <Input
+              placeholder="Price"
+              type="number"
+              step="0.01"
+              value={newVariantPrice}
+              onChange={(e) => setNewVariantPrice(e.target.value)}
+            />
+            <Input
+              placeholder="Stock"
+              type="number"
+              value={newVariantStock}
+              onChange={(e) => setNewVariantStock(e.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={handleAddVariant}
+            disabled={!newVariantSku.trim() || !newVariantName.trim()}
+            className="self-start"
+          >
+            Add Variant
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

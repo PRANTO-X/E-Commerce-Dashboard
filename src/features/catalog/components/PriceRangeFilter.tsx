@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 
 type PriceRange = {
@@ -16,18 +16,13 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
     max: "",
   })
 
-  useEffect(() => {
-    onChange?.({
-      min: range.min === "" ? null : Number(range.min),
-      max: range.max === "" ? null : Number(range.max),
-    })
-  }, [range, onChange])
-
   const handleChange = (key: keyof PriceRange, value: string) => {
-    setRange((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
+    const next = { ...range, [key]: value }
+    setRange(next)
+    onChange?.({
+      min: next.min === "" ? null : Number(next.min),
+      max: next.max === "" ? null : Number(next.max),
+    })
   }
 
   return (

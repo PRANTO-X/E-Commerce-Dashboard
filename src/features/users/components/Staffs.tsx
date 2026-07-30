@@ -3,7 +3,7 @@ import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -13,11 +13,19 @@ import type { AdminUser } from "@/features/users/types"
 const Staffs = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: staffs, isLoading } = useAppSelector((state) => state.staffs)
+  const { data: allStaffs, isLoading } = useAppSelector((state) => state.staffs)
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
     dispatch(fetchAll())
   }, [dispatch])
+
+  const staffs = allStaffs.filter((staff) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    const name = [staff.first_name, staff.last_name].filter(Boolean).join(" ").toLowerCase()
+    return name.includes(q) || staff.email.toLowerCase().includes(q)
+  })
 
   const columns: ColumnDef<AdminUser>[] = [
     {
@@ -114,7 +122,12 @@ const Staffs = () => {
         </div>
       </div>
 
-      <FilterToolbar searchPlaceholder="Search staff..." />
+      <FilterToolbar
+        searchPlaceholder="Search staff..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onReset={() => setSearch("")}
+      />
 
       <div>
         <DataTable

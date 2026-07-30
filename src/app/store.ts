@@ -16,7 +16,6 @@ import customerReducer from "@/features/users/slices/customerSlice"
 import settingsReducer from "@/features/system/slices/settingsSlice"
 import authSettingsReducer from "@/features/system/slices/authSettingsSlice"
 
-import transactionReducer from "@/features/sales/slices/transactionSlice"
 import orderReducer from "@/features/sales/slices/orderSlice"
 
 import couponReducer from "@/features/marketing/slices/couponSlice"
@@ -57,7 +56,6 @@ export const store = configureStore({
     settings: settingsReducer,
     authSettings: authSettingsReducer,
 
-    transactions: transactionReducer,
     orders: orderReducer,
 
     coupons: couponReducer,

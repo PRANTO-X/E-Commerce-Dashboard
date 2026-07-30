@@ -50,7 +50,6 @@ const sidebarItems = [
     icon: ShoppingCart,
     items: [
       { title: "Orders", url: "/orders" },
-      { title: "Transactions", url: "/transactions" },
       { title: "Payments", url: "/payments" },
       { title: "Returns", url: "/returns" },
       { title: "Couriers", url: "/couriers" },
@@ -214,30 +213,32 @@ export function AppSidebar() {
 
               {/* SUBMENU */}
               <div
-                className={`overflow-hidden transition-all duration-200 ease-in-out
-                  ${isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}
+                className={`grid transition-all duration-200 ease-in-out
+                  ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
                 `}
               >
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {section.items.map((item) => (
-                      <SidebarMenuItem key={item.title}>
-                        <NavLink to={item.url} end onClick={handleLinkClick}>
-                          {({ isActive }) => (
-                            <SidebarMenuButton
-                              isActive={isActive}
-                              className={`pl-8 ${
-                                isActive ? "text-primary font-medium" : ""
-                              }`}
-                            >
-                              {item.title}
-                            </SidebarMenuButton>
-                          )}
-                        </NavLink>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
+                <div className="overflow-hidden">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {section.items.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <NavLink to={item.url} end onClick={handleLinkClick}>
+                            {({ isActive }) => (
+                              <SidebarMenuButton
+                                isActive={isActive}
+                                className={`pl-8 ${
+                                  isActive ? "text-primary font-medium" : ""
+                                }`}
+                              >
+                                {item.title}
+                              </SidebarMenuButton>
+                            )}
+                          </NavLink>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </div>
               </div>
             </SidebarGroup>
           )

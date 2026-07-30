@@ -639,31 +639,6 @@ export const roles: Role[] = [
   { id: "4", name: "Editor", description: "Can manage catalog content and blog posts.", usersCount: 3, type: "Custom", permissions: ["Products", "Categories", "Blog"], level: "Medium" },
 ]
 
-export type TransactionPaymentMethod = "card" | "paypal" | "stripe" | "cash"
-
-export interface TransactionItem {
-  id: string
-  customer: string
-  orderId: string
-  paymentMethod: TransactionPaymentMethod
-  amount: number
-  status: "paid" | "pending" | "failed" | "refunded"
-  date: string
-}
-
-export const transactions: TransactionItem[] = [
-  { id: "TXN1001", customer: "John Smith", orderId: "ORD5001", paymentMethod: "card", amount: 249.99, status: "paid", date: "2025-05-01 10:24 AM" },
-  { id: "TXN1002", customer: "Emma Johnson", orderId: "ORD5002", paymentMethod: "paypal", amount: 89.5, status: "pending", date: "2025-05-01 11:12 AM" },
-  { id: "TXN1003", customer: "Michael Brown", orderId: "ORD5003", paymentMethod: "stripe", amount: 520, status: "paid", date: "2025-05-02 09:18 AM" },
-  { id: "TXN1004", customer: "Sophia Davis", orderId: "ORD5004", paymentMethod: "cash", amount: 45, status: "failed", date: "2025-05-02 02:41 PM" },
-  { id: "TXN1005", customer: "Daniel Wilson", orderId: "ORD5005", paymentMethod: "card", amount: 1299.99, status: "paid", date: "2025-05-03 08:55 AM" },
-  { id: "TXN1006", customer: "Olivia Martinez", orderId: "ORD5006", paymentMethod: "paypal", amount: 72.49, status: "refunded", date: "2025-05-03 01:30 PM" },
-  { id: "TXN1007", customer: "William Anderson", orderId: "ORD5007", paymentMethod: "stripe", amount: 340, status: "paid", date: "2025-05-04 03:22 PM" },
-  { id: "TXN1008", customer: "Ava Thomas", orderId: "ORD5008", paymentMethod: "card", amount: 15.99, status: "pending", date: "2025-05-04 06:40 PM" },
-  { id: "TXN1009", customer: "James Taylor", orderId: "ORD5009", paymentMethod: "cash", amount: 230, status: "paid", date: "2025-05-05 10:05 AM" },
-  { id: "TXN1010", customer: "Isabella Moore", orderId: "ORD5010", paymentMethod: "paypal", amount: 480, status: "failed", date: "2025-05-05 12:11 PM" },
-]
-
 export interface InventoryItem {
   id: string
   product: string
