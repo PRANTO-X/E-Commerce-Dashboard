@@ -1,11 +1,11 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { categoryOptions, type Category } from "@/assets/Data"
+import type { Category } from "@/features/catalog/types"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -15,36 +15,19 @@ import { toast } from "sonner"
 const Categories = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: categories } = useAppSelector((state) => state.categories)
+  const [page, setPage] = useState(1)
+  const { data: categories, totalItems, meta } = useAppSelector((state) => state.categories)
 
   useEffect(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+    dispatch(fetchAll({ page }))
+  }, [dispatch, page])
 
   const statusOptions = [
     { label: "Active", value: "active" },
-    { label: "Draft", value: "draft" },
     { label: "Inactive", value: "inactive" },
   ]
-  const statusStyles = {
-    active: "bg-green-500/10 text-green-400 border border-green-500/20",
-    draft: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-    inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
-  } as const
 
-  type categoryStatus = keyof typeof statusStyles
-  type CategoryItem = Category
-  const columns: ColumnDef<CategoryItem>[] = [
-    {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-primary">
-          {row.getValue("id")}
-        </span>
-      ),
-    },
-
+  const columns: ColumnDef<Category>[] = [
     {
       accessorKey: "name",
       header: "CATEGORY NAME",
@@ -69,44 +52,49 @@ const Categories = () => {
       accessorKey: "parent",
       header: "PARENT CATEGORY",
       cell: ({ row }) => {
-        const parent = row.getValue("parent") as string | null
+        const parentId = row.getValue("parent") as string | null
+        const parent = categories.find((c) => c.id === parentId)
 
         return (
-          <span className="text-sm text-muted-foreground">{parent || "—"}</span>
+          <span className="text-sm text-muted-foreground">{parent?.name ?? "—"}</span>
         )
       },
     },
 
     {
-      accessorKey: "products",
-      header: "PRODUCTS",
+      accessorKey: "sort_order",
+      header: "SORT ORDER",
       cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.getValue("products")}</span>
+        <span className="text-sm font-medium">{row.getValue("sort_order")}</span>
       ),
     },
 
     {
-      accessorKey: "status",
+      accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => {
-        const status = row.getValue("status") as categoryStatus
+        const isActive = row.getValue("is_active") as boolean
 
         return (
           <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+              isActive
+                ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                : "bg-red-500/10 text-red-400 border border-red-500/20"
+            }`}
           >
-            {status}
+            {isActive ? "active" : "inactive"}
           </span>
         )
       },
     },
 
     {
-      accessorKey: "createdAt",
+      accessorKey: "created_at",
       header: "CREATED AT",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.getValue("createdAt")}
+          {new Date(row.getValue("created_at")).toLocaleDateString()}
         </span>
       ),
     },
@@ -117,9 +105,13 @@ const Categories = () => {
       cell: ({ row }) => {
         const category = row.original
 
-        const handleDelete = () => {
-          dispatch(deleteData(category.id))
-          toast.success(`${category.name} deleted`)
+        const handleDelete = async () => {
+          try {
+            await dispatch(deleteData(category.id)).unwrap()
+            toast.success(`${category.name} deleted`)
+          } catch {
+            toast.error("Failed to delete category")
+          }
         }
 
         return <TableActions itemName={category.name} onDelete={handleDelete} editUrl={`/category_form/${category.id}`}/>
@@ -158,26 +150,22 @@ const Categories = () => {
               />
             ),
           },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                placeholder="categories"
-                frameworks={categoryOptions}
-              />
-            ),
-          },
         ]}
       />
 
       <DataTable
         columns={columns}
         data={categories}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
         columnWidths={[
-          "80px", // ID
           "220px", // CATEGORY NAME
           "160px", // SLUG
           "180px", // PARENT CATEGORY
-          "120px", // PRODUCTS
+          "120px", // SORT ORDER
           "120px", // STATUS
           "160px", // CREATED AT
           "120px", // ACTION

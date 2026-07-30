@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,128 +8,113 @@ import { Link } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { Button } from "@/components/ui/button"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { type Order } from "@/assets/Data"
+import type { OrderDetail, OrderStatus, PaymentStatus } from "@/features/sales/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 
+const paymentStatusStyle: Record<PaymentStatus, string> = {
+  paid: "bg-green-500/10 text-green-500",
+  pending: "bg-yellow-500/10 text-yellow-500",
+  failed: "bg-red-500/10 text-red-500",
+  partially_refunded: "bg-purple-500/10 text-purple-500",
+  refunded: "bg-purple-500/10 text-purple-500",
+}
+
+const fulfillmentStatusStyles: Record<OrderStatus, string> = {
+  pending_payment: "bg-gray-500/10 text-gray-500",
+  placed: "bg-blue-500/10 text-blue-500",
+  processing: "bg-blue-500/10 text-blue-500",
+  shipped: "bg-green-500/10 text-green-500",
+  delivered: "bg-emerald-500/10 text-emerald-500",
+  cancelled: "bg-red-500/10 text-red-500",
+}
+
 const Orders = () => {
   const dispatch = useAppDispatch()
-  const { data: orders } = useAppSelector((state) => state.orders)
+  const [page, setPage] = useState(1)
+  const { data: orders, totalItems, meta } = useAppSelector((state) => state.orders)
 
   useEffect(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+    dispatch(fetchAll({ page }))
+  }, [dispatch, page])
 
-  const paymentStatus = [
+  const paymentStatusOptions = [
     { label: "Pending", value: "pending" },
     { label: "Paid", value: "paid" },
     { label: "Failed", value: "failed" },
     { label: "Refunded", value: "refunded" },
   ]
 
-  const fulfillmentStatus = [
-    { label: "Unfulfilled", value: "unfulfilled" },
+  const fulfillmentStatusOptions = [
+    { label: "Placed", value: "placed" },
     { label: "Processing", value: "processing" },
     { label: "Shipped", value: "shipped" },
     { label: "Delivered", value: "delivered" },
     { label: "Cancelled", value: "cancelled" },
   ]
 
-  const paymentStatusStyle = {
-    Paid: "bg-green-500/10 text-green-500",
-    Pending: "bg-yellow-500/10 text-yellow-500",
-    Failed: "bg-red-500/10 text-red-500",
-    Refunded: "bg-purple-500/10 text-purple-500",
-  } as const
-
-  type PaymentStatus = keyof typeof paymentStatusStyle
-
-  const fulfillmentStatusStyles = {
-    Shipped: "bg-green-500/10 text-green-500",
-    Processing: "bg-blue-500/10 text-blue-500",
-    Cancelled: "bg-red-500/10 text-red-500",
-    Delivered: "bg-emerald-500/10 text-emerald-500",
-    Unfulfilled: "bg-gray-500/10 text-gray-500",
-  } as const
-
-  type FulfillmentStatus = keyof typeof fulfillmentStatusStyles
-
-  const columns: ColumnDef<Order>[] = [
+  const columns: ColumnDef<OrderDetail>[] = [
     {
-      accessorKey: "id",
-      header: "ORDER ID",
+      accessorKey: "order_number",
+      header: "ORDER #",
       cell: ({ row }) => (
         <span className="font-inter text-sm font-medium text-primary">
-          {row.getValue("id")}
+          {row.getValue("order_number")}
         </span>
       ),
     },
     {
       accessorKey: "customer",
       header: "CUSTOMER",
-      cell: ({ row }) => (
-        <div>
-          <p className="text-sm font-medium text-foreground">
-            {row.getValue("customer")}
-          </p>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const customer = row.getValue("customer") as OrderDetail["customer"]
+        const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ")
+        return (
+          <div>
+            <p className="text-sm font-medium text-foreground">{name || customer.email}</p>
+          </div>
+        )
+      },
     },
     {
-      accessorKey: "product",
-      header: "PRODUCT",
+      accessorKey: "total_amount",
+      header: "AMOUNT",
       cell: ({ row }) => (
-        <span className="text-sm text-foreground line-clamp-1">
-          {row.getValue("product")}
+        <span className="text-sm font-semibold text-foreground">
+          ${Number(row.getValue("total_amount")).toFixed(2)}
         </span>
       ),
     },
     {
-      accessorKey: "amount",
-      header: "AMOUNT",
-      cell: ({ row }) => {
-        const amount = row.getValue("amount") as number
-        return (
-          <span className="text-sm font-semibold text-foreground">
-            ${amount.toFixed(2)}
-          </span>
-        )
-      },
-    },
-    {
-      accessorKey: "paymentStatus",
+      accessorKey: "payment_status",
       header: "PAYMENT",
       cell: ({ row }) => {
-        const status = row.getValue("paymentStatus") as PaymentStatus
+        const status = row.getValue("payment_status") as PaymentStatus
         return (
-          <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}`}
-          >
+          <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}`}>
             {status}
           </span>
         )
       },
     },
     {
-      accessorKey: "fulfillmentStatus",
+      accessorKey: "status",
       header: "FULFILLMENT",
       cell: ({ row }) => {
-        const status = row.getValue("fulfillmentStatus") as FulfillmentStatus
+        const status = row.getValue("status") as OrderStatus
         return (
-          <span
-            className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}`}
-          >
+          <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}`}>
             {status}
           </span>
         )
       },
     },
     {
-      accessorKey: "date",
+      accessorKey: "created_at",
       header: "DATE",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {row.getValue("date")}
+          {new Date(row.getValue("created_at")).toLocaleDateString()}
         </span>
       ),
     },
@@ -152,13 +137,12 @@ const Orders = () => {
   ]
 
   const csvData = orders.map((order) => ({
-    id: order.id,
-    customer: order.customer,
-    product: order.product,
-    amount: order.amount,
-    payment_status: order.paymentStatus,
-    fulfillment_status: order.fulfillmentStatus,
-    date: order.date,
+    order_number: order.order_number,
+    customer: order.customer.email,
+    total: order.total_amount,
+    payment_status: order.payment_status,
+    status: order.status,
+    date: order.created_at,
   }))
 
   return (
@@ -193,7 +177,7 @@ const Orders = () => {
           {
             component: (
               <ExampleComboboxCustomItems
-                frameworks={paymentStatus}
+                frameworks={paymentStatusOptions}
                 placeholder="Payment Status"
               />
             ),
@@ -201,7 +185,7 @@ const Orders = () => {
           {
             component: (
               <ExampleComboboxCustomItems
-                frameworks={fulfillmentStatus}
+                frameworks={fulfillmentStatusOptions}
                 placeholder="Fulfillment Status"
               />
             ),
@@ -213,10 +197,14 @@ const Orders = () => {
         <DataTable
           columns={columns}
           data={orders}
+          manualPagination
+          pageIndex={page - 1}
+          pageCount={meta?.totalPages ?? 1}
+          totalCount={totalItems}
+          onPageChange={(index) => setPage(index + 1)}
           columnWidths={[
-            "120px",
-            "150px",
-            "200px",
+            "140px",
+            "180px",
             "110px",
             "120px",
             "130px",

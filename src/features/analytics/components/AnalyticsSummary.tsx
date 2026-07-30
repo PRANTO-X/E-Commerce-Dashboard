@@ -1,35 +1,48 @@
-import { DollarSign, ShoppingBag, Users, Activity } from "lucide-react"
+import { useEffect } from "react"
+import { DollarSign, ShoppingBag, Receipt, Undo2 } from "lucide-react"
 import MetricCard from "@/features/dashboard/components/MetricCard"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAnalyticsSummary, fetchReturnsSummary } from "@/features/analytics/slices/analyticsSlice"
 
+// Real analytics endpoints have no period-over-period comparison data, so `change` is
+// always 0 here rather than a fabricated trend percentage.
 export function AnalyticsSummary() {
+  const dispatch = useAppDispatch()
+  const { summary, returns } = useAppSelector((state) => state.analytics)
+
+  useEffect(() => {
+    dispatch(fetchAnalyticsSummary())
+    dispatch(fetchReturnsSummary())
+  }, [dispatch])
+
   const metrics = [
     {
       id: "net-revenue",
-      title: "Net Revenue",
-      value: "$84,230.00",
-      change: +15.2,
+      title: "Total Revenue",
+      value: `$${Number(summary?.total_revenue ?? 0).toFixed(2)}`,
+      change: 0,
       icon: DollarSign,
     },
     {
       id: "avg-order",
       title: "Avg. Order Value",
-      value: "$124.50",
-      change: +4.8,
+      value: `$${Number(summary?.average_order_value ?? 0).toFixed(2)}`,
+      change: 0,
       icon: ShoppingBag,
     },
     {
-      id: "retention",
-      title: "Customer Retention",
-      value: "68.2%",
-      change: +2.4,
-      icon: Users,
+      id: "total-orders",
+      title: "Total Orders",
+      value: String(summary?.total_orders ?? 0),
+      change: 0,
+      icon: Receipt,
     },
     {
-      id: "conversion",
-      title: "Conversion Rate",
-      value: "3.42%",
-      change: -0.5,
-      icon: Activity,
+      id: "return-rate",
+      title: "Return Rate",
+      value: `${Number(returns?.return_rate ?? summary?.return_rate ?? 0).toFixed(2)}%`,
+      change: 0,
+      icon: Undo2,
     },
   ]
 

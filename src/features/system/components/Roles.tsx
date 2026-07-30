@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react"
-import {
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  UserCog,
-  PlusIcon,
-  Search,
-  Edit2,
-  Trash2,
-} from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+import { Edit2, Search, ShieldCheck } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -27,90 +21,77 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, postData, deleteData } from "@/features/system/slices/roleSlice"
-import { toast } from "sonner"
+import { fetchAll as fetchAllStaff } from "@/features/users/slices/staffSlice"
+import { setUserRole } from "@/features/users/slices/customerSlice"
+import type { UserRole } from "@/features/users/types"
+
+// The backend has no custom Role-entity CRUD — only a fixed role enum (admin/staff/customer)
+// plus a raw permissions array per staff member (see StaffForm.tsx for the permission
+// checklist editor, backed by PATCH /admin/staff/{id}/permissions/). This page is the
+// staff-facing view of that: browse staff, see their current role/permissions, and change role.
+
+const roleOptions: UserRole[] = ["admin", "staff", "customer"]
 
 const Roles = () => {
-  const [searchTerm, setSearchTerm] = useState("")
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: roles } = useAppSelector((state) => state.roles)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const { data: staffs } = useAppSelector((state) => state.staffs)
 
   useEffect(() => {
-    dispatch(fetchAll())
+    dispatch(fetchAllStaff())
   }, [dispatch])
 
-  const handleCreateRole = () => {
-    const name = window.prompt("New role name?")
-    if (!name) return
-    dispatch(
-      postData({
-        payload: {
-          name,
-          description: "Custom role — configure permissions from the permission matrix.",
-          usersCount: 0,
-          type: "Custom",
-          permissions: [],
-          level: "Low",
-        },
-      })
-    )
-    toast.success(`Role "${name}" created`)
+  const filteredStaff = staffs.filter((s) => {
+    const name = [s.first_name, s.last_name].filter(Boolean).join(" ").toLowerCase()
+    return name.includes(searchTerm.toLowerCase()) || s.email.toLowerCase().includes(searchTerm.toLowerCase())
+  })
+
+  const handleSetRole = async (id: string, role: UserRole) => {
+    setUpdatingId(id)
+    try {
+      await dispatch(setUserRole({ id, role })).unwrap()
+      await dispatch(fetchAllStaff())
+      toast.success("Role updated")
+    } catch {
+      toast.error("Failed to update role")
+    } finally {
+      setUpdatingId(null)
+    }
   }
-
-  const handleDeleteRole = (id: string, name: string) => {
-    dispatch(deleteData(id))
-    toast.success(`Role "${name}" deleted`)
-  }
-
-  const filteredRoles = roles.filter(
-    (role) =>
-      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const tableHeaders = [
-    "Role Name",
-    "Description",
-    "Permissions",
-    "Users",
-    "Actions",
-  ]
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Roles & Permissions
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Staff Permissions</h1>
           <p className="text-muted-foreground">
-            Define and manage user roles and their associated access levels.
+            Manage staff roles and permissions. Detailed permission checklists live on each staff member's edit page.
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="action"
-          onClick={handleCreateRole}
-        >
-          <PlusIcon className="size-5" />
-          Create Role
-        </Button>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>System Roles</CardTitle>
-              <CardDescription>
-                A list of all roles defined in your organization.
-              </CardDescription>
+              <CardTitle>Staff Members</CardTitle>
+              <CardDescription>Role and permission summary for every staff account.</CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-3 top-3 h-4 w-4 text-field-placeholder" />
               <Input
-                placeholder="Search roles..."
+                placeholder="Search staff..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -122,153 +103,82 @@ const Roles = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                {tableHeaders.map((header) => (
-                  <TableHead
-                    key={header}
-                    className={
-                      header === "Role Name"
-                        ? "w-[200px]"
-                        : header === "Users"
-                          ? "text-center"
-                          : header === "Actions"
-                            ? "text-right"
-                            : ""
-                    }
-                  >
-                    {header}
-                  </TableHead>
-                ))}
+                <TableHead>Staff</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Permissions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRoles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {role.level === "High" ? (
-                        <ShieldAlert className="h-4 w-4 text-destructive" />
-                      ) : role.level === "Medium" ? (
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Shield className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <span className="font-medium">{role.name}</span>
-                      {role.type === "System" && (
-                        <Badge variant="secondary">System</Badge>
-                      )}
-                    </div>
+              {filteredStaff.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    No staff members yet.
                   </TableCell>
-                  <TableCell className="max-w-[300px] truncate text-muted-foreground">
-                    {role.description}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {role.permissions.map((perm, index) => (
-                        <Badge key={index} variant="outline">
-                          {perm}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <UserCog className="h-3.5 w-3.5 text-muted-foreground" />
-                      {role.usersCount}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end">
+                </TableRow>
+              )}
+              {filteredStaff.map((staff) => {
+                const name = [staff.first_name, staff.last_name].filter(Boolean).join(" ")
+                return (
+                  <TableRow key={staff.id}>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{name || "—"}</span>
+                        <span className="text-xs text-muted-foreground">{staff.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={staff.role}
+                        onValueChange={(v) => handleSetRole(staff.id, v as UserRole)}
+                        disabled={updatingId === staff.id}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roleOptions.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {staff.permissions.includes("*") ? (
+                          <Badge variant="outline" className="gap-1">
+                            <ShieldCheck className="h-3 w-3" /> All permissions
+                          </Badge>
+                        ) : staff.permissions.length === 0 ? (
+                          <span className="text-sm text-muted-foreground">None</span>
+                        ) : (
+                          staff.permissions.map((perm) => (
+                            <Badge key={perm} variant="outline">
+                              {perm}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-blue-500 hover:text-blue-500"
-                        onClick={() => toast.info("Role editing form isn't built yet — coming in a future update.")}
+                        onClick={() => navigate(`/staff_form/${staff.id}`)}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        disabled={role.type === "System"}
-                        onClick={() => handleDeleteRole(role.id, role.name)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-
-      {/* PERMISSION MATRIX HINT */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Quick Permission Overview</CardTitle>
-            <CardDescription>
-              Most common permission groups assigned to roles.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                {
-                  name: "Catalog Management",
-                  desc: "View, create, edit and delete products and categories.",
-                  roles: 3,
-                },
-                {
-                  name: "Order Processing",
-                  desc: "Manage order status, payments and shipping.",
-                  roles: 2,
-                },
-                {
-                  name: "Customer Support",
-                  desc: "Access customer profiles and communication tools.",
-                  roles: 2,
-                },
-              ].map((group, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-accent/30"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">{group.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {group.desc}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{group.roles} Roles</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Security Tip</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <p>
-              Always follow the <strong>Principle of Least Privilege</strong>{" "}
-              (PoLP). Users should only have the permissions necessary to
-              perform their jobs.
-            </p>
-            <p className="text-muted-foreground">
-              Review roles and permissions quarterly to ensure your system
-              remains secure.
-            </p>
-            <Button variant="link" className="px-0 h-auto">
-              View security docs
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }

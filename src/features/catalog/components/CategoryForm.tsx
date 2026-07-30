@@ -9,6 +9,8 @@ import { ArrowLeft, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -23,18 +25,18 @@ import { fetchAll, fetchSingle, postData, updateData } from "@/features/catalog/
 
 const categorySchema = z.object({
   name: z.string().min(2, "Category name must be at least 2 characters"),
-  slug: z.string().min(2, "Slug is required"),
+  slug: z
+    .string()
+    .min(2, "Slug is required")
+    .regex(/^[-a-zA-Z0-9_]+$/, "Use only letters, numbers, - and _"),
+  description: z.string(),
   parent: z.string(),
-  status: z.enum(["active", "draft", "inactive"]),
+  image: z.string(),
+  is_active: z.boolean(),
+  sort_order: z.number().int().min(0, "Must be 0 or greater"),
 })
 
 type CategoryFormValues = z.infer<typeof categorySchema>
-
-const statusOptions = [
-  { label: "Active", value: "active" },
-  { label: "Draft", value: "draft" },
-  { label: "Inactive", value: "inactive" },
-] as const
 
 const NO_PARENT = "none"
 
@@ -46,7 +48,7 @@ const CategoryForm = () => {
 
   const isEditing = id !== "new"
 
-  const topLevelCategories = categories.filter((c) => !c.parent && c.id !== (isEditing ? id : undefined))
+  const parentOptions = categories.filter((c) => !c.parent && c.id !== (isEditing ? id : undefined))
 
   const {
     control,
@@ -59,13 +61,16 @@ const CategoryForm = () => {
     defaultValues: {
       name: "",
       slug: "",
+      description: "",
       parent: NO_PARENT,
-      status: "active",
+      image: "",
+      is_active: true,
+      sort_order: 0,
     },
   })
 
   useEffect(() => {
-    dispatch(fetchAll())
+    dispatch(fetchAll({ page: 1, page_size: 100 }))
     if (isEditing && id) {
       dispatch(fetchSingle(id))
     }
@@ -76,8 +81,11 @@ const CategoryForm = () => {
       reset({
         name: existing.name,
         slug: existing.slug,
+        description: existing.description ?? "",
         parent: existing.parent ?? NO_PARENT,
-        status: existing.status,
+        image: existing.image ?? "",
+        is_active: existing.is_active,
+        sort_order: existing.sort_order ?? 0,
       })
     }
   }, [existing, id, isEditing, reset])
@@ -100,24 +108,14 @@ const CategoryForm = () => {
 
   const onSubmit = async (values: CategoryFormValues) => {
     const parent = values.parent === NO_PARENT ? null : values.parent
+    const payload = { ...values, parent }
 
     try {
       if (isEditing && existing) {
-        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values, parent } })).unwrap()
+        await dispatch(updateData({ id: existing.id, payload })).unwrap()
         toast.success(`${values.name} updated`)
       } else {
-        await dispatch(
-          postData({
-            payload: {
-              name: values.name,
-              slug: values.slug,
-              parent,
-              status: values.status,
-              products: 0,
-              createdAt: new Date().toISOString().slice(0, 10),
-            },
-          })
-        ).unwrap()
+        await dispatch(postData({ payload })).unwrap()
         toast.success(`${values.name} created`)
       }
       navigate("/categories")
@@ -177,8 +175,8 @@ const CategoryForm = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NO_PARENT}>None (top-level)</SelectItem>
-                        {topLevelCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name}>
+                        {parentOptions.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
                             {cat.name}
                           </SelectItem>
                         ))}
@@ -191,27 +189,45 @@ const CategoryForm = () => {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="status">Status</FieldLabel>
+              <FieldLabel htmlFor="sort_order">Sort Order</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="sort_order"
+                  type="number"
+                  min={0}
+                  {...register("sort_order", { valueAsNumber: true })}
+                />
+                <FieldError errors={[errors.sort_order]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="image">Image URL</FieldLabel>
+              <FieldContent>
+                <Input id="image" placeholder="https://..." {...register("image")} />
+                <FieldError errors={[errors.image]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="is_active">Active</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="status"
+                  name="is_active"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
                   )}
                 />
-                <FieldError errors={[errors.status]} />
+                <FieldError errors={[errors.is_active]} />
+              </FieldContent>
+            </Field>
+
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="description">Description</FieldLabel>
+              <FieldContent>
+                <Textarea id="description" placeholder="Category description" {...register("description")} />
+                <FieldError errors={[errors.description]} />
               </FieldContent>
             </Field>
           </CardContent>

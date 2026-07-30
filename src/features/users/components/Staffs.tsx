@@ -1,226 +1,131 @@
 import { Button } from "@/components/ui/button"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { TableActions } from "@/components/common/TableActions"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { type Staff } from "@/assets/Data"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, deleteData } from "@/features/users/slices/staffSlice"
-import { toast } from "sonner"
+import { fetchAll } from "@/features/users/slices/staffSlice"
+import type { AdminUser } from "@/features/users/types"
+
 const Staffs = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: staffs } = useAppSelector((state) => state.staffs)
+  const { data: staffs, isLoading } = useAppSelector((state) => state.staffs)
 
   useEffect(() => {
     dispatch(fetchAll())
   }, [dispatch])
 
-  const statusStyles = {
-    Active: "bg-green-500/10 text-green-400 border border-green-500/20",
-    Inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
-    "On Leave": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  } as const
-
-  type StaffStatus = keyof typeof statusStyles
-
-  const statusOptions = [
-    { label: "Active", value: "active" },
-    { label: "Inactive", value: "inactive" },
-    { label: "On Leave", value: "on-leave" },
-  ]
-
-  const roleOptions = [
-    { label: "Admin", value: "admin" },
-    { label: "Manager", value: "manager" },
-    { label: "Sales", value: "sales" },
-    { label: "Support", value: "support" },
-    { label: "Editor", value: "editor" },
-  ]
-
-  const columns: ColumnDef<Staff>[] = [
+  const columns: ColumnDef<AdminUser>[] = [
     {
-      accessorKey: "id",
-      header: "STAFF ID",
-      cell: ({ row }) => (
-        <span className="font-medium text-primary text-sm">
-          {row.getValue("id")}
-        </span>
-      ),
-    },
-
-    {
-      accessorKey: "name",
-      header: "STAFF NAME",
+      id: "staff",
+      header: "STAFF",
       cell: ({ row }) => {
         const staff = row.original
-
+        const name = [staff.first_name, staff.last_name].filter(Boolean).join(" ")
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {staff.avatar ? (
-                <img
-                  src={staff.avatar}
-                  alt={staff.name}
-                  className="h-full w-full object-cover"
-                />
+              {staff.profile_picture ? (
+                <img src={staff.profile_picture} alt={name} className="h-full w-full object-cover" />
               ) : (
-                staff.name.charAt(0)
+                (name || staff.email).charAt(0).toUpperCase()
               )}
             </div>
-
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">
-                {staff.name}
-              </span>
-
-              <span className="text-xs text-muted-foreground">
-                {staff.email}
-              </span>
+              <span className="text-sm font-medium text-foreground">{name || "—"}</span>
+              <span className="text-xs text-muted-foreground">{staff.email}</span>
             </div>
           </div>
         )
       },
     },
-
-    {
-      accessorKey: "role",
-      header: "ROLE",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground">
-          {row.getValue("role")}
-        </span>
-      ),
-    },
-
     {
       accessorKey: "phone",
       header: "PHONE",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("phone") || "N/A"}
-        </span>
+        <span className="text-sm text-muted-foreground">{row.getValue("phone") || "N/A"}</span>
       ),
     },
-
     {
-      accessorKey: "status",
-      header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as StaffStatus
-
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}
-          >
-            {status}
-          </span>
-        )
-      },
-    },
-
-    {
-      accessorKey: "joinedAt",
-      header: "JOINED DATE",
+      id: "permissions",
+      header: "PERMISSIONS",
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-sm text-muted-foreground">
-          {row.getValue("joinedAt")}
+        <span className="text-sm text-muted-foreground">
+          {row.original.permissions.includes("*") ? "All" : row.original.permissions.length}
         </span>
       ),
     },
-
+    {
+      accessorKey: "is_active",
+      header: "STATUS",
+      cell: ({ row }) => (
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+            row.getValue("is_active")
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20"
+          }`}
+        >
+          {row.getValue("is_active") ? "active" : "inactive"}
+        </span>
+      ),
+    },
     {
       id: "actions",
       header: "ACTION",
-      cell: ({ row }) => {
-        const staff = row.original
-        const handleDelete = () => {
-          dispatch(deleteData(staff.id))
-          toast.success(`${staff.name} deleted`)
-        }
-        return (
-          <TableActions itemName={staff.name} onDelete={handleDelete} editUrl={`/staff_form/${staff.id}`}/>
-        )
-      },
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/staff_form/${row.original.id}`)}>
+          Edit
+        </Button>
+      ),
     },
   ]
-  const csvData = staffs.map((staff)=>({
+
+  const csvData = staffs.map((staff) => ({
     id: staff.id,
-    name: staff.name,
+    name: [staff.first_name, staff.last_name].filter(Boolean).join(" "),
     email: staff.email,
-    role: staff.role,
     phone: staff.phone,
-    status: staff.status,
-    joined_date: staff.joinedAt,
-  }));
+    active: staff.is_active,
+    permissions: staff.permissions.join("; "),
+  }))
 
   return (
     <div className="section-container">
-      {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold">
-            Staff Members
-          </h1>
-
+          <h1 className="font-heading text-2xl md:text-3xl font-bold">Staff Members</h1>
           <p className="font-text text-accent-foreground text-sm mt-1">
-            Manage your team members, roles, and permissions.
+            Manage your team members and their permissions.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-            <Button variant="primary" size="action" onClick={() => exportToCSV(csvData,'Staffs')}>
+          <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Staffs")}>
             <DownloadIcon className="size-5" /> Export CSV
-            </Button>
-            <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
+          </Button>
+          <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
             <PlusIcon className="size-5" /> Add Staff
-            </Button>
+          </Button>
         </div>
       </div>
 
-      {/* Filter */}
-      <FilterToolbar
-        searchPlaceholder="Search staff..."
-        filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={roleOptions}
-                placeholder="Role"
-              />
-            ),
-          },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={statusOptions}
-                placeholder="Status"
-              />
-            ),
-          },
-        ]}
-      />
+      <FilterToolbar searchPlaceholder="Search staff..." />
 
       <div>
         <DataTable
           columns={columns}
           data={staffs}
-          columnWidths={[
-            "120px",
-            "260px",
-            "140px",
-            "160px",
-            "130px",
-            "140px",
-            "100px",
-          ]}
+          columnWidths={["280px", "160px", "140px", "130px", "100px"]}
         />
       </div>
+      {!isLoading && staffs.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-6">No staff members yet.</p>
+      )}
     </div>
   )
 }

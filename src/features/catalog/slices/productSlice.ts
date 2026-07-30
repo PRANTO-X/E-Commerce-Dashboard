@@ -1,10 +1,10 @@
 import { createSliceFactory } from "@/utils/sliceFactory"
-import { products, type ProductItem } from "@/assets/Data"
+import type { Product } from "../types"
 
 const { reducer, fetchAll, fetchSingle, postData, updateData, patchData, deleteData } =
-  createSliceFactory<ProductItem>({
+  createSliceFactory<Product>({
     name: "products",
-    seed: products,
+    endpoint: "/admin/catalog/products/",
   })
 
 export { fetchAll, fetchSingle, postData, updateData, patchData, deleteData }

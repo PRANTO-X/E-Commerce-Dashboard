@@ -1,175 +1,162 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon } from "lucide-react"
+import { DownloadIcon, SlidersHorizontal } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
-import { categoryOptions, type InventoryItem } from "@/assets/Data"
-import { TableActions } from "@/components/common/TableActions"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, deleteData } from "@/features/catalog/slices/inventorySlice"
+import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
+import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
+import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
+import { adjustStock } from "@/features/catalog/slices/inventorySlice"
+import type { Variant } from "@/features/catalog/types"
 import { toast } from "sonner"
+
+const statusStyles = {
+  active: "bg-green-500/10 text-green-400 border border-green-500/20",
+  inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
+} as const
+
 const Inventory = () => {
   const dispatch = useAppDispatch()
-  const { data: inventory } = useAppSelector((state) => state.inventory)
+  const { data: variants } = useAppSelector((state) => state.variants)
+  const { data: products } = useAppSelector((state) => state.products)
+
+  const [adjustingVariant, setAdjustingVariant] = useState<Variant | null>(null)
+  const [quantityChanged, setQuantityChanged] = useState("")
+  const [notes, setNotes] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchAll())
+    dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
+    dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
+    dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch])
-  const statusOptions = [
-    { label: "In Stock", value: "in_stock" },
-    { label: "Low Stock", value: "low_stock" },
-    { label: "Out of Stock", value: "out_of_stock" },
-  ]
 
-  const statusStyles = {
-    "In Stock": "bg-green-500/10 text-green-400 border border-green-500/20",
+  const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "—"
 
-    "Low Stock": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  const handleAdjust = async () => {
+    if (!adjustingVariant || !quantityChanged.trim()) return
+    setSubmitting(true)
+    try {
+      await dispatch(
+        adjustStock({
+          variant_id: adjustingVariant.id,
+          quantity_changed: Number(quantityChanged),
+          notes: notes.trim(),
+        })
+      ).unwrap()
+      await dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
+      toast.success(`Stock adjusted for ${adjustingVariant.name}`)
+      setAdjustingVariant(null)
+      setQuantityChanged("")
+      setNotes("")
+    } catch {
+      toast.error("Failed to adjust stock")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
-    "Out of Stock": "bg-red-500/10 text-red-400 border border-red-500/20",
-  } as const
-
-  type stockStatus = keyof typeof statusStyles
-
-  const columns: ColumnDef<InventoryItem>[] = [
+  const columns: ColumnDef<Variant>[] = [
     {
-      accessorKey: "id",
-      header: "PRODUCT ID",
+      accessorKey: "name",
+      header: "VARIANT",
       cell: ({ row }) => (
-        <span className="font-medium text-primary text-sm">
-          {row.getValue("id")}
-        </span>
+        <span className="text-sm font-medium text-foreground">{row.getValue("name")}</span>
       ),
     },
     {
       accessorKey: "product",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground">
-          {row.getValue("product")}
-        </span>
+        <span className="text-sm text-muted-foreground">{productName(row.getValue("product"))}</span>
       ),
     },
-
     {
       accessorKey: "sku",
       header: "SKU",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("sku")}
-        </span>
+        <span className="text-sm text-muted-foreground">{row.getValue("sku")}</span>
       ),
     },
-
     {
-      accessorKey: "category",
-      header: "CATEGORY",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("category")}
-        </span>
-      ),
-    },
-
-    {
-      accessorKey: "stock",
+      accessorKey: "stock_quantity",
       header: "STOCK",
-      cell: ({ row }) => {
-        const stock = row.getValue("stock") as number
-
-        return (
-          <span className="text-sm font-medium text-foreground">{stock}</span>
-        )
-      },
+      cell: ({ row }) => (
+        <span className="text-sm font-medium text-foreground">{row.getValue("stock_quantity")}</span>
+      ),
     },
-
     {
       accessorKey: "status",
       header: "STATUS",
       cell: ({ row }) => {
-        const status = row.getValue("status") as stockStatus
-
+        const status = row.getValue("status") as keyof typeof statusStyles
         return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-              statusStyles[status]
-            }`}
-          >
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
             {status}
           </span>
         )
       },
     },
-
     {
       accessorKey: "price",
       header: "PRICE",
-      cell: ({ row }) => {
-        const price = row.getValue("price") as number
-
-        return (
-          <span className="text-sm font-semibold text-foreground">
-            ${price.toFixed(2)}
-          </span>
-        )
-      },
-    },
-
-    {
-      accessorKey: "lastRestocked",
-      header: "LAST RESTOCKED",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {row.getValue("lastRestocked")}
+        <span className="text-sm font-semibold text-foreground">
+          ${Number(row.getValue("price")).toFixed(2)}
         </span>
       ),
     },
-
     {
       id: "actions",
       header: "ACTION",
-      cell: ({ row }) => {
-        const product = row.original
-
-        const handleDelete = () => {
-          dispatch(deleteData(product.id))
-          toast.success(`${product.product} removed from inventory`)
-        }
-
-        return (
-          <TableActions
-            itemName={product.product}
-            viewUrl={`/product_detail/${product.id}`}
-            onDelete={handleDelete}
-          />
-        )
-      },
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAdjustingVariant(row.original)}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Adjust
+        </Button>
+      ),
     },
   ]
 
+  const csvData = variants.map((v) => ({
+    Variant: v.name,
+    Product: productName(v.product),
+    SKU: v.sku,
+    Stock: v.stock_quantity,
+    Status: v.status,
+    Price: v.price,
+  }))
+
   return (
     <div className="section-container">
-      {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold">
-            Inventory
-          </h1>
-
+          <h1 className="font-heading text-2xl md:text-3xl font-bold">Inventory</h1>
           <p className="font-text text-accent-foreground text-sm mt-1">
-            Manage enterprise assets and stock levels
+            Track variant stock levels and record manual adjustments
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="action"
-          onClick={() => exportToCSV(inventory, "Inventory")}
-        >
+        <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Inventory")}>
           <DownloadIcon className="size-5" />
           Export CSV
         </Button>
@@ -177,42 +164,59 @@ const Inventory = () => {
 
       <InventoryStatsCards />
 
-      <FilterToolbar
-        filters={[
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={statusOptions}
-                placeholder="Stock Status"
-              />
-            ),
-          },
-          {
-            component: (
-              <ExampleComboboxCustomItems
-                frameworks={categoryOptions}
-                placeholder="Categories"
-              />
-            ),
-          },
-        ]}
-      />
+      <FilterToolbar searchPlaceholder="search variant or SKU..." />
 
       <DataTable
         columns={columns}
-        data={inventory}
-        columnWidths={[
-          "120px",
-          "240px",
-          "160px",
-          "100px",
-          "140px",
-          "130px",
-          "140px",
-          "140px",
-          "100px",
-        ]}
+        data={variants}
+        columnWidths={["220px", "180px", "140px", "100px", "110px", "110px", "120px"]}
       />
+
+      <Dialog open={!!adjustingVariant} onOpenChange={(open) => !open && setAdjustingVariant(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Stock</DialogTitle>
+            <DialogDescription>
+              {adjustingVariant ? `${adjustingVariant.name} · currently ${adjustingVariant.stock_quantity} in stock` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel htmlFor="quantity_changed">Quantity Change</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="quantity_changed"
+                  type="number"
+                  placeholder="e.g. 10 or -5"
+                  value={quantityChanged}
+                  onChange={(e) => setQuantityChanged(e.target.value)}
+                />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="notes">Notes</FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="notes"
+                  placeholder="Reason for adjustment"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </FieldContent>
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustingVariant(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdjust} disabled={submitting || !quantityChanged.trim()}>
+              Apply Adjustment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

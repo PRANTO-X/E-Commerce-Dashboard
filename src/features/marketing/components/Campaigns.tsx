@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,32 +8,27 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { type Campaign } from "@/assets/Data"
+import type { Campaign, CampaignStatus } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/campaignSlice"
 import { toast } from "sonner"
 
-const statusStyles = {
+const statusStyles: Record<CampaignStatus, string> = {
   draft: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
   scheduled: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   active: "bg-green-500/10 text-green-400 border border-green-500/20",
   ended: "bg-red-500/10 text-red-400 border border-red-500/20",
-} as const
-
-const typeLabels = {
-  flash_sale: "Flash Sale",
-  mega_event: "Mega Event",
-  seasonal: "Seasonal",
-} as const
+}
 
 const Campaigns = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: campaigns } = useAppSelector((state) => state.campaigns)
+  const [page, setPage] = useState(1)
+  const { data: campaigns, totalItems, meta } = useAppSelector((state) => state.campaigns)
 
   useEffect(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+    dispatch(fetchAll({ page }))
+  }, [dispatch, page])
 
   const statusOptions = [
     { label: "Draft", value: "draft" },
@@ -51,12 +46,11 @@ const Campaigns = () => {
       ),
     },
     {
-      accessorKey: "type",
+      accessorKey: "campaign_type",
       header: "TYPE",
-      cell: ({ row }) => {
-        const type = row.getValue("type") as Campaign["type"]
-        return <span className="text-sm text-muted-foreground">{typeLabels[type]}</span>
-      },
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground capitalize">{row.getValue("campaign_type")}</span>
+      ),
     },
     {
       id: "dates",
@@ -65,23 +59,16 @@ const Campaigns = () => {
         const c = row.original
         return (
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {c.startDate} → {c.endDate}
+            {new Date(c.starts_at).toLocaleDateString()} → {new Date(c.ends_at).toLocaleDateString()}
           </span>
         )
       },
     },
     {
-      id: "products",
-      header: "PRODUCTS",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.original.productIds.length}</span>
-      ),
-    },
-    {
       accessorKey: "status",
       header: "STATUS",
       cell: ({ row }) => {
-        const status = row.getValue("status") as Campaign["status"]
+        const status = row.getValue("status") as CampaignStatus
         return (
           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
             {status}
@@ -94,9 +81,13 @@ const Campaigns = () => {
       header: "ACTION",
       cell: ({ row }) => {
         const campaign = row.original
-        const handleDelete = () => {
-          dispatch(deleteData(campaign.id))
-          toast.success(`Campaign "${campaign.name}" deleted`)
+        const handleDelete = async () => {
+          try {
+            await dispatch(deleteData(campaign.id)).unwrap()
+            toast.success(`Campaign "${campaign.name}" deleted`)
+          } catch {
+            toast.error("Failed to delete campaign")
+          }
         }
         return (
           <TableActions
@@ -112,10 +103,9 @@ const Campaigns = () => {
 
   const csvData = campaigns.map((c) => ({
     name: c.name,
-    type: c.type,
-    start: c.startDate,
-    end: c.endDate,
-    products: c.productIds.length,
+    type: c.campaign_type,
+    start: c.starts_at,
+    end: c.ends_at,
     status: c.status,
   }))
 
@@ -125,7 +115,7 @@ const Campaigns = () => {
         <div>
           <h1 className="font-heading text-2xl md:text-3xl font-bold">Campaigns</h1>
           <p className="font-text text-accent-foreground text-sm mt-1">
-            Schedule flash sales and mega campaign events across your catalog.
+            Schedule mega, landing, and seasonal marketing campaigns.
           </p>
         </div>
 
@@ -151,7 +141,12 @@ const Campaigns = () => {
       <DataTable
         columns={columns}
         data={campaigns}
-        columnWidths={["220px", "140px", "220px", "110px", "120px", "110px"]}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
+        columnWidths={["220px", "140px", "220px", "120px", "110px"]}
       />
     </div>
   )

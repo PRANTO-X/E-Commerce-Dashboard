@@ -9,8 +9,6 @@ import { ArrowLeft, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -22,27 +20,30 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/marketing/slices/campaignSlice"
-import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 
 const campaignSchema = z.object({
   name: z.string().min(2, "Campaign name must be at least 2 characters"),
-  type: z.enum(["flash_sale", "mega_event", "seasonal"]),
-  bannerImage: z.string().optional(),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
+  slug: z
+    .string()
+    .min(2, "Slug is required")
+    .regex(/^[-a-zA-Z0-9_]+$/, "Use only letters, numbers, - and _"),
+  campaign_type: z.enum(["mega", "landing", "seasonal"]),
   status: z.enum(["draft", "scheduled", "active", "ended"]),
-  description: z.string().optional(),
-  productIds: z.array(z.string()),
+  hero_title: z.string(),
+  banner_image: z.string(),
+  starts_at: z.string().min(1, "Start date is required"),
+  ends_at: z.string().min(1, "End date is required"),
 })
 
 type CampaignFormValues = z.infer<typeof campaignSchema>
+
+const toDatetimeLocal = (iso: string) => (iso ? iso.slice(0, 16) : "")
 
 const CampaignForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: existing, isLoading } = useAppSelector((state) => state.campaigns)
-  const { data: products } = useAppSelector((state) => state.products)
 
   const isEditing = id !== "new"
 
@@ -56,18 +57,17 @@ const CampaignForm = () => {
     resolver: zodResolver(campaignSchema),
     defaultValues: {
       name: "",
-      type: "flash_sale",
-      bannerImage: "",
-      startDate: "",
-      endDate: "",
+      slug: "",
+      campaign_type: "seasonal",
       status: "draft",
-      description: "",
-      productIds: [],
+      hero_title: "",
+      banner_image: "",
+      starts_at: "",
+      ends_at: "",
     },
   })
 
   useEffect(() => {
-    dispatch(fetchAllProducts())
     if (isEditing && id) {
       dispatch(fetchSingle(id))
     }
@@ -77,13 +77,13 @@ const CampaignForm = () => {
     if (isEditing && existing?.id === id) {
       reset({
         name: existing.name,
-        type: existing.type,
-        bannerImage: existing.bannerImage ?? "",
-        startDate: existing.startDate,
-        endDate: existing.endDate,
+        slug: existing.slug,
+        campaign_type: existing.campaign_type,
         status: existing.status,
-        description: existing.description ?? "",
-        productIds: existing.productIds,
+        hero_title: existing.hero_title ?? "",
+        banner_image: existing.banner_image ?? "",
+        starts_at: toDatetimeLocal(existing.starts_at),
+        ends_at: toDatetimeLocal(existing.ends_at),
       })
     }
   }, [existing, id, isEditing, reset])
@@ -105,14 +105,18 @@ const CampaignForm = () => {
   }
 
   const onSubmit = async (values: CampaignFormValues) => {
+    const payload = {
+      ...values,
+      starts_at: new Date(values.starts_at).toISOString(),
+      ends_at: new Date(values.ends_at).toISOString(),
+    }
+
     try {
       if (isEditing && existing) {
-        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        await dispatch(updateData({ id: existing.id, payload })).unwrap()
         toast.success(`Campaign "${values.name}" updated`)
       } else {
-        await dispatch(
-          postData({ payload: { ...values, createdAt: new Date().toISOString().slice(0, 10) } })
-        ).unwrap()
+        await dispatch(postData({ payload })).unwrap()
         toast.success(`Campaign "${values.name}" created`)
       }
       navigate("/campaigns")
@@ -132,7 +136,7 @@ const CampaignForm = () => {
             {isEditing ? "Edit Campaign" : "Add Campaign"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isEditing ? `Editing ${existing?.name}` : "Schedule a new flash sale or mega campaign event"}
+            {isEditing ? `Editing ${existing?.name}` : "Schedule a new marketing campaign"}
           </p>
         </div>
       </div>
@@ -152,41 +156,33 @@ const CampaignForm = () => {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="type">Campaign Type</FieldLabel>
+              <FieldLabel htmlFor="slug">Slug</FieldLabel>
+              <FieldContent>
+                <Input id="slug" placeholder="e.g. eid-mega-sale" {...register("slug")} />
+                <FieldError errors={[errors.slug]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="campaign_type">Campaign Type</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="type"
+                  name="campaign_type"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="type">
+                      <SelectTrigger id="campaign_type">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="flash_sale">Flash Sale</SelectItem>
-                        <SelectItem value="mega_event">Mega Event</SelectItem>
+                        <SelectItem value="mega">Mega</SelectItem>
+                        <SelectItem value="landing">Landing</SelectItem>
                         <SelectItem value="seasonal">Seasonal</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
-                <FieldError errors={[errors.type]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="startDate">Start Date</FieldLabel>
-              <FieldContent>
-                <Input id="startDate" type="date" {...register("startDate")} />
-                <FieldError errors={[errors.startDate]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="endDate">End Date</FieldLabel>
-              <FieldContent>
-                <Input id="endDate" type="date" {...register("endDate")} />
-                <FieldError errors={[errors.endDate]} />
+                <FieldError errors={[errors.campaign_type]} />
               </FieldContent>
             </Field>
 
@@ -215,53 +211,34 @@ const CampaignForm = () => {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="bannerImage">Banner Image URL</FieldLabel>
+              <FieldLabel htmlFor="starts_at">Start Date</FieldLabel>
               <FieldContent>
-                <Input id="bannerImage" placeholder="/images/product-1.jpg" {...register("bannerImage")} />
-                <FieldError errors={[errors.bannerImage]} />
+                <Input id="starts_at" type="datetime-local" {...register("starts_at")} />
+                <FieldError errors={[errors.starts_at]} />
               </FieldContent>
             </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel htmlFor="description">Description</FieldLabel>
+            <Field>
+              <FieldLabel htmlFor="ends_at">End Date</FieldLabel>
               <FieldContent>
-                <Textarea id="description" rows={3} placeholder="Campaign description" {...register("description")} />
-                <FieldError errors={[errors.description]} />
+                <Input id="ends_at" type="datetime-local" {...register("ends_at")} />
+                <FieldError errors={[errors.ends_at]} />
               </FieldContent>
             </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel>Linked Products</FieldLabel>
+            <Field>
+              <FieldLabel htmlFor="hero_title">Hero Title</FieldLabel>
               <FieldContent>
-                <Controller
-                  control={control}
-                  name="productIds"
-                  render={({ field }) => (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto rounded-lg border border-field-border p-3">
-                      {products.map((product) => {
-                        const checked = field.value.includes(product.id)
-                        return (
-                          <label
-                            key={product.id}
-                            className="flex items-center gap-2 text-sm cursor-pointer rounded-md p-1.5 hover:bg-muted/50"
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={(value) => {
-                                if (value) {
-                                  field.onChange([...field.value, product.id])
-                                } else {
-                                  field.onChange(field.value.filter((pid) => pid !== product.id))
-                                }
-                              }}
-                            />
-                            <span className="truncate">{product.product}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  )}
-                />
+                <Input id="hero_title" placeholder="e.g. Up to 50% off" {...register("hero_title")} />
+                <FieldError errors={[errors.hero_title]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="banner_image">Banner Image URL</FieldLabel>
+              <FieldContent>
+                <Input id="banner_image" placeholder="https://..." {...register("banner_image")} />
+                <FieldError errors={[errors.banner_image]} />
               </FieldContent>
             </Field>
           </CardContent>

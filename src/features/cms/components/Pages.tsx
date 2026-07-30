@@ -1,0 +1,98 @@
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { PlusIcon } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
+import { TableActions } from "@/components/common/TableActions"
+import { DataTable } from "@/components/common/data-table"
+import { useNavigate } from "react-router-dom"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll, deleteData } from "@/features/cms/slices/pageSlice"
+import type { ContentPage } from "@/features/cms/types"
+import { toast } from "sonner"
+
+const Pages = () => {
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const [page, setPage] = useState(1)
+  const { data: pages, totalItems, meta } = useAppSelector((state) => state.pages)
+
+  useEffect(() => {
+    dispatch(fetchAll({ page }))
+  }, [dispatch, page])
+
+  const columns: ColumnDef<ContentPage>[] = [
+    { accessorKey: "title", header: "TITLE" },
+    { accessorKey: "slug", header: "SLUG" },
+    {
+      accessorKey: "page_type",
+      header: "TYPE",
+      cell: ({ row }) => <span className="capitalize">{row.getValue("page_type")}</span>,
+    },
+    {
+      accessorKey: "is_published",
+      header: "STATUS",
+      cell: ({ row }) => (
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+            row.getValue("is_published")
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+          }`}
+        >
+          {row.getValue("is_published") ? "published" : "draft"}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "ACTION",
+      cell: ({ row }) => {
+        const contentPage = row.original
+        const handleDelete = async () => {
+          try {
+            await dispatch(deleteData(contentPage.id)).unwrap()
+            toast.success(`${contentPage.title} deleted`)
+          } catch {
+            toast.error("Failed to delete page")
+          }
+        }
+        return (
+          <TableActions
+            itemName={contentPage.title}
+            onDelete={handleDelete}
+            editUrl={`/page_form/${contentPage.id}`}
+          />
+        )
+      },
+    },
+  ]
+
+  return (
+    <div className="section-container">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl md:text-3xl font-bold">Content Pages</h1>
+          <p className="font-text text-accent-foreground text-sm mt-1">
+            Manage static and landing pages shown on the storefront
+          </p>
+        </div>
+        <Button variant="primary" size="action" onClick={() => navigate("/page_form/new")}>
+          <PlusIcon className="size-5" /> Add Page
+        </Button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={pages}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
+        columnWidths={["240px", "180px", "120px", "130px", "120px"]}
+      />
+    </div>
+  )
+}
+
+export default Pages

@@ -9,6 +9,8 @@ import { ArrowLeft, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -19,19 +21,39 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchSingle, postData, updateData } from "@/features/marketing/slices/couponSlice"
+import { fetchSingle, postData, patchData } from "@/features/marketing/slices/couponSlice"
 
 const couponSchema = z.object({
-  code: z.string().min(3, "Code must be at least 3 characters").toUpperCase(),
-  type: z.enum(["percent", "fixed", "free_shipping"]),
-  value: z.number().min(0, "Value cannot be negative"),
-  minOrderAmount: z.number().min(0).optional(),
-  usageLimit: z.number().int().positive("Usage limit must be at least 1"),
-  expiryDate: z.string().min(1, "Expiry date is required"),
-  status: z.enum(["active", "scheduled", "expired", "disabled"]),
+  code: z.string().min(3, "Code must be at least 3 characters"),
+  description: z.string().min(1, "Description is required"),
+  discount_type: z.enum(["percentage", "fixed_amount"]),
+  discount_value: z.number().min(0, "Value cannot be negative"),
+  min_order_value: z.number().min(0),
+  max_discount_amount: z.number().nullable(),
+  max_usage_count: z.number().int().nullable(),
+  per_customer_limit: z.number().int().min(0),
+  valid_from: z.string().min(1, "Start date is required"),
+  valid_until: z.string(),
+  is_active: z.boolean(),
 })
 
 type CouponFormValues = z.infer<typeof couponSchema>
+
+const defaultValues: CouponFormValues = {
+  code: "",
+  description: "",
+  discount_type: "percentage",
+  discount_value: 10,
+  min_order_value: 0,
+  max_discount_amount: null,
+  max_usage_count: null,
+  per_customer_limit: 1,
+  valid_from: "",
+  valid_until: "",
+  is_active: true,
+}
+
+const toDatetimeLocal = (iso: string | null) => (iso ? iso.slice(0, 16) : "")
 
 const CouponForm = () => {
   const { id } = useParams<{ id: string }>()
@@ -50,18 +72,10 @@ const CouponForm = () => {
     formState: { errors, isSubmitting },
   } = useForm<CouponFormValues>({
     resolver: zodResolver(couponSchema),
-    defaultValues: {
-      code: "",
-      type: "percent",
-      value: 10,
-      minOrderAmount: undefined,
-      usageLimit: 100,
-      expiryDate: "",
-      status: "active",
-    },
+    defaultValues,
   })
 
-  const type = watch("type")
+  const discountType = watch("discount_type")
 
   useEffect(() => {
     if (isEditing && id) {
@@ -70,15 +84,19 @@ const CouponForm = () => {
   }, [dispatch, id, isEditing])
 
   useEffect(() => {
-    if (isEditing && existing?.id === id) {
+    if (isEditing && existing && existing.id === id) {
       reset({
         code: existing.code,
-        type: existing.type,
-        value: existing.value,
-        minOrderAmount: existing.minOrderAmount,
-        usageLimit: existing.usageLimit,
-        expiryDate: existing.expiryDate,
-        status: existing.status,
+        description: existing.description,
+        discount_type: existing.discount_type,
+        discount_value: Number(existing.discount_value),
+        min_order_value: Number(existing.min_order_value),
+        max_discount_amount: existing.max_discount_amount ? Number(existing.max_discount_amount) : null,
+        max_usage_count: existing.max_usage_count,
+        per_customer_limit: existing.per_customer_limit,
+        valid_from: toDatetimeLocal(existing.valid_from),
+        valid_until: toDatetimeLocal(existing.valid_until),
+        is_active: existing.is_active,
       })
     }
   }, [existing, id, isEditing, reset])
@@ -100,16 +118,26 @@ const CouponForm = () => {
   }
 
   const onSubmit = async (values: CouponFormValues) => {
+    const payload = {
+      code: values.code,
+      description: values.description,
+      discount_type: values.discount_type,
+      discount_value: String(values.discount_value),
+      min_order_value: String(values.min_order_value),
+      max_discount_amount: values.max_discount_amount != null ? String(values.max_discount_amount) : null,
+      max_usage_count: values.max_usage_count,
+      per_customer_limit: values.per_customer_limit,
+      valid_from: new Date(values.valid_from).toISOString(),
+      valid_until: values.valid_until ? new Date(values.valid_until).toISOString() : null,
+      is_active: values.is_active,
+    }
+
     try {
       if (isEditing && existing) {
-        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
+        await dispatch(patchData({ id: existing.id, payload })).unwrap()
         toast.success(`Coupon ${values.code} updated`)
       } else {
-        await dispatch(
-          postData({
-            payload: { ...values, usedCount: 0, createdAt: new Date().toISOString().slice(0, 10) },
-          })
-        ).unwrap()
+        await dispatch(postData({ payload })).unwrap()
         toast.success(`Coupon ${values.code} created`)
       }
       navigate("/coupons")
@@ -129,7 +157,7 @@ const CouponForm = () => {
             {isEditing ? "Edit Coupon" : "Add Coupon"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isEditing ? `Editing ${existing?.code}` : "Create a new discount code or voucher"}
+            {isEditing ? `Editing ${existing?.code}` : "Create a new discount code"}
           </p>
         </div>
       </div>
@@ -149,83 +177,123 @@ const CouponForm = () => {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="type">Discount Type</FieldLabel>
+              <FieldLabel htmlFor="discount_type">Discount Type</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="type"
+                  name="discount_type"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="type">
+                      <SelectTrigger id="discount_type">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percent">Percentage</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount</SelectItem>
-                        <SelectItem value="free_shipping">Free Shipping</SelectItem>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="fixed_amount">Fixed Amount</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
-                <FieldError errors={[errors.type]} />
+                <FieldError errors={[errors.discount_type]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="value">
-                {type === "percent" ? "Percentage (%)" : type === "fixed" ? "Amount ($)" : "Value"}
+              <FieldLabel htmlFor="discount_value">
+                {discountType === "percentage" ? "Percentage (%)" : "Amount ($)"}
               </FieldLabel>
               <FieldContent>
-                <Input id="value" type="number" step="0.01" disabled={type === "free_shipping"} {...register("value", { valueAsNumber: true })} />
-                <FieldError errors={[errors.value]} />
+                <Input id="discount_value" type="number" step="0.01" {...register("discount_value", { valueAsNumber: true })} />
+                <FieldError errors={[errors.discount_value]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="minOrderAmount">Minimum Order Amount ($)</FieldLabel>
+              <FieldLabel htmlFor="min_order_value">Minimum Order Value ($)</FieldLabel>
               <FieldContent>
-                <Input id="minOrderAmount" type="number" step="0.01" {...register("minOrderAmount", { valueAsNumber: true })} />
-                <FieldError errors={[errors.minOrderAmount]} />
+                <Input id="min_order_value" type="number" step="0.01" {...register("min_order_value", { valueAsNumber: true })} />
+                <FieldError errors={[errors.min_order_value]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="usageLimit">Usage Limit</FieldLabel>
-              <FieldContent>
-                <Input id="usageLimit" type="number" {...register("usageLimit", { valueAsNumber: true })} />
-                <FieldError errors={[errors.usageLimit]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="expiryDate">Expiry Date</FieldLabel>
-              <FieldContent>
-                <Input id="expiryDate" type="date" {...register("expiryDate")} />
-                <FieldError errors={[errors.expiryDate]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="status">Status</FieldLabel>
+              <FieldLabel htmlFor="max_discount_amount">Max Discount Amount ($, optional)</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="status"
+                  name="max_discount_amount"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="expired">Expired</SelectItem>
-                        <SelectItem value="disabled">Disabled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="max_discount_amount"
+                      type="number"
+                      step="0.01"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                    />
                   )}
                 />
-                <FieldError errors={[errors.status]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="max_usage_count">Max Usage Count (optional)</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="max_usage_count"
+                  render={({ field }) => (
+                    <Input
+                      id="max_usage_count"
+                      type="number"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  )}
+                />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="per_customer_limit">Per-Customer Limit</FieldLabel>
+              <FieldContent>
+                <Input id="per_customer_limit" type="number" {...register("per_customer_limit", { valueAsNumber: true })} />
+                <FieldError errors={[errors.per_customer_limit]} />
+              </FieldContent>
+            </Field>
+
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="is_active">Active</FieldLabel>
+              </FieldContent>
+              <Controller
+                control={control}
+                name="is_active"
+                render={({ field }) => (
+                  <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="valid_from">Valid From</FieldLabel>
+              <FieldContent>
+                <Input id="valid_from" type="datetime-local" {...register("valid_from")} />
+                <FieldError errors={[errors.valid_from]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="valid_until">Valid Until (optional)</FieldLabel>
+              <FieldContent>
+                <Input id="valid_until" type="datetime-local" {...register("valid_until")} />
+              </FieldContent>
+            </Field>
+
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="description">Description</FieldLabel>
+              <FieldContent>
+                <Textarea id="description" placeholder="Coupon description" {...register("description")} />
+                <FieldError errors={[errors.description]} />
               </FieldContent>
             </Field>
           </CardContent>

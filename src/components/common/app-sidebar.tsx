@@ -24,6 +24,7 @@ import {
   Settings,
   ChevronDown,
   Megaphone,
+  FileText,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -38,7 +39,10 @@ const sidebarItems = [
     items: [
       { title: "Products", url: "/products" },
       { title: "Categories", url: "/categories" },
+      { title: "Attributes", url: "/attributes" },
       { title: "Inventory", url: "/inventory" },
+      { title: "Warehouses", url: "/warehouses" },
+      { title: "Reservations", url: "/inventory/reservations" },
     ],
   },
   {
@@ -47,6 +51,10 @@ const sidebarItems = [
     items: [
       { title: "Orders", url: "/orders" },
       { title: "Transactions", url: "/transactions" },
+      { title: "Payments", url: "/payments" },
+      { title: "Returns", url: "/returns" },
+      { title: "Couriers", url: "/couriers" },
+      { title: "Shipments", url: "/shipments" },
     ],
   },
   {
@@ -64,6 +72,18 @@ const sidebarItems = [
       { title: "Coupons", url: "/coupons" },
       { title: "Campaigns", url: "/campaigns" },
       { title: "Reviews", url: "/reviews" },
+      { title: "Flash Sales", url: "/flash-sales" },
+      { title: "Group Buys", url: "/group-buys" },
+      { title: "Automations", url: "/automations" },
+    ],
+  },
+  {
+    label: "CMS",
+    icon: FileText,
+    items: [
+      { title: "Banners", url: "/banners" },
+      { title: "Blog Posts", url: "/blog-posts" },
+      { title: "Pages", url: "/pages" },
     ],
   },
   {
@@ -78,6 +98,8 @@ const sidebarItems = [
       { title: "General Settings", url: "/settings" },
       { title: "Authentication", url: "/auth-settings" },
       { title: "Roles & Permissions", url: "/roles" },
+      { title: "Notifications", url: "/notifications" },
+      { title: "Audit Logs", url: "/audit-logs" },
     ],
   },
 ]

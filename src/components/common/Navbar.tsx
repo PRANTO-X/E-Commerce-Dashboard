@@ -12,9 +12,22 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { logout } from "@/features/authentication/slices/authSlice"
 
 const Navbar = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light")
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.auth.user)
+
+  const handleLogout = async () => {
+    await dispatch(logout())
+    navigate("/login", { replace: true })
+  }
+
+  const displayName = user ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email : ""
 
   // load saved theme
   useEffect(() => {
@@ -124,12 +137,12 @@ const Navbar = () => {
                   </button>
                 </DropdownMenuTrigger>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span className="font-medium text-base">John Doe</span>
-                    <span className="text-xs text-muted-foreground">
-                      admin@example.com
+                    <span className="font-medium text-base">{displayName || "Account"}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {user?.email}
                     </span>
                   </div>
                 </DropdownMenuLabel>
@@ -139,11 +152,11 @@ const Navbar = () => {
                 <DropdownMenuGroup>
                   <DropdownMenuItem><UserIcon/>Profile</DropdownMenuItem>
 
-                  <DropdownMenuItem><SettingsIcon/>Settings</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}><SettingsIcon/>Settings</DropdownMenuItem>
 
                   <DropdownMenuSeparator />
 
-                  <DropdownMenuItem className="text-red-500">
+                  <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
                     <LogOutIcon/>Logout
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

@@ -8,23 +8,10 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
-import { type Coupon } from "@/assets/Data"
+import type { Coupon } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/couponSlice"
 import { toast } from "sonner"
-
-const statusStyles = {
-  active: "bg-green-500/10 text-green-400 border border-green-500/20",
-  scheduled: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  expired: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
-  disabled: "bg-red-500/10 text-red-400 border border-red-500/20",
-} as const
-
-const typeLabels = {
-  percent: "Percentage",
-  fixed: "Fixed Amount",
-  free_shipping: "Free Shipping",
-} as const
 
 const Coupons = () => {
   const navigate = useNavigate()
@@ -37,9 +24,7 @@ const Coupons = () => {
 
   const statusOptions = [
     { label: "Active", value: "active" },
-    { label: "Scheduled", value: "scheduled" },
-    { label: "Expired", value: "expired" },
-    { label: "Disabled", value: "disabled" },
+    { label: "Inactive", value: "inactive" },
   ]
 
   const columns: ColumnDef<Coupon>[] = [
@@ -53,21 +38,22 @@ const Coupons = () => {
       ),
     },
     {
-      accessorKey: "type",
+      accessorKey: "discount_type",
       header: "TYPE",
-      cell: ({ row }) => {
-        const type = row.getValue("type") as Coupon["type"]
-        return <span className="text-sm text-foreground">{typeLabels[type]}</span>
-      },
+      cell: ({ row }) => (
+        <span className="text-sm text-foreground capitalize">
+          {(row.getValue("discount_type") as string).replace("_", " ")}
+        </span>
+      ),
     },
     {
-      accessorKey: "value",
+      accessorKey: "discount_value",
       header: "VALUE",
       cell: ({ row }) => {
         const coupon = row.original
         return (
           <span className="text-sm font-medium text-foreground">
-            {coupon.type === "percent" ? `${coupon.value}%` : coupon.type === "fixed" ? `$${coupon.value}` : "—"}
+            {coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
           </span>
         )
       },
@@ -79,40 +65,50 @@ const Coupons = () => {
         const coupon = row.original
         return (
           <span className="text-sm text-muted-foreground">
-            {coupon.usedCount} / {coupon.usageLimit}
+            {coupon.usage_count} / {coupon.max_usage_count ?? "∞"}
           </span>
         )
       },
     },
     {
-      accessorKey: "expiryDate",
+      accessorKey: "valid_until",
       header: "EXPIRES",
+      cell: ({ row }) => {
+        const value = row.getValue("valid_until") as string | null
+        return (
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {value ? new Date(value).toLocaleDateString() : "Never"}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "is_active",
+      header: "STATUS",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {row.getValue("expiryDate")}
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+            row.getValue("is_active")
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20"
+          }`}
+        >
+          {row.getValue("is_active") ? "active" : "inactive"}
         </span>
       ),
-    },
-    {
-      accessorKey: "status",
-      header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as Coupon["status"]
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
     },
     {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => {
         const coupon = row.original
-        const handleDelete = () => {
-          dispatch(deleteData(coupon.id))
-          toast.success(`Coupon ${coupon.code} deleted`)
+        const handleDelete = async () => {
+          try {
+            await dispatch(deleteData(coupon.id)).unwrap()
+            toast.success(`Coupon ${coupon.code} deleted`)
+          } catch {
+            toast.error("Failed to delete coupon")
+          }
         }
         return (
           <TableActions
@@ -127,12 +123,12 @@ const Coupons = () => {
 
   const csvData = coupons.map((c) => ({
     code: c.code,
-    type: c.type,
-    value: c.value,
-    used: c.usedCount,
-    limit: c.usageLimit,
-    expiry: c.expiryDate,
-    status: c.status,
+    type: c.discount_type,
+    value: c.discount_value,
+    used: c.usage_count,
+    limit: c.max_usage_count,
+    expires: c.valid_until,
+    active: c.is_active,
   }))
 
   return (
@@ -141,7 +137,7 @@ const Coupons = () => {
         <div>
           <h1 className="font-heading text-2xl md:text-3xl font-bold">Coupons & Vouchers</h1>
           <p className="font-text text-accent-foreground text-sm mt-1">
-            Create and manage discount codes, free-shipping vouchers, and usage limits.
+            Create and manage discount codes and usage limits.
           </p>
         </div>
 

@@ -1,34 +1,51 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { generateId } from "@/lib/utils"
-
-/**
- * Same slice shape/action names as the createSliceFactory used in the
- * blog-app admin panel (data/singleData/isLoading/error/totalItems +
- * fetchAll/fetchSingle/postData/updateData/patchData/deleteData thunks) —
- * but reading/writing an in-memory seed array instead of calling axios/a
- * `url`, since there's no backend yet. Swapping in real API calls later
- * only means rewriting the bodies of the thunks below, not any component
- * that dispatches them.
- */
+import { api, extractApiError } from "@/lib/api/client"
+import { unwrapList, unwrapItem, type ListMeta } from "@/lib/api/envelope"
 
 interface WithId {
   id: string
 }
 
 interface FetchAllParams {
+  page?: number
+  page_size?: number
   search?: string
+  [key: string]: unknown
 }
 
+/**
+ * Two modes, selected by whether `endpoint` is passed:
+ *  - `endpoint` present: thunks call the real backend (used by migrated slices).
+ *  - `endpoint` absent (`seed` only): thunks operate purely in-memory (legacy/not-yet-migrated slices).
+ * The consumer-facing contract ({reducer, fetchAll, fetchSingle, postData, updateData, patchData, deleteData})
+ * and state shape are identical either way, so components never need to change when a slice migrates.
+ */
 export function createSliceFactory<T extends WithId>({
   name,
-  seed,
+  endpoint,
+  seed = [],
 }: {
   name: string
-  seed: T[]
+  endpoint?: string
+  seed?: T[]
 }) {
+  const resourceUrl = (id: string) => `${endpoint}${id}/`
+
   const fetchAll = createAsyncThunk(
     `${name}/fetchAll`,
-    async (params: FetchAllParams | undefined, { getState }) => {
+    async (params: FetchAllParams | undefined, { getState, rejectWithValue }) => {
+      if (endpoint) {
+        try {
+          const { page = 1, page_size = 20, ...rest } = params ?? {}
+          const res = await api.get(endpoint, { params: { page, page_size, ...rest } })
+          const { items, meta } = unwrapList<T>(res.data, page, page_size)
+          return { data: items, total: meta.count, meta }
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+
       const state = getState() as Record<string, { data: T[] } | undefined>
       const list = state[name]?.data ?? seed
       const search = params?.search?.trim().toLowerCase()
@@ -41,13 +58,22 @@ export function createSliceFactory<T extends WithId>({
           )
         : list
 
-      return { data: filtered, total: filtered.length }
+      return { data: filtered, total: filtered.length, meta: null as ListMeta | null }
     }
   )
 
   const fetchSingle = createAsyncThunk(
     `${name}/fetchSingle`,
     async (id: string, { getState, rejectWithValue }) => {
+      if (endpoint) {
+        try {
+          const res = await api.get(resourceUrl(id))
+          return unwrapItem<T>(res.data)
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+
       const state = getState() as Record<string, { data: T[] } | undefined>
       const list = state[name]?.data ?? seed
       const item = list.find((i) => i.id === id)
@@ -60,7 +86,21 @@ export function createSliceFactory<T extends WithId>({
 
   const postData = createAsyncThunk(
     `${name}/postData`,
-    async ({ payload, onSuccess }: { payload: Partial<T>; onSuccess?: () => void }) => {
+    async (
+      { payload, onSuccess }: { payload: Partial<T>; onSuccess?: () => void },
+      { rejectWithValue }
+    ) => {
+      if (endpoint) {
+        try {
+          const res = await api.post(endpoint, payload)
+          const item = unwrapItem<T>(res.data)
+          onSuccess?.()
+          return item
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+
       const newItem = { ...payload, id: payload.id ?? generateId(name.toUpperCase()) } as T
       onSuccess?.()
       return newItem
@@ -69,14 +109,32 @@ export function createSliceFactory<T extends WithId>({
 
   const updateData = createAsyncThunk(
     `${name}/updateData`,
-    async ({ id, payload }: { id: string; payload: Partial<T> }) => {
+    async ({ id, payload }: { id: string; payload: Partial<T> }, { rejectWithValue }) => {
+      if (endpoint) {
+        try {
+          const res = await api.put(resourceUrl(id), payload)
+          return unwrapItem<T>(res.data)
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+
       return { ...payload, id } as T
     }
   )
 
   const patchData = createAsyncThunk(
     `${name}/patchData`,
-    async ({ id, payload }: { id: string; payload: Partial<T> }, { getState }) => {
+    async ({ id, payload }: { id: string; payload: Partial<T> }, { getState, rejectWithValue }) => {
+      if (endpoint) {
+        try {
+          const res = await api.patch(resourceUrl(id), payload)
+          return unwrapItem<T>(res.data)
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+
       const state = getState() as Record<string, { data: T[] } | undefined>
       const list = state[name]?.data ?? seed
       const existing = list.find((i) => i.id === id)
@@ -84,7 +142,20 @@ export function createSliceFactory<T extends WithId>({
     }
   )
 
-  const deleteData = createAsyncThunk(`${name}/deleteData`, async (id: string) => id)
+  const deleteData = createAsyncThunk(
+    `${name}/deleteData`,
+    async (id: string, { rejectWithValue }) => {
+      if (endpoint) {
+        try {
+          await api.delete(resourceUrl(id))
+          return id
+        } catch (err) {
+          return rejectWithValue(extractApiError(err))
+        }
+      }
+      return id
+    }
+  )
 
   const slice = createSlice({
     name,
@@ -94,6 +165,7 @@ export function createSliceFactory<T extends WithId>({
       isLoading: false, // Loading state for all actions
       error: null as unknown, // Error handling
       totalItems: seed.length,
+      meta: null as ListMeta | null, // server pagination info, populated once endpoint-backed
     },
     reducers: {},
     extraReducers: (builder) => {
@@ -106,6 +178,7 @@ export function createSliceFactory<T extends WithId>({
           state.isLoading = false
           state.data = action.payload.data as typeof state.data
           state.totalItems = action.payload.total
+          state.meta = action.payload.meta
           state.error = null
         })
         .addCase(fetchAll.rejected, (state, action) => {

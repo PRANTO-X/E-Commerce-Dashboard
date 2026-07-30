@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -9,30 +9,31 @@ import { ArrowLeft, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchSingle, postData, updateData } from "@/features/users/slices/staffSlice"
+import { fetchSingle, postData, patchData, updateStaffPermissions } from "@/features/users/slices/staffSlice"
+import { permissionCodes, type PermissionCode } from "@/features/users/types"
 
-const staffSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+const createSchema = z.object({
   email: z.string().email("Enter a valid email address"),
-  phone: z.string().optional(),
-  role: z.enum(["Admin", "Manager", "Sales", "Support", "Editor"]),
-  status: z.enum(["Active", "Inactive", "On Leave"]),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  first_name: z.string(),
+  last_name: z.string(),
+  phone: z.string(),
 })
 
-type StaffFormValues = z.infer<typeof staffSchema>
+const editSchema = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  phone: z.string(),
+  is_active: z.boolean(),
+})
 
-const roleOptions = ["Admin", "Manager", "Sales", "Support", "Editor"] as const
-const statusOptions = ["Active", "Inactive", "On Leave"] as const
+type CreateFormValues = z.infer<typeof createSchema>
+type EditFormValues = z.infer<typeof editSchema>
 
 const StaffForm = () => {
   const { id } = useParams<{ id: string }>()
@@ -41,23 +42,20 @@ const StaffForm = () => {
   const { singleData: existing, isLoading } = useAppSelector((state) => state.staffs)
 
   const isEditing = id !== "new"
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<PermissionCode>>(new Set())
+  const [savingPermissions, setSavingPermissions] = useState(false)
 
-  const {
-    control,
-    register,
-    reset,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<StaffFormValues>({
-    resolver: zodResolver(staffSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      role: "Support",
-      status: "Active",
-    },
+  const createForm = useForm<CreateFormValues>({
+    resolver: zodResolver(createSchema),
+    defaultValues: { email: "", password: "", first_name: "", last_name: "", phone: "" },
   })
+
+  const editForm = useForm<EditFormValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { first_name: "", last_name: "", phone: "", is_active: true },
+  })
+
+  const [syncedFor, setSyncedFor] = useState<string | null>(null)
 
   useEffect(() => {
     if (isEditing && id) {
@@ -65,23 +63,23 @@ const StaffForm = () => {
     }
   }, [dispatch, id, isEditing])
 
-  useEffect(() => {
-    if (isEditing && existing?.id === id) {
-      reset({
-        name: existing.name,
-        email: existing.email,
-        phone: existing.phone ?? "",
-        role: existing.role as StaffFormValues["role"],
-        status: existing.status,
-      })
-    }
-  }, [existing, id, isEditing, reset])
+  // Sync the form + permission checklist once per loaded staff member, without a state-setting effect.
+  if (isEditing && existing && existing.id === id && existing.id !== syncedFor) {
+    setSyncedFor(existing.id)
+    editForm.reset({
+      first_name: existing.first_name,
+      last_name: existing.last_name,
+      phone: existing.phone,
+      is_active: existing.is_active,
+    })
+    setSelectedPermissions(new Set(existing.permissions.filter((p): p is PermissionCode => p !== "*") as PermissionCode[]))
+  }
 
   if (isEditing && isLoading) {
     return <div className="section-container py-12 text-center text-muted-foreground">Loading staff member...</div>
   }
 
-  if (isEditing && existing?.id !== id) {
+  if (isEditing && existing && existing.id !== id) {
     return (
       <div className="section-container py-12 text-center">
         <h2 className="text-2xl font-bold">Staff member not found</h2>
@@ -93,22 +91,50 @@ const StaffForm = () => {
     )
   }
 
-  const onSubmit = async (values: StaffFormValues) => {
+  const togglePermission = (code: PermissionCode) => {
+    setSelectedPermissions((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
+  }
+
+  const handleCreate = async (values: CreateFormValues) => {
     try {
-      if (isEditing && existing) {
-        await dispatch(updateData({ id: existing.id, payload: { ...existing, ...values } })).unwrap()
-        toast.success(`${values.name} updated`)
-      } else {
-        await dispatch(
-          postData({
-            payload: { ...values, avatar: "", joinedAt: new Date().toISOString().slice(0, 10) },
-          })
-        ).unwrap()
-        toast.success(`${values.name} added`)
-      }
-      navigate("/staffs")
+      const created = await dispatch(
+        postData({
+          payload: { ...values, permissions: Array.from(selectedPermissions) },
+        })
+      ).unwrap()
+      toast.success(`${values.email} added`)
+      navigate(`/staff_form/${created.id}`)
     } catch {
-      toast.error("Failed to save staff member")
+      toast.error("Failed to add staff member")
+    }
+  }
+
+  const handleUpdate = async (values: EditFormValues) => {
+    if (!existing) return
+    try {
+      await dispatch(patchData({ id: existing.id, payload: values })).unwrap()
+      toast.success("Staff member updated")
+    } catch {
+      toast.error("Failed to update staff member")
+    }
+  }
+
+  const handleSavePermissions = async () => {
+    if (!existing) return
+    setSavingPermissions(true)
+    try {
+      const changes = permissionCodes.map((code) => ({ code, enabled: selectedPermissions.has(code) }))
+      await dispatch(updateStaffPermissions({ id: existing.id, changes })).unwrap()
+      toast.success("Permissions updated")
+    } catch {
+      toast.error("Failed to update permissions")
+    } finally {
+      setSavingPermissions(false)
     }
   }
 
@@ -123,102 +149,132 @@ const StaffForm = () => {
             {isEditing ? "Edit Staff Member" : "Add Staff Member"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isEditing ? `Editing ${existing?.name}` : "Invite a new team member"}
+            {isEditing ? `Editing ${existing?.email}` : "Invite a new team member"}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Staff Details</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="name">Full Name</FieldLabel>
-              <FieldContent>
-                <Input id="name" placeholder="e.g. Alice Johnson" {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <FieldContent>
-                <Input id="email" type="email" placeholder="alice@example.com" {...register("email")} />
-                <FieldError errors={[errors.email]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="phone">Phone</FieldLabel>
-              <FieldContent>
-                <Input id="phone" placeholder="+8801712345671" {...register("phone")} />
-                <FieldError errors={[errors.phone]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="role">Role</FieldLabel>
-              <FieldContent>
+      {isEditing ? (
+        <form onSubmit={editForm.handleSubmit(handleUpdate)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Details</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field>
+                <FieldLabel htmlFor="first_name">First Name</FieldLabel>
+                <FieldContent>
+                  <Input id="first_name" {...editForm.register("first_name")} />
+                  <FieldError errors={[editForm.formState.errors.first_name]} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="last_name">Last Name</FieldLabel>
+                <FieldContent>
+                  <Input id="last_name" {...editForm.register("last_name")} />
+                  <FieldError errors={[editForm.formState.errors.last_name]} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="phone">Phone</FieldLabel>
+                <FieldContent>
+                  <Input id="phone" {...editForm.register("phone")} />
+                </FieldContent>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
+                </FieldContent>
                 <Controller
-                  control={control}
-                  name="role"
+                  control={editForm.control}
+                  name="is_active"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roleOptions.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {role}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
                   )}
                 />
-                <FieldError errors={[errors.role]} />
-              </FieldContent>
-            </Field>
+              </Field>
+            </CardContent>
+            <CardFooter className="justify-end gap-3 border-t p-4">
+              <Button type="button" variant="outline" onClick={() => navigate("/staffs")}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
+      ) : (
+        <form onSubmit={createForm.handleSubmit(handleCreate)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Details</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldContent>
+                  <Input id="email" type="email" {...createForm.register("email")} />
+                  <FieldError errors={[createForm.formState.errors.email]} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">Temporary Password</FieldLabel>
+                <FieldContent>
+                  <Input id="password" type="password" {...createForm.register("password")} />
+                  <FieldError errors={[createForm.formState.errors.password]} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="first_name">First Name</FieldLabel>
+                <FieldContent>
+                  <Input id="first_name" {...createForm.register("first_name")} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="last_name">Last Name</FieldLabel>
+                <FieldContent>
+                  <Input id="last_name" {...createForm.register("last_name")} />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="phone">Phone</FieldLabel>
+                <FieldContent>
+                  <Input id="phone" {...createForm.register("phone")} />
+                </FieldContent>
+              </Field>
+            </CardContent>
+          </Card>
+        </form>
+      )}
 
-            <Field>
-              <FieldLabel htmlFor="status">Status</FieldLabel>
-              <FieldContent>
-                <Controller
-                  control={control}
-                  name="status"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError errors={[errors.status]} />
-              </FieldContent>
-            </Field>
-          </CardContent>
-          <CardFooter className="justify-end gap-3 border-t p-4">
-            <Button type="button" variant="outline" onClick={() => navigate("/staffs")}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Permissions</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {permissionCodes.map((code) => (
+            <label key={code} className="flex items-center gap-2 text-sm cursor-pointer rounded-md p-1.5 hover:bg-muted/50">
+              <Checkbox checked={selectedPermissions.has(code)} onCheckedChange={() => togglePermission(code)} />
+              <span>{code}</span>
+            </label>
+          ))}
+        </CardContent>
+        <CardFooter className="justify-end gap-3 border-t p-4">
+          {isEditing ? (
+            <Button onClick={handleSavePermissions} disabled={savingPermissions}>
               <Save className="h-4 w-4" />
-              {isEditing ? "Save Changes" : "Add Staff"}
+              Save Permissions
             </Button>
-          </CardFooter>
-        </Card>
-      </form>
+          ) : (
+            <Button onClick={createForm.handleSubmit(handleCreate)} disabled={createForm.formState.isSubmitting}>
+              <Save className="h-4 w-4" />
+              Create Staff Member
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   )
 }

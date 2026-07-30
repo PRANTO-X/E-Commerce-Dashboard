@@ -1,10 +1,10 @@
 import { createSliceFactory } from "@/utils/sliceFactory"
-import { campaigns, type Campaign } from "@/assets/Data"
+import type { Campaign } from "../types"
 
 const { reducer, fetchAll, fetchSingle, postData, updateData, patchData, deleteData } =
   createSliceFactory<Campaign>({
     name: "campaigns",
-    seed: campaigns,
+    endpoint: "/admin/marketing/campaigns/",
   })
 
 export { fetchAll, fetchSingle, postData, updateData, patchData, deleteData }

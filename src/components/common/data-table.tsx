@@ -29,6 +29,13 @@ interface DataTableProps<TData, TValue> {
   columnWidths?: string[]
   minWidth?: string
   showPagination?: boolean
+  /** Server-side pagination mode: `data` is just the current page, and page changes are
+   * driven by `onPageChange` (e.g. dispatching `fetchAll({page})`) instead of client-side slicing. */
+  manualPagination?: boolean
+  pageIndex?: number
+  pageCount?: number
+  totalCount?: number
+  onPageChange?: (pageIndex: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -38,6 +45,11 @@ export function DataTable<TData, TValue>({
   columnWidths,
   minWidth = "700px",
   showPagination = true,
+  manualPagination = false,
+  pageIndex: controlledPageIndex = 0,
+  pageCount: controlledPageCount = 1,
+  totalCount,
+  onPageChange,
 }: DataTableProps<TData, TValue>) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const headerScrollRef = React.useRef<HTMLDivElement>(null)
@@ -46,19 +58,35 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize },
-    },
+    ...(manualPagination
+      ? {
+          manualPagination: true,
+          pageCount: controlledPageCount,
+          state: { pagination: { pageIndex: controlledPageIndex, pageSize } },
+        }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+          initialState: { pagination: { pageSize } },
+        }),
   })
 
-  const { pageIndex, pageSize: currentPageSize } = table.getState().pagination
-  const totalRows = table.getFilteredRowModel().rows.length
-  const from = pageIndex * currentPageSize + 1
-  const to = Math.min((pageIndex + 1) * currentPageSize, totalRows)
+  const pageIndex = manualPagination ? controlledPageIndex : table.getState().pagination.pageIndex
+  const currentPageSize = manualPagination ? pageSize : table.getState().pagination.pageSize
+  const pageCount = manualPagination ? controlledPageCount : table.getPageCount()
+  const totalRows = manualPagination ? totalCount ?? data.length : table.getFilteredRowModel().rows.length
+  const from = totalRows === 0 ? 0 : pageIndex * currentPageSize + 1
+  const to = manualPagination
+    ? Math.min(pageIndex * currentPageSize + data.length, totalRows)
+    : Math.min((pageIndex + 1) * currentPageSize, totalRows)
+  const canPreviousPage = manualPagination ? pageIndex > 0 : table.getCanPreviousPage()
+  const canNextPage = manualPagination ? pageIndex < pageCount - 1 : table.getCanNextPage()
 
-  const goToPage = (fn: () => void) => {
-    fn()
+  const goToPage = (fn: () => void, targetIndex?: number) => {
+    if (manualPagination) {
+      if (targetIndex !== undefined) onPageChange?.(targetIndex)
+    } else {
+      fn()
+    }
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -164,8 +192,8 @@ export function DataTable<TData, TValue>({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => goToPage(() => table.setPageIndex(0))}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => goToPage(() => table.setPageIndex(0), 0)}
+            disabled={!canPreviousPage}
           >
             <ChevronsLeftIcon className="h-4 w-4" />
           </Button>
@@ -173,17 +201,17 @@ export function DataTable<TData, TValue>({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => goToPage(() => table.previousPage())}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => goToPage(() => table.previousPage(), pageIndex - 1)}
+            disabled={!canPreviousPage}
           >
             <ChevronLeftIcon className="h-4 w-4" />
           </Button>
 
-          {Array.from({ length: table.getPageCount() }, (_, i) => i)
+          {Array.from({ length: pageCount }, (_, i) => i)
             .filter(
               (i) =>
                 i === 0 ||
-                i === table.getPageCount() - 1 ||
+                i === pageCount - 1 ||
                 Math.abs(i - pageIndex) <= 1
             )
             .reduce((acc: (number | string)[], i, idx, arr) => {
@@ -200,7 +228,7 @@ export function DataTable<TData, TValue>({
                   variant={pageIndex === item ? "default" : "ghost"}
                   size="icon"
                   className="h-7 w-7 text-xs"
-                  onClick={() => goToPage(() => table.setPageIndex(item as number))}
+                  onClick={() => goToPage(() => table.setPageIndex(item as number), item as number)}
                 >
                   {(item as number) + 1}
                 </Button>
@@ -211,8 +239,8 @@ export function DataTable<TData, TValue>({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => goToPage(() => table.nextPage())}
-            disabled={!table.getCanNextPage()}
+            onClick={() => goToPage(() => table.nextPage(), pageIndex + 1)}
+            disabled={!canNextPage}
           >
             <ChevronRightIcon className="h-4 w-4" />
           </Button>
@@ -220,8 +248,8 @@ export function DataTable<TData, TValue>({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => goToPage(() => table.setPageIndex(table.getPageCount() - 1))}
-            disabled={!table.getCanNextPage()}
+            onClick={() => goToPage(() => table.setPageIndex(pageCount - 1), pageCount - 1)}
+            disabled={!canNextPage}
           >
             <ChevronsRightIcon className="h-4 w-4" />
           </Button>

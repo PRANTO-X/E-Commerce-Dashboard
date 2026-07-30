@@ -1,105 +1,91 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import { categoryOptions, statusStyles, type ProductItem, type ProductStatus } from "@/assets/Data"
+import {
+  productStatusOptions,
+  productStatusStyles,
+  type Product,
+  type ProductStatus,
+} from "@/features/catalog/types"
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/productSlice"
+import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
 import { toast } from "sonner"
+
 const Products = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: products } = useAppSelector((state) => state.products)
+  const [page, setPage] = useState(1)
+  const { data: products, totalItems, meta } = useAppSelector((state) => state.products)
+  const { data: categories } = useAppSelector((state) => state.categories)
 
   useEffect(() => {
-    dispatch(fetchAll())
+    dispatch(fetchAll({ page }))
+  }, [dispatch, page])
+
+  useEffect(() => {
+    dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch])
 
-  const statusOptions = [
-    { label: "Active", value: "active" },
-    { label: "Draft", value: "draft" },
-    { label: "Inactive", value: "inactive" },
-  ]
+  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—"
 
-  const columns: ColumnDef<ProductItem>[] = [
+  const columns: ColumnDef<Product>[] = [
     {
-      accessorKey: "id",
-      header: "PRODUCT ID",
-      cell: ({ row }) => (
-        <span className="font-medium text-primary text-sm">
-          {row.getValue("id")}
-        </span>
-      ),
-    },
-    // IMAGE
-    {
-      accessorKey: "image",
-      header: "IMAGE",
-      cell: ({ row }) => (
-        <img
-          src={row.getValue("image")}
-          alt="product"
-          className="h-10 w-10 rounded-md object-cover"
-        />
-      ),
-    },
-
-    // PRODUCT
-    {
-      accessorKey: "product",
+      accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
         <span className="text-sm font-medium text-foreground">
-          {row.getValue("product")}
+          {row.getValue("name")}
         </span>
       ),
     },
 
-    // SKU
     {
-      accessorKey: "sku",
-      header: "SKU",
+      accessorKey: "slug",
+      header: "SLUG",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("sku")}
-        </span>
+        <span className="text-sm text-muted-foreground">{row.getValue("slug")}</span>
       ),
     },
 
-    // CATEGORY
     {
       accessorKey: "category",
       header: "CATEGORY",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.getValue("category")}
+          {categoryName(row.getValue("category"))}
         </span>
       ),
     },
 
-    // PRICE
     {
-      accessorKey: "price",
+      accessorKey: "base_price",
       header: "PRICE",
-      cell: ({ row }) => {
-        const price = row.getValue("price") as number
-
-        return (
-          <span className="text-sm font-semibold text-foreground">
-            ${price.toFixed(2)}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <span className="text-sm font-semibold text-foreground">
+          ${Number(row.getValue("base_price")).toFixed(2)}
+        </span>
+      ),
     },
 
-    // STATUS
+    {
+      accessorKey: "product_type",
+      header: "TYPE",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground capitalize">
+          {row.getValue("product_type")}
+        </span>
+      ),
+    },
+
     {
       accessorKey: "status",
       header: "STATUS",
@@ -108,7 +94,7 @@ const Products = () => {
 
         return (
           <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${productStatusStyles[status]}`}
           >
             {status}
           </span>
@@ -116,58 +102,40 @@ const Products = () => {
       },
     },
 
-    // RATING
     {
-      accessorKey: "rating",
-      header: "RATING",
-      cell: ({ row }) => {
-        const rating = row.getValue("rating") as number
-
-        return (
-          <span className="text-sm text-foreground">
-            ⭐ {rating.toFixed(1)}
-          </span>
-        )
-      },
+      accessorKey: "is_featured",
+      header: "FEATURED",
+      cell: ({ row }) => (row.getValue("is_featured") ? "Yes" : "No"),
     },
 
-    // SALES
     {
-      accessorKey: "sales",
-      header: "SALES",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("sales")}
-        </span>
-      ),
-    },
-
-    // CREATED AT
-    {
-      accessorKey: "createdAt",
+      accessorKey: "created_at",
       header: "CREATED AT",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {row.getValue("createdAt")}
+          {new Date(row.getValue("created_at")).toLocaleDateString()}
         </span>
       ),
     },
 
-    // ACTION
     {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => {
         const product = row.original
 
-        const handleDelete = () => {
-          dispatch(deleteData(product.id))
-          toast.success(`${product.product} deleted`)
+        const handleDelete = async () => {
+          try {
+            await dispatch(deleteData(product.id)).unwrap()
+            toast.success(`${product.name} deleted`)
+          } catch {
+            toast.error("Failed to delete product")
+          }
         }
 
         return (
           <TableActions
-            itemName={product.product}
+            itemName={product.name}
             onDelete={handleDelete}
             editUrl={`/product_form/${product.id}`}
             viewUrl={`/product_detail/${product.id}`}
@@ -176,17 +144,18 @@ const Products = () => {
       },
     },
   ]
+
   const csvData = products.map((product) => ({
-  ID: product.id,
-  Product: product.product,
-  SKU: product.sku,
-  Category: product.category,
-  Price: product.price,
-  Status: product.status,
-  Rating: product.rating,
-  Sales: product.sales,
-  CreatedAt: product.createdAt,
-}))
+    ID: product.id,
+    Name: product.name,
+    Slug: product.slug,
+    Category: categoryName(product.category),
+    Price: product.base_price,
+    Type: product.product_type,
+    Status: product.status,
+    Featured: product.is_featured,
+    CreatedAt: product.created_at,
+  }))
 
   return (
     <div className="section-container">
@@ -202,21 +171,21 @@ const Products = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button 
-          variant="default" 
-          size="action"
-          onClick={() => navigate("/product_form/new")}
-        >
-          <PlusIcon className="size-5" /> Add Product
-        </Button>
+          <Button
+            variant="default"
+            size="action"
+            onClick={() => navigate("/product_form/new")}
+          >
+            <PlusIcon className="size-5" /> Add Product
+          </Button>
 
-        <Button 
-          variant="primary" 
-          size="action"
-          onClick={() => exportToCSV(csvData,'Products')}
-        >
-          <DownloadIcon className="size-5" /> Export CSV
-        </Button>
+          <Button
+            variant="primary"
+            size="action"
+            onClick={() => exportToCSV(csvData, "Products")}
+          >
+            <DownloadIcon className="size-5" /> Export CSV
+          </Button>
         </div>
       </div>
 
@@ -237,7 +206,7 @@ const Products = () => {
             component: (
               <ExampleComboboxCustomItems
                 placeholder="status"
-                frameworks={statusOptions}
+                frameworks={productStatusOptions}
               />
             ),
           },
@@ -245,7 +214,7 @@ const Products = () => {
             component: (
               <ExampleComboboxCustomItems
                 placeholder="categories"
-                frameworks={categoryOptions}
+                frameworks={categories.map((c) => ({ label: c.name, value: c.id }))}
               />
             ),
           },
@@ -255,16 +224,19 @@ const Products = () => {
       <DataTable
         columns={columns}
         data={products}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
         columnWidths={[
-          "90px", // ID
-          "70px", // IMAGE
-          "240px", // PRODUCT
-          "140px", // SKU
+          "220px", // PRODUCT
+          "160px", // SLUG
           "140px", // CATEGORY
           "110px", // PRICE
+          "110px", // TYPE
           "120px", // STATUS
-          "100px", // RATING
-          "110px", // SALES
+          "100px", // FEATURED
           "150px", // CREATED AT
           "100px", // ACTION
         ]}

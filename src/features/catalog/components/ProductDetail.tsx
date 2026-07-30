@@ -1,17 +1,17 @@
 import { useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { statusStyles, type ProductStatus } from "@/assets/Data"
+import { productStatusStyles, type ProductStatus } from "@/features/catalog/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle } from "@/features/catalog/slices/productSlice"
+import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
+import { fetchAll as fetchAllProductImages } from "@/features/catalog/slices/productImageSlice"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft,
   Edit,
-  Star,
   Package,
-  ShoppingCart,
   Calendar,
   Tag,
   Hash,
@@ -24,9 +24,15 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: product, isLoading } = useAppSelector((state) => state.products)
+  const { data: categories } = useAppSelector((state) => state.categories)
+  const { data: allImages } = useAppSelector((state) => state.productImages)
 
   useEffect(() => {
-    if (id) dispatch(fetchSingle(id))
+    if (id) {
+      dispatch(fetchSingle(id))
+      dispatch(fetchAllProductImages({ page: 1, page_size: 100 }))
+    }
+    dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch, id])
 
   if (isLoading) {
@@ -60,6 +66,10 @@ const ProductDetail = () => {
     )
   }
 
+  const images = allImages.filter((img) => img.product === product.id)
+  const primaryImage = images.find((img) => img.is_primary) ?? images[0]
+  const categoryName = categories.find((c) => c.id === product.category)?.name ?? "—"
+
   return (
     <div className="section-container ">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -76,7 +86,7 @@ const ProductDetail = () => {
               Product Details
             </h1>
             <p className="text-muted-foreground text-sm">
-              Detailed information about {product.product}
+              Detailed information about {product.name}
             </p>
           </div>
         </div>
@@ -93,51 +103,35 @@ const ProductDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Product Image and Primary Info */}
         <Card className="lg:col-span-1 h-full overflow-hidden border-none shadow-sm bg-card/50 backdrop-blur-sm flex flex-col">
-          <div className="aspect-square w-full overflow-hidden">
-            <img
-              src={product.image}
-              alt={product.product}
-              className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
-            />
+          <div className="aspect-square w-full overflow-hidden bg-muted flex items-center justify-center">
+            {primaryImage ? (
+              <img
+                src={primaryImage.image}
+                alt={primaryImage.alt_text || product.name}
+                className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+              />
+            ) : (
+              <Package className="h-16 w-16 text-muted-foreground" />
+            )}
           </div>
           <CardContent className="p-6 flex-1 flex flex-col">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <Badge
-                  className={`${
-                    statusStyles[product.status as ProductStatus]
-                  } border-none mb-2`}
-                >
+                <Badge className={`${productStatusStyles[product.status as ProductStatus]} border-none mb-2`}>
                   {product.status.toUpperCase()}
                 </Badge>
                 <h2 className="text-2xl font-bold text-foreground">
-                  {product.product}
+                  {product.name}
                 </h2>
                 <p className="text-muted-foreground text-sm flex items-center mt-1">
-                  <Hash className="h-3 w-3 mr-1" /> {product.sku}
+                  <Hash className="h-3 w-3 mr-1" /> {product.slug}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-primary">
-                  ${product.price.toFixed(2)}
+                  ${Number(product.base_price).toFixed(2)}
                 </p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-amber-500 mb-6">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-4 w-4 ${
-                    i < Math.floor(product.rating)
-                      ? "fill-current"
-                      : "text-muted-foreground opacity-30"
-                  }`}
-                />
-              ))}
-              <span className="ml-2 text-sm font-medium text-foreground">
-                {product.rating} (Customer Rating)
-              </span>
             </div>
 
             <div className="mt-auto">
@@ -146,17 +140,15 @@ const ProductDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold flex items-center">
-                    <Package className="h-3 w-3 mr-1" /> Stock Available
+                    <Tag className="h-3 w-3 mr-1" /> Product Type
                   </p>
-                  <p className="text-lg font-bold">
-                    {product.stock || 0} Units
-                  </p>
+                  <p className="text-lg font-bold capitalize">{product.product_type}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold flex items-center">
-                    <ShoppingCart className="h-3 w-3 mr-1" /> Total Sales
+                    <Package className="h-3 w-3 mr-1" /> Featured
                   </p>
-                  <p className="text-lg font-bold">{product.sales} Sales</p>
+                  <p className="text-lg font-bold">{product.is_featured ? "Yes" : "No"}</p>
                 </div>
               </div>
             </div>
@@ -171,8 +163,7 @@ const ProductDetail = () => {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground leading-relaxed">
-                {product.description ||
-                  "No description provided for this product. High-quality materials and craftsmanship ensure durability and performance."}
+                {product.description || "No description provided for this product."}
               </p>
             </CardContent>
           </Card>
@@ -190,9 +181,7 @@ const ProductDetail = () => {
                   <p className="text-xs text-muted-foreground uppercase font-semibold">
                     Category
                   </p>
-                  <p className="text-sm font-medium capitalize">
-                    {product.category.replace("_", " ")}
-                  </p>
+                  <p className="text-sm font-medium">{categoryName}</p>
                 </div>
               </div>
 
@@ -204,7 +193,9 @@ const ProductDetail = () => {
                   <p className="text-xs text-muted-foreground uppercase font-semibold">
                     Created At
                   </p>
-                  <p className="text-sm font-medium">{product.createdAt}</p>
+                  <p className="text-sm font-medium">
+                    {new Date(product.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
@@ -214,87 +205,48 @@ const ProductDetail = () => {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    SKU Number
+                    Requires Shipping
                   </p>
-                  <p className="text-sm font-medium">{product.sku}</p>
+                  <p className="text-sm font-medium">{product.requires_shipping ? "Yes" : "No"}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
-                  <ShoppingCart className="h-5 w-5" />
+                  <Tag className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase font-semibold">
-                    Availability
+                    Downloadable / Recurring
                   </p>
-                  <Badge
-                    variant="outline"
-                    className={
-                      product.status === "active"
-                        ? "text-green-500 border-green-500/20 bg-green-500/5"
-                        : "text-amber-500 border-amber-500/20 bg-amber-500/5"
-                    }
-                  >
-                    {product.status === "active" ? "In Stock" : "Limited Stock"}
-                  </Badge>
+                  <p className="text-sm font-medium">
+                    {product.is_downloadable ? "Downloadable" : "—"}
+                    {product.is_downloadable && product.is_recurring ? " · " : ""}
+                    {product.is_recurring ? "Recurring" : ""}
+                    {!product.is_downloadable && !product.is_recurring ? "—" : ""}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Optional: Add more sections like Pricing History, Recent Activity, or Related Products */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {images.length > 0 && (
             <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Monthly Performance
-                </CardTitle>
+              <CardHeader>
+                <CardTitle>Images</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-end gap-2 h-20 pt-4">
-                  {[40, 60, 45, 70, 55, 80, 65].map((h, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 bg-primary hover:bg-primary rounded-t-sm transition-colors cursor-pointer"
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-4 text-center">
-                  Sales trend over the last 7 months
-                </p>
+              <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {images.map((img) => (
+                  <img
+                    key={img.id}
+                    src={img.image}
+                    alt={img.alt_text || product.name}
+                    className="h-24 w-full rounded-lg object-cover"
+                  />
+                ))}
               </CardContent>
             </Card>
-
-            <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs h-8"
-                >
-                  Duplicate Product
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs h-8"
-                >
-                  View on Storefront
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs h-8 text-red-500 hover:text-red-500"
-                >
-                  Archive Product
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          )}
         </div>
       </div>
     </div>
