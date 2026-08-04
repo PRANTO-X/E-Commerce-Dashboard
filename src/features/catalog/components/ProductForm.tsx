@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Save, Trash2, Star } from "lucide-react"
+import { ArrowLeft, Loader2, Save, Trash2, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -205,7 +205,7 @@ const ProductForm = () => {
           }
         }
         toast.success(`${values.name} created`)
-        navigate(`/product_form/${created.id}`)
+        navigate("/products")
       }
     } catch {
       toast.error("Failed to save product")
@@ -540,8 +540,18 @@ const ProductForm = () => {
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4" />
-              {isEditing ? "Save Changes" : "Create Product"}
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {isSubmitting
+                ? isEditing
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditing
+                  ? "Save Changes"
+                  : "Create Product"}
             </Button>
           </CardFooter>
         </Card>

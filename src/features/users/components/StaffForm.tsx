@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -102,13 +102,13 @@ const StaffForm = () => {
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
-      const created = await dispatch(
+      await dispatch(
         postData({
           payload: { ...values, permissions: Array.from(selectedPermissions) },
         })
       ).unwrap()
       toast.success(`${values.email} added`)
-      navigate(`/staff_form/${created.id}`)
+      navigate("/staffs")
     } catch {
       toast.error("Failed to add staff member")
     }
@@ -119,6 +119,7 @@ const StaffForm = () => {
     try {
       await dispatch(patchData({ id: existing.id, payload: values })).unwrap()
       toast.success("Staff member updated")
+      navigate("/staffs")
     } catch {
       toast.error("Failed to update staff member")
     }
@@ -199,8 +200,12 @@ const StaffForm = () => {
                 Cancel
               </Button>
               <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                <Save className="h-4 w-4" />
-                Save Changes
+                {editForm.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
             </CardFooter>
           </Card>
@@ -269,8 +274,12 @@ const StaffForm = () => {
             </Button>
           ) : (
             <Button onClick={createForm.handleSubmit(handleCreate)} disabled={createForm.formState.isSubmitting}>
-              <Save className="h-4 w-4" />
-              Create Staff Member
+              {createForm.formState.isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {createForm.formState.isSubmitting ? "Creating..." : "Create Staff Member"}
             </Button>
           )}
         </CardFooter>

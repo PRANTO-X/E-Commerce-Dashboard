@@ -11,7 +11,7 @@ function MetricCard({ title, value, change, icon: Icon }: MetricCardProps) {
   const isPositive = change >= 0
 
   return (
-    <div className="flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
       {/* top row */}
       <div className="flex items-center justify-between">
         <span className="flex items-center justify-center rounded-full border-2 border-gray-100 dark:border-gray-800">

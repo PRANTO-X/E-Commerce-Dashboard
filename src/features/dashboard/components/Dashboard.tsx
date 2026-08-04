@@ -168,8 +168,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Metric stat band */}
-      <div className="mb-4 grid grid-cols-1 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-100 bg-white sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-4 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
+      {/* Metric stat cards */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.id} {...metric} />
         ))}

@@ -47,7 +47,7 @@ export function AnalyticsSummary() {
   ]
 
   return (
-    <div className="grid grid-cols-1 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-100 bg-white sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-4 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric) => (
         <MetricCard key={metric.id} {...metric} />
       ))}

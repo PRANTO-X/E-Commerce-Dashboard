@@ -146,7 +146,7 @@ const Categories = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="action" onClick={() => navigate("/category_form/new")}>
+        <Button variant="apply" size="action" onClick={() => navigate("/category_form/new")}>
           <PlusIcon className="size-5" />
           Add Category
         </Button>

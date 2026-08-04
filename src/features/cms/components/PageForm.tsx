@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -207,8 +207,18 @@ const PageForm = () => {
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4" />
-              {isEditing ? "Save Changes" : "Create Page"}
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {isSubmitting
+                ? isEditing
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditing
+                  ? "Save Changes"
+                  : "Create Page"}
             </Button>
           </CardFooter>
         </Card>
