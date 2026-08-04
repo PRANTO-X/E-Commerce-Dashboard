@@ -86,7 +86,7 @@ const SignInForm = () => {
             </Field>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
+            <Button type="submit" variant="apply" className="w-full" disabled={isSubmitting || isLoading}>
               <LogInIcon className="h-4 w-4" />
               Sign in
             </Button>
