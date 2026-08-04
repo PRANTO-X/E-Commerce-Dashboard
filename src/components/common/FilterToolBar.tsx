@@ -23,7 +23,7 @@ const FilterToolbar = ({
   return (
     <div className="mt-[18px] flex flex-wrap items-center justify-between gap-3 pb-0 pt-4">
       {/* Search — left side */}
-      <div className="relative w-full min-[600px]:w-[380px]">
+      <div className="relative min-w-[220px] max-w-[380px] flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
         <input
           type="text"

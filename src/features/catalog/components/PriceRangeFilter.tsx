@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
 
 type PriceRange = {
   min: string
@@ -25,26 +24,29 @@ export function PriceRangeFilter({ onChange }: PriceRangeFilterProps) {
     })
   }
 
+  const inputClass =
+    "h-9 w-full min-w-0 rounded-lg border border-border bg-accent px-3 text-sm text-foreground transition-all outline-none placeholder:text-muted-foreground focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-primary"
+
   return (
     <div className="flex items-center gap-2 w-full">
       {/* MIN */}
-      <Input
+      <input
         type="number"
         placeholder="Min"
         value={range.min}
         onChange={(e) => handleChange("min", e.target.value)}
-        className="flex-1 h-9"
+        className={inputClass}
       />
 
       <span className="text-muted-foreground shrink-0">-</span>
 
       {/* MAX */}
-      <Input
+      <input
         type="number"
         placeholder="Max"
         value={range.max}
         onChange={(e) => handleChange("max", e.target.value)}
-        className="flex-1 h-9"
+        className={inputClass}
       />
     </div>
   )
