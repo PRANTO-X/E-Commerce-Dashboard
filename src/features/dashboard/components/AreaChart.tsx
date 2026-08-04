@@ -27,13 +27,13 @@ const chartData = [
 const chartConfig = {
   desktop: {
     label: "Revenue",
-    color: "#3758f9",
+    color: "#14b8a6",
   },
 } satisfies ChartConfig
 
 export function ChartAreaDefault() {
   return (
-    <Card className="rounded-xl border border-gray-100 bg-white p-5 shadow-none dark:border-gray-800 dark:bg-gray-900">
+    <Card className="rounded-xl border border-gray-100 bg-white p-5 shadow-none dark:border-[#16312b] dark:bg-[#0b1a17]">
       <CardHeader className="mb-4 flex flex-row items-center justify-between gap-4 px-0">
         <div>
           <CardTitle className="text-base font-semibold text-gray-800 dark:text-white/90">
@@ -43,7 +43,7 @@ export function ChartAreaDefault() {
             Tracking performance across global regions
           </CardDescription>
         </div>
-        <select className="h-9 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-500 outline-none transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800">
+        <select className="h-9 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-500 outline-none transition-colors hover:bg-gray-50 dark:border-[#1e413a] dark:bg-[#0b1a17] dark:text-gray-400 dark:hover:bg-gray-800">
           <option>Last 12 Months</option>
           <option>Last 6 Months</option>
           <option>Last 3 Months</option>
@@ -59,8 +59,8 @@ export function ChartAreaDefault() {
           >
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3758f9" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#3758f9" stopOpacity={0} />
+                <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
               </linearGradient>
             </defs>
 
@@ -80,18 +80,18 @@ export function ChartAreaDefault() {
             />
 
             <ChartTooltip
-              cursor={{ stroke: "#3758f9", strokeOpacity: 0.3, strokeWidth: 1 }}
+              cursor={{ stroke: "#14b8a6", strokeOpacity: 0.3, strokeWidth: 1 }}
               content={<ChartTooltipContent indicator="line" />}
             />
 
             <Area
               dataKey="desktop"
               type="monotone"
-              stroke="#3758f9"
+              stroke="#14b8a6"
               strokeWidth={2}
               fill="url(#revenueGradient)"
               dot={false}
-              activeDot={{ r: 4, fill: "#3758f9", strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: "#14b8a6", strokeWidth: 0 }}
             />
           </AreaChart>
         </ChartContainer>

@@ -7,17 +7,17 @@ import ScrollToTop from "@/components/common/ScrollToTop";
 const DashboardLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-950">
+      <div className="flex h-screen w-full overflow-hidden bg-white dark:bg-[#06110f]">
         <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* sticky navbar — same surface as sidebar, no border */}
-          <div className="sticky top-0 z-10 bg-white dark:bg-gray-950">
+          <div className="sticky top-0 z-10 bg-white dark:bg-[#06110f]">
             <Navbar />
           </div>
 
           {/* floating content panel */}
-          <main className="m-3 flex-1 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-0 mt-0 dark:border-gray-800 dark:bg-gray-950">
+          <main className="m-3 flex-1 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-0 mt-0 dark:border-[#16312b] dark:bg-[#06110f]">
             <ScrollToTop />
             <Outlet />
           </main>

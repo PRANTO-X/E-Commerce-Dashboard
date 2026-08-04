@@ -291,7 +291,7 @@ export function AppSidebar() {
           </Avatar>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 group-data-[collapsible=icon]:hidden dark:border-gray-800 dark:bg-gray-950">
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 group-data-[collapsible=icon]:hidden dark:border-[#16312b] dark:bg-[#06110f]">
           <div className="flex items-center gap-3">
             <Avatar className="size-10">
               {user?.profile_picture ? (

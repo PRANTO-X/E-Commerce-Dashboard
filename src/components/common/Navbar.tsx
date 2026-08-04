@@ -83,7 +83,7 @@ const Navbar = () => {
   }
 
   return (
-    <header className="bg-white dark:bg-gray-950">
+    <header className="bg-white dark:bg-[#06110f]">
       <nav className="flex items-center justify-between p-4 sm:p-5">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white/90" />
@@ -101,9 +101,9 @@ const Navbar = () => {
                 }
               }}
               placeholder="Search product, order, customer..."
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-100 pl-9 pr-13 text-sm text-gray-900 transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-400 dark:border-gray-800 dark:bg-white/5 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:bg-gray-700"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-100 pl-9 pr-13 text-sm text-gray-900 transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-400 dark:border-[#16312b] dark:bg-white/5 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:bg-gray-700"
             />
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-400 dark:border-gray-800 dark:bg-white/5">
+            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-400 dark:border-[#16312b] dark:bg-white/5">
               ⌘K
             </span>
           </div>
@@ -137,7 +137,7 @@ const Navbar = () => {
           {/* Theme */}
           <button
             onClick={toggleTheme}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-[#16312b] dark:bg-[#06110f] dark:text-gray-300 dark:hover:bg-gray-800"
           >
             {theme === "light" ? (
               <MoonIcon className="size-5" />
@@ -149,7 +149,7 @@ const Navbar = () => {
           {/* Notification */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400 dark:hover:bg-gray-800">
+              <button className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-[#1e413a] dark:bg-[#06110f] dark:text-gray-400 dark:hover:bg-gray-800">
                 <BellIcon className="size-5" />
 
                 <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring ring-white dark:ring-gray-800" />
@@ -157,7 +157,7 @@ const Navbar = () => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-80 rounded-2xl">
-              <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-gray-800 dark:text-white/90">
+              <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-[#16312b] dark:text-white/90">
                 Notifications
               </DropdownMenuLabel>
 
@@ -189,7 +189,7 @@ const Navbar = () => {
           {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-[10px] border border-gray-200 transition-all dark:border-gray-700">
+              <button className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-[10px] border border-gray-200 transition-all dark:border-[#1e413a]">
                 <UserIcon className="size-5 text-gray-700 dark:text-gray-400" />
               </button>
             </DropdownMenuTrigger>

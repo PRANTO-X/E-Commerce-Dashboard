@@ -53,15 +53,17 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Primary scale (Tailgrids CMS brand blue) */
-  --color-primary-50: #eff3ff;
-  --color-primary-100: #dbe4fe;
-  --color-primary-200: #bccdfe;
-  --color-primary-300: #91aeff;
-  --color-primary-400: #5e84fc;
-  --color-primary-500: #3758f9;
-  --color-primary-600: #2237ee;
-  --color-primary-700: #1a25db;
+  /* Primary scale (deep teal) */
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-300: #5eead4;
+  --color-primary-400: #2dd4bf;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+  --color-primary-900: #134e4a;
 }
 
 /* -------------------------
@@ -77,7 +79,7 @@
   --popover: #ffffff;
   --popover-foreground: #1f2937;
 
-  --primary: #3758f9;
+  --primary: #0d9488;
   --primary-foreground: #ffffff;
 
   --secondary: #111827;
@@ -93,16 +95,16 @@
 
   --border: #e5e7eb;
   --input: #d1d5db;
-  --ring: #3758f9;
+  --ring: #14b8a6;
 
   --sidebar: #ffffff;
   --sidebar-foreground: #374151;
-  --sidebar-primary: #3758f9;
+  --sidebar-primary: #0d9488;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f3f4f6;
   --sidebar-accent-foreground: #111827;
   --sidebar-border: #e5e7eb;
-  --sidebar-ring: #3758f9;
+  --sidebar-ring: #14b8a6;
 
   /* ---- Field tokens (input, combobox, date picker) ---- */
   --field-bg: #f9fafb;
@@ -115,45 +117,45 @@
    DARK MODE — Tailgrids CMS
 --------------------------*/
 .dark {
-  --background: #030712;
+  --background: #06110f;
   --foreground: #f9fafb;
 
-  --card: #111827;
+  --card: #0b1a17;
   --card-foreground: #f9fafb;
 
-  --popover: #111827;
+  --popover: #0b1a17;
   --popover-foreground: #f9fafb;
 
-  --primary: #3758f9;
-  --primary-foreground: #ffffff;
+  --primary: #2dd4bf;
+  --primary-foreground: #03211c;
 
-  --secondary: #1f2937;
+  --secondary: #12201d;
   --secondary-foreground: #f9fafb;
 
-  --accent: #1f2937;
+  --accent: #12201d;
   --accent-foreground: #f3f4f6;
 
-  --muted: #111827;
+  --muted: #0b1a17;
   --muted-foreground: #9ca3af;
 
   --destructive: #ef4444;
 
-  --border: #1f2937;
-  --input: #374151;
-  --ring: #5e84fc;
+  --border: #16312b;
+  --input: #1e413a;
+  --ring: #2dd4bf;
 
-  --sidebar: #030712;
+  --sidebar: #06110f;
   --sidebar-foreground: #9ca3af;
-  --sidebar-primary: #5e84fc;
-  --sidebar-primary-foreground: #030712;
-  --sidebar-accent: #111827;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-primary-foreground: #03211c;
+  --sidebar-accent: #0f201c;
   --sidebar-accent-foreground: #f9fafb;
-  --sidebar-border: #1f2937;
-  --sidebar-ring: #3758f9;
+  --sidebar-border: #16312b;
+  --sidebar-ring: #14b8a6;
 
   /* ---- Field tokens (dark mode) ---- */
   --field-bg: rgba(255, 255, 255, 0.05);
-  --field-border: #374151;
+  --field-border: #1e413a;
   --field-text: #f9fafb;
   --field-placeholder: #6b7280;
 }

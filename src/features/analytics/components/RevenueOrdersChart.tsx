@@ -28,8 +28,8 @@ const chartConfig = {
   revenue: {
     label: "Revenue",
     theme: {
-      light: "#3758f9",
-      dark: "#5e84fc",
+      light: "#14b8a6",
+      dark: "#2dd4bf",
     },
   },
   order_count: {

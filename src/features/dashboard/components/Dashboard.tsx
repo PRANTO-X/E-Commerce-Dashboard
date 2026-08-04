@@ -183,7 +183,7 @@ const Dashboard = () => {
       {/* Table & ProgressBar */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Order Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-gray-800 dark:bg-gray-900">
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-[#16312b] dark:bg-[#0b1a17]">
           <div className="flex items-center justify-between px-5 py-4">
             <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
               Recent Orders
@@ -205,7 +205,7 @@ const Dashboard = () => {
         </div>
 
         {/* Progress Bar */}
-        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-[#16312b] dark:bg-[#0b1a17]">
           <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
             Top Products
           </h2>

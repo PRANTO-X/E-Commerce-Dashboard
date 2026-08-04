@@ -18,7 +18,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchTopProducts } from "@/features/analytics/slices/analyticsSlice"
 
-const palette = ["#3758f9", "#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#6b7280"]
+const palette = ["#14b8a6", "#f59e0b", "#38bdf8", "#f43f5e", "#8b5cf6", "#94a3b8"]
 
 export function SalesByCategoryChart() {
   const dispatch = useAppDispatch()

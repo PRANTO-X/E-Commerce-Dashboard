@@ -41,7 +41,7 @@ const FilterToolbar = ({
   )
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-[#16312b] dark:bg-[#0b1a17]">
       {/* Desktop */}
       <div className="hidden xl:block">
         {stacked ? (
