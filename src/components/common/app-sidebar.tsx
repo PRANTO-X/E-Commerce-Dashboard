@@ -1,22 +1,18 @@
 import { useEffect, useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSidebar } from "@/components/ui/sidebar"
+import { useAppSelector } from "@/app/hooks"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
+  SidebarFooter,
   SidebarHeader,
 } from "@/components/ui/sidebar"
 
 import {
   LayoutDashboard,
-  Home,
   Boxes,
   ShoppingCart,
   Users,
@@ -25,12 +21,14 @@ import {
   ChevronDown,
   Megaphone,
   FileText,
+  Store,
+  UserIcon,
 } from "lucide-react"
 
 const sidebarItems = [
   {
     label: "Home",
-    icon: Home,
+    icon: LayoutDashboard,
     items: [{ title: "Overview", url: "/" }],
   },
   {
@@ -103,11 +101,35 @@ const sidebarItems = [
   },
 ]
 
+const groups: { label: string; sections: string[] }[] = [
+  {
+    label: "MAIN",
+    sections: ["Home", "Catalog", "Sales"],
+  },
+  {
+    label: "CONTENT",
+    sections: ["Users", "Marketing", "CMS"],
+  },
+  {
+    label: "GROWTH",
+    sections: ["Analytics", "System"],
+  },
+]
+
 export function AppSidebar() {
   const location = useLocation()
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
+  const user = useAppSelector((state) => state.auth.user)
 
   const isCollapsed = state === "collapsed"
+
+  const displayName = user
+    ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
+    : ""
+
+  const initials = user
+    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase()
+    : ""
 
   const [openSections, setOpenSections] = useState<string[]>([])
 
@@ -149,101 +171,148 @@ export function AppSidebar() {
     )
   }
 
+  const sectionFor = (label: string) =>
+    sidebarItems.find((s) => s.label === label)
+
   return (
-    <Sidebar collapsible="icon" variant="floating" className="z-50">
+    <Sidebar collapsible="icon" className="z-50">
       {/* HEADER */}
-      <SidebarHeader className="mt-2 flex items-center gap-2 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
-        <NavLink 
-          to="/" 
+      <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+        <NavLink
+          to="/"
           onClick={handleLinkClick}
-          className="flex items-center gap-2"
+          className="flex w-full items-center gap-3"
         >
-          <LayoutDashboard className="h-6 w-6 shrink-0" />
-          <span className="font-bold text-xl group-data-[collapsible=icon]:hidden">
-            Dahsbord
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-primary-500/20">
+            <Store className="size-5" />
+          </span>
+          <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
+              Nova Commerce
+            </span>
+            <span className="block truncate text-xs font-medium text-gray-500 dark:text-gray-400">
+              Admin Workspace
+            </span>
           </span>
         </NavLink>
       </SidebarHeader>
 
       {/* CONTENT */}
-      <SidebarContent className="overflow-x-hidden group-data-[collapsible=icon]:mt-2">
-        {sidebarItems.map((section) => {
-          const isOpen = openSections.includes(section.label)
-          const isActive = section.items.some(
-            (item) => item.url === location.pathname,
-          )
+      <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-2">
+        {groups.map((group) => (
+          <div key={group.label} className="mb-4 last:mb-0">
+            <p className="mb-2 px-3 text-xs font-normal uppercase text-gray-400 dark:text-gray-500 group-data-[collapsible=icon]:hidden">
+              {group.label}
+            </p>
 
-          return (
-            <SidebarGroup
-              key={section.label}
-              className="group-data-[collapsible=icon]:items-center"
-            >
-              {/* HEADER */}
-              <SidebarGroupLabel
-                onClick={() => toggleSection(section.label)}
-                className={`flex items-center justify-between text-base cursor-pointer rounded-md px-2 py-2 transition-colors
-                  ${
-                    isActive
-                      ? "text-primary font-medium"
-                      : "text-muted-foreground"
-                  }
-                  hover:bg-accent
-                  group-data-[collapsible=icon]:justify-center
-                  group-data-[collapsible=icon]:px-0
-                `}
-              >
-                <span className="flex items-center gap-2 group-data-[collapsible=icon]:gap-0">
-                  {/* ICON (ALWAYS VISIBLE) */}
-                  <section.icon className="size-4.5 shrink-0 block" />
+            <div className="space-y-1">
+              {group.sections.map((label) => {
+                const section = sectionFor(label)
+                if (!section) return null
 
-                  {/* LABEL */}
-                  <span className="group-data-[collapsible=icon]:hidden">
-                    {section.label}
-                  </span>
-                </span>
+                const isOpen = openSections.includes(section.label)
+                const isActive = section.items.some(
+                  (item) => item.url === location.pathname,
+                )
 
-                {/* CHEVRON */}
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-300
-                    group-data-[collapsible=icon]:hidden
-                    ${isOpen ? "rotate-180" : ""}
-                  `}
-                />
-              </SidebarGroupLabel>
+                return (
+                  <div key={section.label}>
+                    {/* HEADER */}
+                    <button
+                      onClick={() => toggleSection(section.label)}
+                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 ${
+                        isActive
+                          ? "text-primary-500"
+                          : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <section.icon className="size-4.5 shrink-0" />
+                        <span className="group-data-[collapsible=icon]:hidden">
+                          {section.label}
+                        </span>
+                      </span>
 
-              {/* SUBMENU */}
-              <div
-                className={`grid transition-all duration-200 ease-in-out
-                  ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
-                `}
-              >
-                <div className="overflow-hidden">
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {section.items.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                          <NavLink to={item.url} end onClick={handleLinkClick}>
-                            {({ isActive }) => (
-                              <SidebarMenuButton
-                                isActive={isActive}
-                                className={`pl-8 ${
-                                  isActive ? "text-primary font-medium" : ""
-                                }`}
-                              >
-                                {item.title}
-                              </SidebarMenuButton>
-                            )}
-                          </NavLink>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </div>
-              </div>
-            </SidebarGroup>
-          )
-        })}
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-300 group-data-[collapsible=icon]:hidden ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {/* SUBMENU */}
+                    <div
+                      className={`grid transition-all duration-200 ease-in-out ${
+                        isOpen
+                          ? "grid-rows-[1fr] opacity-100"
+                          : "grid-rows-[0fr] opacity-0"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="flex flex-col gap-0.5 py-1">
+                          {section.items.map((item) => (
+                            <NavLink
+                              key={item.title}
+                              to={item.url}
+                              end
+                              onClick={handleLinkClick}
+                              className={({ isActive: itemActive }) =>
+                                `flex items-center rounded-lg px-3 py-2 pl-6 text-sm transition-colors duration-200 ${
+                                  itemActive
+                                    ? "bg-primary-500/10 font-medium text-primary-500"
+                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                                }`
+                              }
+                            >
+                              {item.title}
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </SidebarContent>
+
+      {/* FOOTER — profile */}
+      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-2">
+        <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex">
+          <Avatar className="size-9">
+            {user?.profile_picture ? (
+              <AvatarImage src={user.profile_picture} alt={displayName} />
+            ) : null}
+            <AvatarFallback>
+              {initials || <UserIcon className="size-4" />}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 group-data-[collapsible=icon]:hidden dark:border-gray-800 dark:bg-gray-950">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-10">
+              {user?.profile_picture ? (
+                <AvatarImage src={user.profile_picture} alt={displayName} />
+              ) : null}
+              <AvatarFallback>
+                {initials || <UserIcon className="size-5" />}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                {displayName || "Admin User"}
+              </p>
+              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                {user?.email}
+              </p>
+            </div>
+          </div>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

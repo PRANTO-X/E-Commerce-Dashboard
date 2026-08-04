@@ -30,7 +30,7 @@ const providerOptions: { label: string; value: CourierProvider }[] = [
 
 const Couriers = () => {
   const dispatch = useAppDispatch()
-  const { couriers, isLoading } = useAppSelector((state) => state.shipping)
+  const { couriers } = useAppSelector((state) => state.shipping)
 
   const [provider, setProvider] = useState<CourierProvider | "">("")
   const [displayName, setDisplayName] = useState("")
@@ -94,8 +94,8 @@ const Couriers = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Couriers</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Couriers</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Manage courier integrations used to ship orders
         </p>
       </div>
@@ -155,9 +155,7 @@ const Couriers = () => {
         showPagination={false}
         columnWidths={["200px", "140px", "260px", "120px"]}
       />
-      {!isLoading && couriers.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No couriers configured yet.</p>
-      )}
+
     </div>
   )
 }

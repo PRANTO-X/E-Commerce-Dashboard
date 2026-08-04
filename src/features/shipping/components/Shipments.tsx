@@ -15,7 +15,7 @@ const statusStyles: Record<CourierShipmentStatus, string> = {
 
 const Shipments = () => {
   const dispatch = useAppDispatch()
-  const { shipments, isLoading } = useAppSelector((state) => state.shipping)
+  const { shipments } = useAppSelector((state) => state.shipping)
 
   useEffect(() => {
     dispatch(fetchShipments())
@@ -54,8 +54,8 @@ const Shipments = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Shipments</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Shipments</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Courier bookings made for customer orders
         </p>
       </div>
@@ -66,9 +66,7 @@ const Shipments = () => {
         showPagination={false}
         columnWidths={["160px", "140px", "180px", "120px"]}
       />
-      {!isLoading && shipments.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No shipments booked yet.</p>
-      )}
+
     </div>
   )
 }

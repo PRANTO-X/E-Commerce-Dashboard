@@ -35,13 +35,13 @@ const FilterToolbar = ({
         placeholder={searchPlaceholder}
         value={searchValue}
         onChange={(e) => onSearchChange?.(e.target.value)}
-        className="h-9 w-full rounded-xl border border-field-border bg-field-bg pl-10 pr-4 text-sm text-field-text placeholder:text-field-placeholder outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+        className="h-10 w-full rounded-lg border border-field-border bg-field-bg pl-10 pr-4 text-sm text-field-text placeholder:text-field-placeholder outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-primary"
       />
     </div>
   )
 
   return (
-    <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       {/* Desktop */}
       <div className="hidden xl:block">
         {stacked ? (

@@ -212,7 +212,7 @@ const ProductDetail = () => {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                <div className="h-10 w-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
                   <Tag className="h-5 w-5" />
                 </div>
                 <div>

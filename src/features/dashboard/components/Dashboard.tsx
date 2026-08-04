@@ -5,6 +5,14 @@ import { DataTable } from "@/components/common/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ProgressBar } from "./ProgressBar"
 import { Link } from "react-router-dom"
+
+const statusStyles = {
+  Paid: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500",
+  Pending:
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500",
+  Failed: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500",
+} as const
+
 const Dashboard = () => {
   const metrics = [
     {
@@ -37,7 +45,6 @@ const Dashboard = () => {
     },
   ]
 
-
   type Order = {
     id: string
     customer: string
@@ -46,19 +53,12 @@ const Dashboard = () => {
     date: string
   }
 
-  const statusStyles = {
-    Paid: "bg-green-500/10 text-green-400 border border-green-500/20",
-    Pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-    Failed: "bg-red-500/10 text-red-400 border border-red-500/20",
-  } as const
-
-
   const columns: ColumnDef<Order>[] = [
     {
       accessorKey: "id",
       header: "Order ID",
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-primary">
+        <span className="text-sm font-medium text-primary-500">
           {row.getValue("id")}
         </span>
       ),
@@ -67,7 +67,7 @@ const Dashboard = () => {
       accessorKey: "customer",
       header: "Customer",
       cell: ({ row }) => (
-        <span className="text-sm text-foreground">
+        <span className="text-sm text-gray-800 dark:text-gray-200">
           {row.getValue("customer")}
         </span>
       ),
@@ -76,7 +76,7 @@ const Dashboard = () => {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground">
+        <span className="text-sm font-medium text-gray-800 dark:text-white/90">
           {row.getValue("amount")}
         </span>
       ),
@@ -88,8 +88,9 @@ const Dashboard = () => {
         const status = row.getValue("status") as keyof typeof statusStyles
         return (
           <span
-            className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusStyles[status]}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status]}`}
           >
+            <span className="size-1.5 rounded-full bg-current" />
             {status}
           </span>
         )
@@ -99,7 +100,7 @@ const Dashboard = () => {
       accessorKey: "date",
       header: "Date",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-gray-500 dark:text-gray-400">
           {row.getValue("date")}
         </span>
       ),
@@ -156,54 +157,59 @@ const Dashboard = () => {
   ]
   return (
     <div className="section-container">
-      
-      <div className="flex md:justify-between md:items-center flex-col md:flex-row gap-4">
+      <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl  font-bold">
+          <h1 className="mb-1 text-xl font-semibold text-gray-800 dark:text-white/90">
             Overview
           </h1>
-          <p className="font-text text-accent-foreground text-sm">
-            Real-time performance metrics for your enterprise.
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Real-time performance metrics for your store.
           </p>
         </div>
       </div>
 
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric Cards */}
+      {/* Metric stat band */}
+      <div className="mb-4 grid grid-cols-1 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-100 bg-white sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-4 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
         {metrics.map((metric) => (
           <MetricCard key={metric.id} {...metric} />
         ))}
       </div>
 
       {/* Chart Area */}
-      <div>
+      <div className="mb-4">
         <ChartAreaDefault />
       </div>
 
-        {/* Table & ProgressBar  */}
-      <div className=" grid grid-cols-1 md:grid-cols-12 gap-4">
+      {/* Table & ProgressBar */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Order Table */}
-        <div className="rounded-xl  bg-card md:col-span-8">
-          <div className="flex items-center justify-between py-4 px-5">
-            <h2 className="font-geist text-xl md:text-2xl font-semibold text-foreground">
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center justify-between px-5 py-4">
+            <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
               Recent Orders
             </h2>
-            <Link to={'/orders'} className="text-sm text-primary hover:underline">
+            <Link
+              to={"/orders"}
+              className="text-sm font-medium text-primary-500 hover:underline"
+            >
               View All
             </Link>
           </div>
-          <div className=" overflow-hidden">
-            <DataTable columns={columns} data={recentOrders} showPagination={false}/>
+          <div className="overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={recentOrders}
+              showPagination={false}
+            />
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="rounded-xl border border-border bg-card md:col-span-4 p-5">
-          <h2 className="font-geist text-xl md:text-2xl font-semibold text-foreground mb-4">
-              Top Orders
-            </h2>
-          <div className="flex flex-col gap-4 w-full">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+            Top Products
+          </h2>
+          <div className="flex w-full flex-col gap-4">
             {topProducts.map((product) => (
               <ProgressBar
                 key={product.name}

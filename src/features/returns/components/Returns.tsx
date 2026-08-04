@@ -19,7 +19,7 @@ const statusStyles: Partial<Record<ReturnStatus, string>> = {
 
 const Returns = () => {
   const dispatch = useAppDispatch()
-  const { data: returns, isLoading } = useAppSelector((state) => state.returns)
+  const { data: returns } = useAppSelector((state) => state.returns)
   const { data: orders } = useAppSelector((state) => state.orders)
 
   useEffect(() => {
@@ -93,8 +93,8 @@ const Returns = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Returns</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Returns</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Review and process customer return requests
         </p>
       </div>
@@ -105,9 +105,7 @@ const Returns = () => {
         showPagination={false}
         columnWidths={["140px", "140px", "130px", "140px", "130px", "100px"]}
       />
-      {!isLoading && returns.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No return requests yet.</p>
-      )}
+
     </div>
   )
 }

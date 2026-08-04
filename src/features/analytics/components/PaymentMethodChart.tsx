@@ -22,7 +22,7 @@ const providerLabels: Record<PaymentProvider, string> = {
   cash_on_delivery: "Cash on Delivery",
 }
 
-const palette = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#6b7280"]
+const palette = ["#3758f9", "#3b82f6", "#10b981", "#f59e0b", "#6b7280"]
 
 export function PaymentMethodChart() {
   const dispatch = useAppDispatch()

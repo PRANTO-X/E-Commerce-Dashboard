@@ -1,7 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -9,10 +9,11 @@
    THEME TOKENS
 --------------------------*/
 @theme inline {
-  --font-heading: var(--font-geist);
-  --font-text: var(--font-inter);
-  --font-geist: "Geist", sans-serif;
-  --font-inter: "Inter", sans-serif;
+  --font-heading: "DM Sans", sans-serif;
+  --font-text: "DM Sans", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-geist: "DM Sans", sans-serif;
+  --font-inter: "DM Sans", sans-serif;
 
   --radius: 0.75rem;
 
@@ -51,100 +52,110 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Primary scale (Tailgrids CMS brand blue) */
+  --color-primary-50: #eff3ff;
+  --color-primary-100: #dbe4fe;
+  --color-primary-200: #bccdfe;
+  --color-primary-300: #91aeff;
+  --color-primary-400: #5e84fc;
+  --color-primary-500: #3758f9;
+  --color-primary-600: #2237ee;
+  --color-primary-700: #1a25db;
 }
 
 /* -------------------------
-   LIGHT MODE — Violet & Slate
+   LIGHT MODE — Tailgrids CMS
 --------------------------*/
 :root {
-  --background: #eeedf8;
-  --foreground: #0e0c1a;
+  --background: #ffffff;
+  --foreground: #1f2937;
 
   --card: #ffffff;
-  --card-foreground: #0e0c1a;
+  --card-foreground: #1f2937;
 
   --popover: #ffffff;
-  --popover-foreground: #0e0c1a;
+  --popover-foreground: #1f2937;
 
-  --primary: #7c3aed;
+  --primary: #3758f9;
   --primary-foreground: #ffffff;
 
-  --secondary: #1e1b2e;
+  --secondary: #111827;
   --secondary-foreground: #ffffff;
 
-  --accent: #e0dbf7;
-  --accent-foreground: #1a1640;
+  --accent: #f3f4f6;
+  --accent-foreground: #374151;
 
-  --muted: #e0dbf7;
-  --muted-foreground: #4a4680;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
 
-  --destructive: #f43f5e;
+  --destructive: #dc2626;
 
-  --border: #9b8fd4;
-  --input: #e0dbf7;
-  --ring: #7c3aed;
+  --border: #e5e7eb;
+  --input: #d1d5db;
+  --ring: #3758f9;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #0e0c1a;
-  --sidebar-primary: #7c3aed;
+  --sidebar-foreground: #374151;
+  --sidebar-primary: #3758f9;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e0dbf7;
-  --sidebar-accent-foreground: #1a1640;
-  --sidebar-border: #9b8fd4;
-  --sidebar-ring: #7c3aed;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #3758f9;
 
   /* ---- Field tokens (input, combobox, date picker) ---- */
-  --field-bg: #e0dbf7;
-  --field-border: #9b8fd4;
-  --field-text: #1a1640;
-  --field-placeholder: #8b84c4;
+  --field-bg: #f9fafb;
+  --field-border: #d1d5db;
+  --field-text: #111827;
+  --field-placeholder: #9ca3af;
 }
 
 /* -------------------------
-   DARK MODE — Violet & Slate
+   DARK MODE — Tailgrids CMS
 --------------------------*/
 .dark {
-  --background: #0f0f1a;
-  --foreground: #ececf4;
+  --background: #030712;
+  --foreground: #f9fafb;
 
-  --card: #1a1a2e;
-  --card-foreground: #ececf4;
+  --card: #111827;
+  --card-foreground: #f9fafb;
 
-  --popover: #1a1a2e;
-  --popover-foreground: #ececf4;
+  --popover: #111827;
+  --popover-foreground: #f9fafb;
 
-  --primary: #a78bfa;
-  --primary-foreground: #0f0f1a;
+  --primary: #3758f9;
+  --primary-foreground: #ffffff;
 
-  --secondary: #2a2a3e;
-  --secondary-foreground: #ececf4;
+  --secondary: #1f2937;
+  --secondary-foreground: #f9fafb;
 
-  --accent: #2e1f52;
-  --accent-foreground: #ddd6fe;
+  --accent: #1f2937;
+  --accent-foreground: #f3f4f6;
 
-  --muted: #1e1e30;
-  --muted-foreground: #8888aa;
+  --muted: #111827;
+  --muted-foreground: #9ca3af;
 
-  --destructive: #fb7185;
+  --destructive: #ef4444;
 
-  --border: #2a2a3e;
-  --input: #1e1b2e;
-  --ring: #a78bfa;
+  --border: #1f2937;
+  --input: #374151;
+  --ring: #5e84fc;
 
-  --sidebar: #1a1a2e;
-  --sidebar-foreground: #ececf4;
-  --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #0f0f1a;
-  --sidebar-accent: #2a2a3e;
-  --sidebar-accent-foreground: #ececf4;
-  --sidebar-border: #2a2a3e;
-  --sidebar-ring: #a78bfa;
+  --sidebar: #030712;
+  --sidebar-foreground: #9ca3af;
+  --sidebar-primary: #5e84fc;
+  --sidebar-primary-foreground: #030712;
+  --sidebar-accent: #111827;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #1f2937;
+  --sidebar-ring: #3758f9;
 
   /* ---- Field tokens (dark mode) ---- */
-  --field-bg: #2a2a3e;
-  --field-border: #3d3a5c;
-  --field-text: #ececf4;
-  --field-placeholder: #8888aa;
+  --field-bg: rgba(255, 255, 255, 0.05);
+  --field-border: #374151;
+  --field-text: #f9fafb;
+  --field-placeholder: #6b7280;
 }
 
 /* -------------------------
@@ -157,13 +168,15 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "DM Sans", sans-serif;
   }
 
   html {
-    font-family: var(--font-inter);
+    font-family: "DM Sans", sans-serif;
   }
+
   .section-container {
-    @apply px-4 py-6 md:px-8 md:py-8 space-y-6 animate-in fade-in duration-500;
+    @apply px-4 py-5 md:px-6 md:py-6 space-y-5 animate-in fade-in duration-500;
   }
 }
 
@@ -171,26 +184,41 @@
    CUSTOM SCROLLBAR
 --------------------------*/
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--primary) 60%, transparent);
+  background: #d1d5db;
   border-radius: 999px;
-  border: 2px solid var(--background);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-foreground);
+  background: #9ca3af;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--background);
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dark * {
+  scrollbar-color: #374151 transparent;
 }
 
 @media print {
@@ -210,7 +238,6 @@
     width: 100%;
   }
 
-  /* Hide buttons / UI explicitly (extra safety) */
   button,
   textarea,
   input {

@@ -108,7 +108,7 @@ export function DataTable<TData, TValue>({
   )
 
   return (
-    <div className="flex flex-col rounded-lg border border-border overflow-clip">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
 
       {/* Header — horizontally scrollable but scrollbar hidden, synced with body */}
       <div
@@ -156,7 +156,7 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
-                    className="border-b border-border hover:bg-muted/40 transition-colors last:border-0"
+                    className="border-b border-gray-100 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3.5">
@@ -182,7 +182,7 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {showPagination && 
-      <div className="bg-card border-t border-border text-center px-4 py-2.5 flex items-center justify-center sm:justify-between gap-4 flex-wrap">
+      <div className="flex items-center justify-center gap-4 border-t border-gray-100 bg-white px-4 py-2.5 text-center sm:justify-between flex-wrap dark:border-gray-800 dark:bg-gray-900">
         <p className="text-xs text-muted-foreground">
           Showing <span className="font-medium text-foreground">{from}–{to}</span> of{" "}
           <span className="font-medium text-foreground">{totalRows}</span> results

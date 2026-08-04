@@ -14,7 +14,7 @@ const statusStyles: Record<NotificationDeliveryStatus, string> = {
 
 const Notifications = () => {
   const dispatch = useAppDispatch()
-  const { notifications, preferences, isLoading } = useAppSelector((state) => state.notifications)
+  const { notifications, preferences } = useAppSelector((state) => state.notifications)
 
   useEffect(() => {
     dispatch(fetchNotifications())
@@ -55,8 +55,8 @@ const Notifications = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Notifications</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Notifications</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           System-generated customer notifications and delivery preferences
         </p>
       </div>
@@ -67,9 +67,6 @@ const Notifications = () => {
         showPagination={false}
         columnWidths={["220px", "120px", "300px", "110px", "200px"]}
       />
-      {!isLoading && notifications.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No notifications yet.</p>
-      )}
 
       <Card>
         <CardHeader>

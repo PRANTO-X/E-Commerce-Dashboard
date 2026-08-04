@@ -4,29 +4,27 @@ import { Outlet } from "react-router-dom";
 import Navbar from "@/components/common/Navbar";
 import ScrollToTop from "@/components/common/ScrollToTop";
 
-
-
 const DashboardLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar/>
+      <div className="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-950">
+        <AppSidebar />
 
-        <div className="flex flex-col flex-1 min-w-0">
-          {/* sticky navbar — stays within the flex column, width follows sidebar */}
-          <div className="sticky top-0 z-10 bg-background">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* sticky navbar — same surface as sidebar, no border */}
+          <div className="sticky top-0 z-10 bg-white dark:bg-gray-950">
             <Navbar />
           </div>
 
-          {/* scrollable content */}
-          <main className="flex-1 overflow-y-auto">
-            <ScrollToTop/>
+          {/* floating content panel */}
+          <main className="m-3 flex-1 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-0 mt-0 dark:border-gray-800 dark:bg-gray-950">
+            <ScrollToTop />
             <Outlet />
           </main>
         </div>
       </div>
     </SidebarProvider>
-  )
-}
+  );
+};
 
 export default DashboardLayout;

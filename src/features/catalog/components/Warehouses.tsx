@@ -16,7 +16,7 @@ import type { Warehouse } from "@/features/catalog/types"
 
 const Warehouses = () => {
   const dispatch = useAppDispatch()
-  const { warehouses, isLoading } = useAppSelector((state) => state.inventory)
+  const { warehouses } = useAppSelector((state) => state.inventory)
 
   const [name, setName] = useState("")
   const [code, setCode] = useState("")
@@ -88,8 +88,8 @@ const Warehouses = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Warehouses</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Warehouses</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Manage warehouse locations used for stock allocation
         </p>
       </div>
@@ -150,9 +150,7 @@ const Warehouses = () => {
         showPagination={false}
         columnWidths={["200px", "120px", "140px", "220px", "100px", "120px"]}
       />
-      {!isLoading && warehouses.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No warehouses yet.</p>
-      )}
+
     </div>
   )
 }

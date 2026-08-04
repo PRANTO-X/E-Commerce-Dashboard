@@ -144,8 +144,8 @@ const Coupons = () => {
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-bold">Coupons & Vouchers</h1>
-          <p className="font-text text-accent-foreground text-sm mt-1">
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Coupons & Vouchers</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Create and manage discount codes and usage limits.
           </p>
         </div>

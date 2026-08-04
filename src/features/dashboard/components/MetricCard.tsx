@@ -11,34 +11,40 @@ function MetricCard({ title, value, change, icon: Icon }: MetricCardProps) {
   const isPositive = change >= 0
 
   return (
-    <div className="relative rounded-2xl p-5 flex flex-col gap-4 overflow-hidden
-      bg-card border border-border
-      shadow-sm
-      hover:shadow-md hover:border-primary/30
-      transition-all duration-300">
-
-      {/* soft glow blob */}
-      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-accent blur-2xl pointer-events-none" />
-
+    <div className="flex flex-col gap-3 p-5">
       {/* top row */}
       <div className="flex items-center justify-between">
-        <div className="p-2 rounded-lg bg-muted border border-border">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-        <span className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${
-          isPositive
-            ? "bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400"
-            : "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
-        }`}>
-          {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {isPositive ? "+" : ""}{change}%
+        <span className="flex items-center justify-center rounded-full border-2 border-gray-100 dark:border-gray-800">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <Icon className="size-4 text-primary-500" />
+          </span>
+        </span>
+
+        <span
+          className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            isPositive
+              ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500"
+              : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500"
+          }`}
+        >
+          {isPositive ? (
+            <TrendingUp className="size-3" />
+          ) : (
+            <TrendingDown className="size-3" />
+          )}
+          {isPositive ? "+" : ""}
+          {change}%
         </span>
       </div>
 
       {/* value + label */}
       <div>
-        <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{title}</p>
+        <p className="text-[28px] font-medium leading-none text-gray-800 dark:text-white/90">
+          {value}
+        </p>
+        <p className="mt-1.5 text-sm text-gray-700 dark:text-gray-400">
+          {title}
+        </p>
       </div>
     </div>
   )

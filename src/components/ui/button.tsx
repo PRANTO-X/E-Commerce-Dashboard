@@ -9,21 +9,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-white hover:bg-primary/80",
+        default: "bg-primary text-white hover:bg-primary-600",
         outline:
-          "border-border bg-accent  hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-muted dark:hover:bg-transparent",
+          "border-border bg-white text-foreground hover:bg-accent dark:bg-card dark:hover:bg-accent aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
-          "hover:bg-muted hover:text-foreground border aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "hover:bg-accent hover:text-foreground border-transparent aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-accent",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
         primary:
-          "border-border bg-accent hover:bg-primary hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-primary dark:bg-accent dark:hover:bg-primary",
+          "border-border bg-white text-foreground hover:bg-accent aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-card dark:hover:bg-accent",
         back:
-          "hover:bg-muted border border-border hover:text-foreground border aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        apply: "bg-primary text-white hover:bg-primary/90 shadow-sm",
+          "hover:bg-accent border border-border hover:text-foreground border aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-accent",
+        apply: "bg-primary text-white hover:bg-primary-600 shadow-sm",
         reset: "bg-red-600 text-white border-red-700 hover:bg-red-600/50",
       },
       size: {

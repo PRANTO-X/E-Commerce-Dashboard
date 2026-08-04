@@ -108,8 +108,8 @@ const FlashSales = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Flash Sales</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Flash Sales</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Schedule time-boxed flash sales and set discounted variant pricing
         </p>
       </div>

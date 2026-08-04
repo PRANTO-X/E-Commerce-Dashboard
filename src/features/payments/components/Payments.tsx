@@ -16,7 +16,7 @@ const statusStyles: Record<PaymentTransactionState, string> = {
 
 const Payments = () => {
   const dispatch = useAppDispatch()
-  const { data: payments, isLoading } = useAppSelector((state) => state.payments)
+  const { data: payments } = useAppSelector((state) => state.payments)
 
   useEffect(() => {
     dispatch(fetchAllPayments())
@@ -86,8 +86,8 @@ const Payments = () => {
   return (
     <div className="section-container">
       <div>
-        <h1 className="font-heading text-2xl md:text-3xl font-bold">Payments</h1>
-        <p className="font-text text-accent-foreground text-sm mt-1">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Payments</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Track payment transactions and process refunds
         </p>
       </div>
@@ -98,9 +98,7 @@ const Payments = () => {
         showPagination={false}
         columnWidths={["150px", "150px", "150px", "120px", "180px", "100px"]}
       />
-      {!isLoading && payments.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">No payments yet.</p>
-      )}
+
     </div>
   )
 }
