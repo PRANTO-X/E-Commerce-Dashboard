@@ -178,7 +178,7 @@
   }
 
   .section-container {
-    @apply px-4 py-5 md:px-6 md:py-6 space-y-5 animate-in fade-in duration-500;
+    @apply px-4 py-5 md:px-6 md:py-6 space-y-3.5 animate-in fade-in duration-500;
   }
 }
 

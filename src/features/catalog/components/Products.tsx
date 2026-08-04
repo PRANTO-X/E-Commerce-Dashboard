@@ -30,7 +30,6 @@ const Products = () => {
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<{ label: string; value: string } | null>(null)
   const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null })
-  const [resetSignal, setResetSignal] = useState(0)
 
   useEffect(() => {
     // Backend list endpoints don't support filter query params (confirmed live) —
@@ -58,14 +57,6 @@ const Products = () => {
     if (priceRange.max !== null && price > priceRange.max) return false
     return true
   })
-
-  const handleReset = () => {
-    setSearch("")
-    setStatusFilter(null)
-    setCategoryFilter(null)
-    setPriceRange({ min: null, max: null })
-    setResetSignal((n) => n + 1)
-  }
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -223,13 +214,10 @@ const Products = () => {
         searchPlaceholder="search product..."
         searchValue={search}
         onSearchChange={setSearch}
-        stacked
-        onReset={handleReset}
         filters={[
           {
             component: (
               <PriceRangeFilter
-                key={resetSignal}
                 onChange={(range) => setPriceRange(range)}
               />
             ),

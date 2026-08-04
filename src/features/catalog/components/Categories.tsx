@@ -35,11 +35,6 @@ const Categories = () => {
     return true
   })
 
-  const handleReset = () => {
-    setSearch("")
-    setStatusFilter(null)
-  }
-
   const columns: ColumnDef<Category>[] = [
     {
       accessorKey: "name",
@@ -156,7 +151,6 @@ const Categories = () => {
         searchPlaceholder="search category..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={handleReset}
         filters={[
           {
             component: (

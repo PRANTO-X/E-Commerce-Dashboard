@@ -127,10 +127,6 @@ const Customers = () => {
         searchPlaceholder="Search customer..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => {
-          setSearch("")
-          setStatusFilter(null)
-        }}
         filters={[
           {
             component: (

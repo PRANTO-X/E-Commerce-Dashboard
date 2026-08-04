@@ -175,7 +175,6 @@ const Inventory = () => {
         searchPlaceholder="search variant or SKU..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => setSearch("")}
       />
 
       <DataTable

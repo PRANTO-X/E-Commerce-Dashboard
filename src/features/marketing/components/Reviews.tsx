@@ -167,10 +167,6 @@ const Reviews = () => {
         searchPlaceholder="search reviews..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => {
-          setSearch("")
-          setStatusFilter(null)
-        }}
         filters={[
           {
             component: (

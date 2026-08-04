@@ -60,13 +60,6 @@ const Orders = () => {
     return true
   })
 
-  const handleReset = () => {
-    setSearch("")
-    setPaymentStatusFilter(null)
-    setFulfillmentStatusFilter(null)
-    setDateRange(undefined)
-  }
-
   const paymentStatusOptions = [
     { label: "Pending", value: "pending" },
     { label: "Paid", value: "paid" },
@@ -202,8 +195,6 @@ const Orders = () => {
         searchPlaceholder="Search Orders..."
         searchValue={search}
         onSearchChange={setSearch}
-        stacked
-        onReset={handleReset}
         datePicker={<DatePicker value={dateRange} onChange={setDateRange} />}
         filters={[
           {

@@ -141,10 +141,6 @@ const Campaigns = () => {
         searchPlaceholder="search campaign..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => {
-          setSearch("")
-          setStatusFilter(null)
-        }}
         filters={[
           {
             component: (

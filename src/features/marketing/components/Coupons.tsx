@@ -164,10 +164,6 @@ const Coupons = () => {
         searchPlaceholder="search coupon code..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => {
-          setSearch("")
-          setStatusFilter(null)
-        }}
         filters={[
           {
             component: (

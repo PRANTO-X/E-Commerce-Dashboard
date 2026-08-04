@@ -126,7 +126,6 @@ const Staffs = () => {
         searchPlaceholder="Search staff..."
         searchValue={search}
         onSearchChange={setSearch}
-        onReset={() => setSearch("")}
       />
 
       <div>
