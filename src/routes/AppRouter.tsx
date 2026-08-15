@@ -40,6 +40,7 @@ const CustomerDetail = lazy(
 
 const Staffs = lazy(() => import("../features/users/components/Staffs"))
 const StaffForm = lazy(() => import("../features/users/components/StaffForm"))
+const Profile = lazy(() => import("../features/users/components/Profile"))
 
 const Reports = lazy(() => import("../features/analytics/components/Reports"))
 
@@ -74,6 +75,7 @@ const Returns = lazy(() => import("../features/returns/components/Returns"))
 const ReturnDetail = lazy(() => import("../features/returns/components/ReturnDetail"))
 const Couriers = lazy(() => import("../features/shipping/components/Couriers"))
 const Shipments = lazy(() => import("../features/shipping/components/Shipments"))
+const Expenses = lazy(() => import("../features/finance/components/Expenses"))
 
 const SignInForm = lazy(
   () => import("../features/authentication/components/SignInForm"),
@@ -106,6 +108,7 @@ export const router = createBrowserRouter([
           { path: "staff_form/:id", element: Load(StaffForm) },
           { path: "reports", element: Load(Reports) },
           { path: "settings", element: Load(Settings) },
+          { path: "profile", element: Load(Profile) },
           { path: "auth-settings", element: Load(Authentication) },
           { path: "roles", element: Load(Roles) },
           { path: "coupons", element: Load(Coupons) },
@@ -129,6 +132,7 @@ export const router = createBrowserRouter([
           { path: "return_detail/:id", element: Load(ReturnDetail) },
           { path: "couriers", element: Load(Couriers) },
           { path: "shipments", element: Load(Shipments) },
+          { path: "expenses", element: Load(Expenses) },
         ],
       },
     ],

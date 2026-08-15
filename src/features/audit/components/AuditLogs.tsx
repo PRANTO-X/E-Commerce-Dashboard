@@ -97,6 +97,7 @@ const AuditLogs = () => {
         pageCount={meta?.totalPages ?? 1}
         totalCount={totalItems}
         onPageChange={(index) => setPage(index + 1)}
+        minWidth="1000px"
         columnWidths={["220px", "300px", "140px", "140px", "200px"]}
       />
     </div>

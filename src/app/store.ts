@@ -9,6 +9,7 @@ import inventoryReducer from "@/features/catalog/slices/inventorySlice"
 import attributeReducer from "@/features/catalog/slices/attributeSlice"
 import attributeValueReducer from "@/features/catalog/slices/attributeValueSlice"
 import variantReducer from "@/features/catalog/slices/variantSlice"
+import bundleItemReducer from "@/features/catalog/slices/bundleItemSlice"
 
 import staffReducer from "@/features/users/slices/staffSlice"
 import customerReducer from "@/features/users/slices/customerSlice"
@@ -37,6 +38,7 @@ import analyticsReducer from "@/features/analytics/slices/analyticsSlice"
 import paymentReducer from "@/features/payments/slices/paymentSlice"
 import returnReducer from "@/features/returns/slices/returnSlice"
 import shippingReducer from "@/features/shipping/slices/shippingSlice"
+import expenseReducer from "@/features/finance/slices/expenseSlice"
 
 export const store = configureStore({
   reducer: {
@@ -49,6 +51,7 @@ export const store = configureStore({
     attributes: attributeReducer,
     attributeValues: attributeValueReducer,
     variants: variantReducer,
+    bundleItems: bundleItemReducer,
 
     staffs: staffReducer,
     customers: customerReducer,
@@ -77,6 +80,7 @@ export const store = configureStore({
     payments: paymentReducer,
     returns: returnReducer,
     shipping: shippingReducer,
+    expenses: expenseReducer,
   },
 })
 

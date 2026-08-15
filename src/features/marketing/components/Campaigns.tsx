@@ -158,6 +158,8 @@ const Campaigns = () => {
       <DataTable
         columns={columns}
         data={campaigns}
+        onRowClick={(campaign) => navigate(`/campaign_detail/${campaign.id}`)}
+        minWidth="850px"
         columnWidths={["220px", "140px", "220px", "120px", "110px"]}
       />
     </div>

@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { Pie, PieChart } from "recharts"
+import { Package } from "lucide-react"
 
 import {
   Card,
@@ -15,6 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { EmptyState } from "@/components/common/EmptyState"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchTopProducts } from "@/features/analytics/slices/analyticsSlice"
 
@@ -47,9 +49,12 @@ export function SalesByCategoryChart() {
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         {chartData.length === 0 ? (
-          <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground py-12">
-            No sales data yet.
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No top products yet"
+            description="Revenue distribution per product will calculate automatically."
+            className="py-10"
+          />
         ) : (
           <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
             <PieChart>

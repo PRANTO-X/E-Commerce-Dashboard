@@ -65,6 +65,7 @@ const Notifications = () => {
         columns={columns}
         data={notifications}
         showPagination={false}
+        minWidth="950px"
         columnWidths={["220px", "120px", "300px", "110px", "200px"]}
       />
 

@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { Pie, PieChart } from "recharts"
+import { ShoppingBag } from "lucide-react"
 
 import {
   Card,
@@ -15,6 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { EmptyState } from "@/components/common/EmptyState"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 import type { OrderStatus } from "@/features/sales/types"
@@ -63,9 +65,12 @@ export function OrderStatusChart() {
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         {chartData.length === 0 ? (
-          <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground py-12">
-            No orders yet.
-          </div>
+          <EmptyState
+            icon={ShoppingBag}
+            title="No orders yet"
+            description="Status breakdown will appear when orders are created."
+            className="py-10"
+          />
         ) : (
           <ChartContainer
             config={chartConfig}

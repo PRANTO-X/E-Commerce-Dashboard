@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
+import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/cms/slices/pageSlice"
@@ -49,6 +50,8 @@ const PageForm = () => {
     control,
     register,
     reset,
+    watch,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<PageFormValues>({
@@ -174,10 +177,33 @@ const PageForm = () => {
               </FieldContent>
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="hero_image">Hero Image URL</FieldLabel>
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="hero_image">Hero Graphic Image</FieldLabel>
               <FieldContent>
-                <Input id="hero_image" placeholder="https://..." {...register("hero_image")} />
+                <ImageUploader
+                  singleMode
+                  images={
+                    watch("hero_image")
+                      ? [
+                          {
+                            id: "page-hero-image",
+                            url: watch("hero_image"),
+                            alt: watch("title") || "Page Hero Image",
+                            isPrimary: true,
+                          },
+                        ]
+                      : []
+                  }
+                  onImagesChange={(imgs) => {
+                    setValue("hero_image", imgs.length > 0 ? imgs[0].url : "")
+                  }}
+                  onAddImage={(url) => {
+                    setValue("hero_image", url)
+                  }}
+                  label="Upload Hero Image"
+                  description="Choose an image file from your device, drag & drop, or enter an image URL"
+                />
+                <FieldError errors={[errors.hero_image]} />
               </FieldContent>
             </Field>
 

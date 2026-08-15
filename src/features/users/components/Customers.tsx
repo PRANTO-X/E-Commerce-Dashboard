@@ -2,10 +2,11 @@ import { Button } from "@/components/ui/button"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { DownloadIcon, EyeIcon } from "lucide-react"
+import { TableActions } from "@/components/common/TableActions"
+import { DownloadIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/users/slices/customerSlice"
@@ -17,6 +18,7 @@ const status = [
 ]
 
 const Customers = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: users } = useAppSelector((state) => state.customers)
   const allCustomers = users.filter((u) => u.role === "customer")
@@ -93,9 +95,10 @@ const Customers = () => {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => (
-        <Link to={`/customer_detail/${row.original.id}`} className="ml-1 flex items-center gap-1 text-xs text-primary">
-          <EyeIcon className="size-3.5" /> View
-        </Link>
+        <TableActions
+          itemName={[row.original.first_name, row.original.last_name].filter(Boolean).join(" ") || row.original.email}
+          viewUrl={`/customer_detail/${row.original.id}`}
+        />
       ),
     },
   ]
@@ -145,6 +148,8 @@ const Customers = () => {
         <DataTable
           columns={columns}
           data={customers}
+          onRowClick={(customer) => navigate(`/customer_detail/${customer.id}`)}
+          minWidth="900px"
           columnWidths={["280px", "160px", "140px", "120px", "100px"]}
         />
       </div>

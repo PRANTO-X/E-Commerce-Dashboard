@@ -758,12 +758,24 @@ export const reviews: Review[] = [
   { id: "REV-004", productId: "P1012", productName: "Gaming Mouse Pro", customerId: "CUST-001", customerName: "John Doe", rating: 1, comment: "This review contains spam links, flagging for removal.", status: "rejected", date: "2026-06-30" },
 ]
 
+export interface SocialMediaLinks {
+  facebook?: string
+  instagram?: string
+  twitter?: string
+  youtube?: string
+  linkedin?: string
+  tiktok?: string
+}
+
 export interface StoreSettings {
   storeName: string
+  storeLogo: string
   supportEmail: string
   storeAddress: string
   storePhone: string
+  whatsappNumber: string
   vatId: string
+  socialLinks: SocialMediaLinks
   notifications: {
     orderUpdates: boolean
     inventoryAlerts: boolean
@@ -774,10 +786,20 @@ export interface StoreSettings {
 
 export const defaultStoreSettings: StoreSettings = {
   storeName: "My Awesome Store",
+  storeLogo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&auto=format&fit=crop&q=80",
   supportEmail: "support@mystore.com",
   storeAddress: "123 Commerce St, Tech City, 54321, US",
   storePhone: "+1 (555) 000-0000",
+  whatsappNumber: "+1 (555) 987-6543",
   vatId: "US123456789",
+  socialLinks: {
+    facebook: "https://facebook.com/myawesomestore",
+    instagram: "https://instagram.com/myawesomestore",
+    twitter: "https://x.com/myawesomestore",
+    youtube: "https://youtube.com/@myawesomestore",
+    linkedin: "https://linkedin.com/company/myawesomestore",
+    tiktok: "https://tiktok.com/@myawesomestore",
+  },
   notifications: {
     orderUpdates: true,
     inventoryAlerts: true,

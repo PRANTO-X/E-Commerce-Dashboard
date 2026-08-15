@@ -85,6 +85,7 @@ const Reservations = () => {
         columns={columns}
         data={reservations}
         showPagination={false}
+        minWidth="900px"
         columnWidths={["260px", "110px", "120px", "200px", "200px"]}
       />
     </div>

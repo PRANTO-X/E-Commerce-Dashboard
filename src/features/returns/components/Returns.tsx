@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link } from "react-router-dom"
-import { EyeIcon } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
@@ -18,6 +18,7 @@ const statusStyles: Partial<Record<ReturnStatus, string>> = {
 }
 
 const Returns = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: returns } = useAppSelector((state) => state.returns)
   const { data: orders } = useAppSelector((state) => state.orders)
@@ -82,10 +83,10 @@ const Returns = () => {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => (
-        <Link to={`/return_detail/${row.original.id}`} className="ml-1 text-xs text-primary flex gap-1">
-          <EyeIcon className="h-3.5 w-3.5" />
-          View
-        </Link>
+        <TableActions
+          itemName={`Return ${row.original.return_number}`}
+          viewUrl={`/return_detail/${row.original.id}`}
+        />
       ),
     },
   ]
@@ -102,7 +103,9 @@ const Returns = () => {
       <DataTable
         columns={columns}
         data={returns}
+        onRowClick={(ret) => navigate(`/return_detail/${ret.id}`)}
         showPagination={false}
+        minWidth="950px"
         columnWidths={["140px", "140px", "130px", "140px", "130px", "100px"]}
       />
 

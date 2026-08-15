@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
+import { TableActions } from "@/components/common/TableActions"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
@@ -86,9 +87,10 @@ const Staffs = () => {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/staff_form/${row.original.id}`)}>
-          Edit
-        </Button>
+        <TableActions
+          itemName={[row.original.first_name, row.original.last_name].filter(Boolean).join(" ") || row.original.email}
+          editUrl={`/staff_form/${row.original.id}`}
+        />
       ),
     },
   ]
@@ -132,6 +134,8 @@ const Staffs = () => {
         <DataTable
           columns={columns}
           data={staffs}
+          onRowClick={(staff) => navigate(`/staff_form/${staff.id}`)}
+          minWidth="900px"
           columnWidths={["280px", "160px", "140px", "130px", "100px"]}
         />
       </div>

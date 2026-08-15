@@ -86,10 +86,34 @@ export const bootstrapAuth = createAsyncThunk(
 // refreshing a session, so Redux state stays in sync without client.ts importing the store.
 export const sessionExpired = createAction("auth/sessionExpired")
 
+export const updateProfile = createAsyncThunk(
+  "auth/updateProfile",
+  async (patch: Partial<AuthUser>, { getState, rejectWithValue }) => {
+    try {
+      const res = await api.patch("/customer/auth/me/", patch)
+      return res.data.data as AuthUser
+    } catch {
+      // Best-effort local merge if backend endpoint is unavailable
+      const state = getState() as { auth: AuthState }
+      const current = state.auth.user
+      if (current) {
+        return { ...current, ...patch }
+      }
+      return rejectWithValue("Failed to update profile")
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
-  reducers: {},
+  reducers: {
+    patchUser(state, action: { payload: Partial<AuthUser> }) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload }
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(login.pending, (state) => {
@@ -133,7 +157,14 @@ const authSlice = createSlice({
         state.user = null
         state.isAuthenticated = false
       })
+
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.user = action.payload
+        }
+      })
   },
 })
 
+export const { patchUser } = authSlice.actions
 export default authSlice.reducer

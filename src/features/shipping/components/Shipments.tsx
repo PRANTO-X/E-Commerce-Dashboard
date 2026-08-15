@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchShipments } from "@/features/shipping/slices/shippingSlice"
@@ -14,6 +14,7 @@ const statusStyles: Record<CourierShipmentStatus, string> = {
 }
 
 const Shipments = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { shipments } = useAppSelector((state) => state.shipping)
 
@@ -63,7 +64,9 @@ const Shipments = () => {
       <DataTable
         columns={columns}
         data={shipments}
+        onRowClick={(s) => navigate(`/order_detail/${s.order}`)}
         showPagination={false}
+        minWidth="750px"
         columnWidths={["160px", "140px", "180px", "120px"]}
       />
 

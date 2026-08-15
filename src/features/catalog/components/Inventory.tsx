@@ -180,6 +180,8 @@ const Inventory = () => {
       <DataTable
         columns={columns}
         data={filteredVariants}
+        onRowClick={(v) => setAdjustingVariant(v)}
+        minWidth="980px"
         columnWidths={["220px", "180px", "140px", "100px", "110px", "110px", "120px"]}
       />
 

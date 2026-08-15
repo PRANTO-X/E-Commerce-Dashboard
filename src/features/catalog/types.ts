@@ -42,6 +42,8 @@ export const productStatusStyles: Record<ProductStatus, string> = {
 // Hand-transcribed from AdminProduct — note there is no flat price/stock/image/rating/sales
 // here like the old mock ProductItem had. base_price is a decimal string per the API.
 // Stock lives in Inventory (batch 4), images are a separate sub-resource (ProductImage below).
+export type BundlePricingMode = "fixed" | "dynamic"
+
 export interface Product {
   id: string
   category: string
@@ -55,9 +57,22 @@ export interface Product {
   is_downloadable: boolean
   is_recurring: boolean
   is_featured: boolean
-  created_by: string | null
+  bundle_pricing_mode?: BundlePricingMode
+  bundle_discount_percent?: string
+  created_by?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface BundleItem {
+  id: string
+  bundle: string
+  variant: string
+  variant_sku?: string
+  variant_name?: string
+  quantity: number
+  created_at?: string
+  updated_at?: string
 }
 
 export interface ProductImage {
@@ -90,9 +105,11 @@ export interface Variant {
   sku: string
   name: string
   price: string
+  cost_price?: string | null
   stock_quantity: number
   status: VariantStatus
   image: string
+  options?: { attribute: string; attribute_name?: string; value: string; value_name?: string }[]
   created_at: string
   updated_at: string
 }

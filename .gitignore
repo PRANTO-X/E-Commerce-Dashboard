@@ -7,17 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Production build
 dist
 dist-ssr
 *.local
 
-# Env
+# Environment variables
 .env
 .env.*
 !.env.example
 
-# Editor directories and files
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -28,4 +31,13 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
-.env*
+
+# Test artifacts and reports
+test-results/
+playwright-report/
+blob-report/
+coverage/
+
+# Local agent & skills artifacts
+.agents/
+skills-lock.json

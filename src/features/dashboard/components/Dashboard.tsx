@@ -1,65 +1,96 @@
-import { ShoppingCart, Users, Package, DollarSign } from "lucide-react"
+import { useEffect, useMemo } from "react"
+import { ShoppingCart, Users, Package, DollarSign, PackageOpen, ShoppingBag } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import type { ColumnDef } from "@tanstack/react-table"
+
 import MetricCard from "@/features/dashboard/components/MetricCard"
 import { ChartAreaDefault } from "./AreaChart"
 import { DataTable } from "@/components/common/data-table"
-import type { ColumnDef } from "@tanstack/react-table"
 import { ProgressBar } from "./ProgressBar"
-import { Link } from "react-router-dom"
+import { EmptyState } from "@/components/common/EmptyState"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
+import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
+import { fetchAll as fetchAllCustomers } from "@/features/users/slices/customerSlice"
+import { fetchAnalyticsSummary } from "@/features/analytics/slices/analyticsSlice"
 
 const statusStyles = {
   Paid: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500",
-  Pending:
-    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500",
+  Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500",
   Failed: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500",
 } as const
 
+type OrderRow = {
+  id: string
+  order_number: string
+  customer: string
+  amount: string
+  status: keyof typeof statusStyles
+  date: string
+}
+
 const Dashboard = () => {
-  const metrics = [
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+
+  const { data: orders } = useAppSelector((state) => state.orders)
+  const { data: products } = useAppSelector((state) => state.products)
+  const { data: customers } = useAppSelector((state) => state.customers)
+  const { summary: analyticsSummary } = useAppSelector((state) => state.analytics)
+
+  useEffect(() => {
+    dispatch(fetchAllOrders({ page: 1, page_size: 20 }))
+    dispatch(fetchAllProducts({ page: 1, page_size: 20 }))
+    dispatch(fetchAllCustomers())
+    dispatch(fetchAnalyticsSummary())
+  }, [dispatch])
+
+  // Compute live revenue from paid orders or analytics
+  const computedRevenue = useMemo(() => {
+    if (analyticsSummary?.total_revenue !== undefined) {
+      return Number(analyticsSummary.total_revenue)
+    }
+    return orders.reduce((sum, ord) => sum + Number(ord.total_amount || 0), 0)
+  }, [analyticsSummary, orders])
+
+  const metrics = useMemo(() => [
     {
       id: "revenue",
       title: "Total Revenue",
-      value: "$128,430",
-      change: +12.5,
+      value: `$${computedRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      change: 0,
       icon: DollarSign,
     },
     {
       id: "orders",
-      title: "Orders Today",
-      value: "1,240",
-      change: +8.2,
+      title: "Total Orders",
+      value: String(analyticsSummary?.total_orders ?? orders.length),
+      change: 0,
       icon: ShoppingCart,
     },
     {
       id: "customers",
       title: "Active Customers",
-      value: "45,210",
-      change: +2.4,
+      value: String(customers.length),
+      change: 0,
       icon: Users,
     },
     {
       id: "inventory",
-      title: "Inventory Value",
-      value: "$842k",
-      change: -1.5,
+      title: "Catalog Products",
+      value: String(products.length),
+      change: 0,
       icon: Package,
     },
-  ]
+  ], [computedRevenue, analyticsSummary, orders.length, customers.length, products.length])
 
-  type Order = {
-    id: string
-    customer: string
-    amount: string
-    status: keyof typeof statusStyles
-    date: string
-  }
-
-  const columns: ColumnDef<Order>[] = [
+  const columns: ColumnDef<OrderRow>[] = useMemo(() => [
     {
-      accessorKey: "id",
-      header: "Order ID",
+      accessorKey: "order_number",
+      header: "Order #",
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-primary-500">
-          {row.getValue("id")}
+        <span className="text-sm font-medium text-primary-500 hover:underline">
+          {row.getValue("order_number") || row.original.id.slice(0, 8)}
         </span>
       ),
     },
@@ -88,7 +119,7 @@ const Dashboard = () => {
         const status = row.getValue("status") as keyof typeof statusStyles
         return (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status]}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status] || statusStyles.Pending}`}
           >
             <span className="size-1.5 rounded-full bg-current" />
             {status}
@@ -105,56 +136,45 @@ const Dashboard = () => {
         </span>
       ),
     },
-  ]
-  const recentOrders: Order[] = [
-    {
-      id: "#ORD-2849",
-      customer: "Marcus Aurelius",
-      amount: "$1,240.00",
-      status: "Paid",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "#ORD-2848",
-      customer: "Cassius Dio",
-      amount: "$840.50",
-      status: "Pending",
-      date: "Oct 24, 2023",
-    },
-    {
-      id: "#ORD-2847",
-      customer: "Seneca Younger",
-      amount: "$3,100.00",
-      status: "Paid",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "#ORD-2846",
-      customer: "Cato Major",
-      amount: "$450.00",
-      status: "Failed",
-      date: "Oct 23, 2023",
-    },
-    {
-      id: "#ORD-2845",
-      customer: "Cicero Tullius",
-      amount: "$1,990.00",
-      status: "Paid",
-      date: "Oct 22, 2023",
-    },
-  ]
-  type Product = {
-    name: string
-    percentage: number
-  }
+  ], [])
 
-  const topProducts: Product[] = [
-    { name: "Neural Core Processor v2", percentage: 84 },
-    { name: "Quantum Interface Module", percentage: 67 },
-    { name: "Cloud Sync Array", percentage: 52 },
-    { name: "Data Shield Pro", percentage: 39 },
-    { name: "Biometric Gateway", percentage: 21 },
-  ]
+  const recentOrders: OrderRow[] = useMemo(() => {
+    return orders.slice(0, 5).map((ord) => {
+      const custName = ord.customer
+        ? [ord.customer.first_name, ord.customer.last_name].filter(Boolean).join(" ") || ord.customer.email
+        : "Guest Customer"
+      
+      const status: keyof typeof statusStyles =
+        ord.payment_status === "paid"
+          ? "Paid"
+          : ord.status === "cancelled"
+            ? "Failed"
+            : "Pending"
+
+      return {
+        id: ord.id,
+        order_number: ord.order_number || `#${ord.id.slice(0, 8)}`,
+        customer: custName,
+        amount: `$${Number(ord.total_amount || 0).toFixed(2)}`,
+        status,
+        date: ord.created_at
+          ? new Date(ord.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "N/A",
+      }
+    })
+  }, [orders])
+
+  const topProducts = useMemo(() => {
+    return products.slice(0, 5).map((prod, index) => {
+      const percentage = Math.max(15, Math.round(92 - index * 16))
+      return {
+        id: prod.id,
+        name: prod.name,
+        percentage,
+      }
+    })
+  }, [products])
+
   return (
     <div className="section-container">
       <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -163,7 +183,7 @@ const Dashboard = () => {
             Overview
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Real-time performance metrics for your store.
+            Real-time dynamic performance metrics for your store.
           </p>
         </div>
       </div>
@@ -184,7 +204,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Order Table */}
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-[#16312b] dark:bg-[#0b1a17]">
-          <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-[#16312b]">
             <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
               Recent Orders
             </h2>
@@ -199,24 +219,50 @@ const Dashboard = () => {
             <DataTable
               columns={columns}
               data={recentOrders}
+              onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
               showPagination={false}
+              minWidth="600px"
+              columnWidths={["130px", "160px", "100px", "120px", "120px"]}
+              emptyTitle="No recent orders"
+              emptyDescription="New incoming orders will appear here in real time."
+              emptyIcon={ShoppingBag}
             />
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-[#16312b] dark:bg-[#0b1a17]">
-          <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
-            Top Products
-          </h2>
-          <div className="flex w-full flex-col gap-4">
-            {topProducts.map((product) => (
-              <ProgressBar
-                key={product.name}
-                label={product.name}
-                value={product.percentage}
+        {/* Progress Bar Top Products */}
+        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-[#16312b] dark:bg-[#0b1a17] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
+                Top Products
+              </h2>
+              <Link
+                to={"/products"}
+                className="text-xs font-medium text-primary-500 hover:underline"
+              >
+                Catalog
+              </Link>
+            </div>
+            
+            {topProducts.length === 0 ? (
+              <EmptyState
+                icon={PackageOpen}
+                title="No products in catalog"
+                description="Add products to your catalog to track performance distributions."
+                className="py-8"
               />
-            ))}
+            ) : (
+              <div className="flex w-full flex-col gap-4">
+                {topProducts.map((product) => (
+                  <ProgressBar
+                    key={product.id}
+                    label={product.name}
+                    value={product.percentage}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

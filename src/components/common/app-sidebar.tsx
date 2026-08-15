@@ -22,7 +22,6 @@ import {
   Megaphone,
   FileText,
   Store,
-  UserIcon,
 } from "lucide-react"
 
 const sidebarItems = [
@@ -49,6 +48,7 @@ const sidebarItems = [
     items: [
       { title: "Orders", url: "/orders" },
       { title: "Payments", url: "/payments" },
+      { title: "Expenses", url: "/expenses" },
       { title: "Returns", url: "/returns" },
       { title: "Couriers", url: "/couriers" },
       { title: "Shipments", url: "/shipments" },
@@ -123,13 +123,26 @@ export function AppSidebar() {
 
   const isCollapsed = state === "collapsed"
 
-  const displayName = user
-    ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
-    : ""
+  const hasFullName = Boolean(user?.first_name?.trim() || user?.last_name?.trim())
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ")
+
+  const displayName = hasFullName
+    ? fullName
+    : user?.email
+      ? user.email
+          .split("@")[0]
+          .replace(/[._-]/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Admin Workspace"
+
+  const userEmail = user?.email || ""
+  const userRole = user?.role ? user.role.replace(/_/g, " ").toUpperCase() : "ADMIN"
 
   const initials = user
-    ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase()
-    : ""
+    ? hasFullName
+      ? `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase()
+      : (user.email?.[0] ?? "A").toUpperCase()
+    : "AD"
 
   const [openSections, setOpenSections] = useState<string[]>([])
 
@@ -177,18 +190,18 @@ export function AppSidebar() {
   return (
     <Sidebar variant="floating" collapsible="icon" className="z-50">
       {/* HEADER */}
-      <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+      <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <NavLink
           to="/"
           onClick={handleLinkClick}
-          className="flex w-full items-center gap-3"
+          className="flex w-full items-center gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:w-auto"
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-primary-500/20">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-primary-500/20 group-data-[collapsible=icon]:size-9">
             <Store className="size-5" />
           </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
             <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
-              Nova Commerce
+              NestmartIT
             </span>
             <span className="block truncate text-xs font-medium text-gray-500 dark:text-gray-400">
               Admin Workspace
@@ -198,7 +211,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* CONTENT */}
-      <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-2">
+      <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
         {groups.map((group) => (
           <div key={group.label} className="mb-4 last:mb-0">
             <p className="mb-2 px-3 text-xs font-normal uppercase text-gray-400 dark:text-gray-500 group-data-[collapsible=icon]:hidden">
@@ -220,14 +233,14 @@ export function AppSidebar() {
                     {/* HEADER */}
                     <button
                       onClick={() => toggleSection(section.label)}
-                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 ${
+                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:mx-auto ${
                         isActive
                           ? "text-primary-500"
                           : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                       }`}
                     >
-                      <span className="flex items-center gap-2">
-                        <section.icon className="size-4.5 shrink-0" />
+                      <span className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+                        <section.icon className="size-5 shrink-0" />
                         <span className="group-data-[collapsible=icon]:hidden">
                           {section.label}
                         </span>
@@ -279,39 +292,55 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* FOOTER — profile */}
-      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-2">
-        <div className="hidden items-center justify-center group-data-[collapsible=icon]:flex">
-          <Avatar className="size-9">
+      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
+        <NavLink
+          to="/profile"
+          title={`Profile: ${displayName}`}
+          className="hidden items-center justify-center group-data-[collapsible=icon]:flex rounded-lg transition-transform hover:scale-105"
+        >
+          <Avatar className="size-9 ring-2 ring-primary/20">
             {user?.profile_picture ? (
               <AvatarImage src={user.profile_picture} alt={displayName} />
             ) : null}
-            <AvatarFallback>
-              {initials || <UserIcon className="size-4" />}
+            <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-xs">
+              {initials}
             </AvatarFallback>
           </Avatar>
-        </div>
+        </NavLink>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-3 group-data-[collapsible=icon]:hidden dark:border-[#16312b] dark:bg-[#06110f]">
+        <NavLink
+          to="/profile"
+          title="View profile & account settings"
+          className="block rounded-xl border border-border bg-card p-3 shadow-sm group-data-[collapsible=icon]:hidden transition-all hover:bg-muted/60 hover:border-primary/40 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
-            <Avatar className="size-10">
+            <Avatar className="size-10 shrink-0 ring-2 ring-primary/20">
               {user?.profile_picture ? (
                 <AvatarImage src={user.profile_picture} alt={displayName} />
               ) : null}
-              <AvatarFallback>
-                {initials || <UserIcon className="size-5" />}
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+                {initials}
               </AvatarFallback>
             </Avatar>
 
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
-                {displayName || "Admin User"}
-              </p>
-              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                {user?.email}
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <p className="truncate text-sm font-semibold text-foreground leading-tight" title={displayName}>
+                  {displayName}
+                </p>
+                <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                  {userRole}
+                </span>
+              </div>
+              <p
+                className="truncate text-xs text-muted-foreground mt-0.5 font-normal select-all"
+                title={userEmail}
+              >
+                {userEmail}
               </p>
             </div>
           </div>
-        </div>
+        </NavLink>
       </SidebarFooter>
     </Sidebar>
   )

@@ -185,6 +185,7 @@ const Reviews = () => {
         columns={columns}
         data={reviews}
         showPagination={false}
+        minWidth="1080px"
         columnWidths={["180px", "180px", "110px", "260px", "140px", "110px", "100px"]}
       />
     </div>

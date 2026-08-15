@@ -153,6 +153,7 @@ const Couriers = () => {
         columns={columns}
         data={couriers}
         showPagination={false}
+        minWidth="750px"
         columnWidths={["200px", "140px", "260px", "120px"]}
       />
 

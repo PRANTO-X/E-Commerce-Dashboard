@@ -4,9 +4,10 @@ import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/common/data-table"
-import { DownloadIcon, EyeIcon } from "lucide-react"
-import { Link } from "react-router-dom"
+import { DownloadIcon } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
+import { TableActions } from "@/components/common/TableActions"
 import { Button } from "@/components/ui/button"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import type { OrderDetail, OrderStatus, PaymentStatus } from "@/features/sales/types"
@@ -31,6 +32,7 @@ const fulfillmentStatusStyles: Record<OrderStatus, string> = {
 }
 
 const Orders = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: orders } = useAppSelector((state) => state.orders)
 
@@ -146,13 +148,10 @@ const Orders = () => {
       cell: ({ row }) => {
         const order = row.original
         return (
-          <Link
-            to={`/order_detail/${order.id}`}
-            className="ml-1 text-xs text-primary flex gap-1"
-          >
-            <EyeIcon className="h-3.5 w-3.5" />
-            View
-          </Link>
+          <TableActions
+            itemName={`Order ${order.order_number}`}
+            viewUrl={`/order_detail/${order.id}`}
+          />
         )
       },
     },
@@ -224,6 +223,8 @@ const Orders = () => {
         <DataTable
           columns={columns}
           data={filteredOrders}
+          onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
+          minWidth="1050px"
           columnWidths={[
             "140px",
             "180px",

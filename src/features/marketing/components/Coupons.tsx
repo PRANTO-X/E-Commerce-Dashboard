@@ -181,6 +181,8 @@ const Coupons = () => {
       <DataTable
         columns={columns}
         data={coupons}
+        onRowClick={(coupon) => navigate(`/coupon_form/${coupon.id}`)}
+        minWidth="900px"
         columnWidths={["140px", "140px", "100px", "120px", "140px", "120px", "100px"]}
       />
     </div>

@@ -180,6 +180,7 @@ const GroupBuys = () => {
         pageCount={meta?.totalPages ?? 1}
         totalCount={totalItems}
         onPageChange={(index) => setPage(index + 1)}
+        minWidth="750px"
         columnWidths={["200px", "140px", "140px", "220px"]}
       />
     </div>

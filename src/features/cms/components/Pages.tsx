@@ -84,11 +84,13 @@ const Pages = () => {
       <DataTable
         columns={columns}
         data={pages}
+        onRowClick={(contentPage) => navigate(`/page_form/${contentPage.id}`)}
         manualPagination
         pageIndex={page - 1}
         pageCount={meta?.totalPages ?? 1}
         totalCount={totalItems}
         onPageChange={(index) => setPage(index + 1)}
+        minWidth="800px"
         columnWidths={["240px", "180px", "120px", "130px", "120px"]}
       />
     </div>

@@ -1,4 +1,6 @@
 import { useEffect } from "react"
+import { EmptyState } from "@/components/common/EmptyState"
+import { BarChart3 } from "lucide-react"
 import {
   Bar,
   BarChart,
@@ -68,9 +70,12 @@ export function RevenueOrdersChart() {
 
       <CardContent className="h-[300px] sm:h-[400px] px-2 sm:px-6">
         {chartData.length === 0 ? (
-          <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-            No sales data yet.
-          </div>
+          <EmptyState
+            icon={BarChart3}
+            title="No sales revenue data"
+            description="Sales and order trend data will display here automatically once orders are placed."
+            className="h-full py-0"
+          />
         ) : (
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">

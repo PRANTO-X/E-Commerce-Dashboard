@@ -57,6 +57,8 @@ export interface OrderStatusHistoryEntry {
   from_status: string
   to_status: string
   changed_by: string | null
+  reason?: string
+  created_at?: string
 }
 
 export interface OrderDetail extends OrderListItem {

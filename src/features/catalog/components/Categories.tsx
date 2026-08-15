@@ -168,6 +168,8 @@ const Categories = () => {
       <DataTable
         columns={columns}
         data={filteredCategories}
+        onRowClick={(category) => navigate(`/category_form/${category.id}`)}
+        minWidth="1080px"
         columnWidths={[
           "220px", // CATEGORY NAME
           "160px", // SLUG

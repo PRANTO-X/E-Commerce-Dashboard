@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
+import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, fetchSingle, postData, updateData } from "@/features/catalog/slices/categorySlice"
@@ -54,6 +55,8 @@ const CategoryForm = () => {
     control,
     register,
     reset,
+    watch,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<CategoryFormValues>({
@@ -201,26 +204,47 @@ const CategoryForm = () => {
               </FieldContent>
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="image">Image URL</FieldLabel>
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="image">Category Image</FieldLabel>
               <FieldContent>
-                <Input id="image" placeholder="https://..." {...register("image")} />
+                <ImageUploader
+                  singleMode
+                  images={
+                    watch("image")
+                      ? [
+                          {
+                            id: "category-image",
+                            url: watch("image"),
+                            alt: watch("name") || "Category image",
+                            isPrimary: true,
+                          },
+                        ]
+                      : []
+                  }
+                  onImagesChange={(imgs) => {
+                    setValue("image", imgs.length > 0 ? imgs[0].url : "")
+                  }}
+                  onAddImage={(url) => {
+                    setValue("image", url)
+                  }}
+                  label="Upload or link category image"
+                  description="Choose an image file from your device or enter an image URL"
+                />
                 <FieldError errors={[errors.image]} />
               </FieldContent>
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="is_active">Active</FieldLabel>
+            <Field orientation="horizontal">
               <FieldContent>
-                <Controller
-                  control={control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <FieldError errors={[errors.is_active]} />
+                <FieldLabel htmlFor="is_active">Active Status</FieldLabel>
               </FieldContent>
+              <Controller
+                control={control}
+                name="is_active"
+                render={({ field }) => (
+                  <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
             </Field>
 
             <Field className="md:col-span-2">

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
+import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/marketing/slices/campaignSlice"
@@ -51,6 +52,8 @@ const CampaignForm = () => {
     control,
     register,
     reset,
+    watch,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<CampaignFormValues>({
@@ -234,10 +237,32 @@ const CampaignForm = () => {
               </FieldContent>
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="banner_image">Banner Image URL</FieldLabel>
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="banner_image">Campaign Banner Graphic</FieldLabel>
               <FieldContent>
-                <Input id="banner_image" placeholder="https://..." {...register("banner_image")} />
+                <ImageUploader
+                  singleMode
+                  images={
+                    watch("banner_image")
+                      ? [
+                          {
+                            id: "campaign-banner",
+                            url: watch("banner_image"),
+                            alt: watch("name") || "Campaign Banner",
+                            isPrimary: true,
+                          },
+                        ]
+                      : []
+                  }
+                  onImagesChange={(imgs) => {
+                    setValue("banner_image", imgs.length > 0 ? imgs[0].url : "")
+                  }}
+                  onAddImage={(url) => {
+                    setValue("banner_image", url)
+                  }}
+                  label="Upload Campaign Banner"
+                  description="Upload image graphic from your device or paste an image URL"
+                />
                 <FieldError errors={[errors.banner_image]} />
               </FieldContent>
             </Field>

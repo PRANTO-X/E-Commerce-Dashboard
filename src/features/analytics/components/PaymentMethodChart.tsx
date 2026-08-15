@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts"
+import { CreditCard } from "lucide-react"
 
 import {
   Card,
@@ -13,6 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { EmptyState } from "@/components/common/EmptyState"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
 import type { PaymentProvider } from "@/features/payments/types"
@@ -57,9 +59,12 @@ export function PaymentMethodChart() {
       </CardHeader>
       <CardContent className="pt-4">
         {chartData.length === 0 ? (
-          <div className="h-[250px] w-full flex items-center justify-center text-sm text-muted-foreground">
-            No payments yet.
-          </div>
+          <EmptyState
+            icon={CreditCard}
+            title="No payment records yet"
+            description="Payment distribution will show here as customer orders are paid."
+            className="py-10"
+          />
         ) : (
           <>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">

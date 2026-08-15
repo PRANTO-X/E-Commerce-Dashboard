@@ -6,13 +6,13 @@ import {
   LogOutIcon,
   SettingsIcon,
   UserIcon,
-  Search,
   Plus,
   Package,
   Ticket,
   Megaphone,
   FileText,
 } from "lucide-react"
+import { GlobalSearch } from "./GlobalSearch"
 
 import {
   DropdownMenu,
@@ -24,10 +24,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { logout } from "@/features/authentication/slices/authSlice"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const quickCreateItems = [
   { label: "New Product", icon: Package, url: "/product_form/new" },
@@ -38,7 +39,6 @@ const quickCreateItems = [
 
 const Navbar = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light")
-  const [search, setSearch] = useState("")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
@@ -48,10 +48,27 @@ const Navbar = () => {
     navigate("/login", { replace: true })
   }
 
-  const displayName =
-    user
-      ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
-      : ""
+  const hasFullName = Boolean(user?.first_name?.trim() || user?.last_name?.trim())
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ")
+
+  const displayName = hasFullName
+    ? fullName
+    : user?.email
+      ? user.email
+          .split("@")[0]
+          .replace(/[._-]/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Admin"
+
+  const initials = useMemo(() => {
+    return displayName
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "AD"
+  }, [displayName])
 
   // load saved theme
   useEffect(() => {
@@ -85,27 +102,12 @@ const Navbar = () => {
   return (
     <header className="bg-white dark:bg-[#06110f]">
       <nav className="flex items-center justify-between p-4 sm:p-5">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white/90" />
+        <div className="flex items-center gap-4 flex-1 max-w-[460px]">
+          <SidebarTrigger className="rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white/90 shrink-0" />
 
           {/* Search */}
-          <div className="relative hidden w-xs lg:flex">
-            <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && search.trim()) {
-                  navigate("/products")
-                }
-              }}
-              placeholder="Search product, order, customer..."
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-100 pl-9 pr-13 text-sm text-gray-900 transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-gray-400 dark:border-[#16312b] dark:bg-white/5 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:bg-gray-700"
-            />
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex h-7 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-400 dark:border-[#16312b] dark:bg-white/5">
-              ⌘K
-            </span>
+          <div className="relative hidden sm:flex w-full">
+            <GlobalSearch />
           </div>
         </div>
 
@@ -189,15 +191,38 @@ const Navbar = () => {
           {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-[10px] border border-gray-200 transition-all dark:border-[#1e413a]">
-                <UserIcon className="size-5 text-gray-700 dark:text-gray-400" />
+              <button
+                aria-label="Open user profile menu"
+                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-200 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none dark:border-[#1e413a]"
+              >
+                <Avatar className="size-full">
+                  {user?.profile_picture ? (
+                    <AvatarImage
+                      src={user.profile_picture}
+                      alt={displayName}
+                      className="object-cover size-full"
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-primary-500 text-white font-semibold text-xs size-full flex items-center justify-center">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 overflow-hidden">
               <DropdownMenuLabel className="flex items-center gap-3 px-4 py-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-500/10 text-primary-500">
-                  <UserIcon className="size-5" />
-                </span>
+                <Avatar className="size-10 shrink-0 ring-2 ring-primary-500/20">
+                  {user?.profile_picture ? (
+                    <AvatarImage
+                      src={user.profile_picture}
+                      alt={displayName}
+                      className="object-cover"
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-primary-500 text-white font-bold text-sm flex items-center justify-center">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-gray-800 dark:text-white/90">
                     {displayName || "Account"}
@@ -211,7 +236,7 @@ const Navbar = () => {
               <DropdownMenuSeparator />
 
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                   <UserIcon /> Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")}>

@@ -151,6 +151,7 @@ const Automations = () => {
         pageCount={meta?.totalPages ?? 1}
         totalCount={totalItems}
         onPageChange={(index) => setPage(index + 1)}
+        minWidth="850px"
         columnWidths={["160px", "260px", "200px", "200px"]}
       />
     </div>

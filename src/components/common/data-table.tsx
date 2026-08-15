@@ -20,7 +20,12 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  type LucideIcon,
 } from "lucide-react"
+
+import { useNavigate } from "react-router-dom"
+import { cn } from "@/lib/utils"
+import { EmptyState } from "./EmptyState"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -29,6 +34,11 @@ interface DataTableProps<TData, TValue> {
   columnWidths?: string[]
   minWidth?: string
   showPagination?: boolean
+  emptyTitle?: string
+  emptyDescription?: string
+  emptyIcon?: LucideIcon
+  emptyActionLabel?: string
+  onEmptyAction?: () => void
   /** Server-side pagination mode: `data` is just the current page, and page changes are
    * driven by `onPageChange` (e.g. dispatching `fetchAll({page})`) instead of client-side slicing. */
   manualPagination?: boolean
@@ -36,6 +46,8 @@ interface DataTableProps<TData, TValue> {
   pageCount?: number
   totalCount?: number
   onPageChange?: (pageIndex: number) => void
+  onRowClick?: (row: TData) => void
+  getRowLink?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
@@ -45,12 +57,20 @@ export function DataTable<TData, TValue>({
   columnWidths,
   minWidth = "700px",
   showPagination = true,
+  emptyTitle = "No records found",
+  emptyDescription = "There are no items matching your criteria or available in this view.",
+  emptyIcon,
+  emptyActionLabel,
+  onEmptyAction,
   manualPagination = false,
   pageIndex: controlledPageIndex = 0,
   pageCount: controlledPageCount = 1,
   totalCount,
   onPageChange,
+  onRowClick,
+  getRowLink,
 }: DataTableProps<TData, TValue>) {
+  const navigate = useNavigate()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const headerScrollRef = React.useRef<HTMLDivElement>(null)
 
@@ -153,25 +173,60 @@ export function DataTable<TData, TValue>({
             <ColGroup />
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="border-b border-gray-100 transition-colors last:border-0 hover:bg-gray-50 dark:border-[#16312b] dark:hover:bg-gray-800/50"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3.5">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const isClickable = Boolean(onRowClick || getRowLink)
+                  return (
+                    <TableRow
+                      key={row.id}
+                      onClick={(e) => {
+                        if (!isClickable) return
+                        const target = e.target as HTMLElement | null
+                        if (
+                          target?.closest("button") ||
+                          target?.closest("a") ||
+                          target?.closest("input") ||
+                          target?.closest("select") ||
+                          target?.closest("textarea") ||
+                          target?.closest("[role='checkbox']") ||
+                          target?.closest("[role='menuitem']") ||
+                          target?.closest("[data-no-row-click]")
+                        ) {
+                          return
+                        }
+                        if (onRowClick) {
+                          onRowClick(row.original)
+                        } else if (getRowLink) {
+                          navigate(getRowLink(row.original))
+                        }
+                      }}
+                      className={cn(
+                        "border-b border-gray-100 transition-colors last:border-0 dark:border-[#16312b]",
+                        isClickable
+                          ? "cursor-pointer hover:bg-gray-50/90 active:bg-gray-100/70 dark:hover:bg-gray-800/60 dark:active:bg-gray-800/80"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-3.5">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )
+                })
               ) : (
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={columns.length}
-                    className="h-24 text-center text-muted-foreground"
+                    className="p-0 border-0"
                   >
-                    No results.
+                    <EmptyState
+                      icon={emptyIcon}
+                      title={emptyTitle}
+                      description={emptyDescription}
+                      actionLabel={emptyActionLabel}
+                      onAction={onEmptyAction}
+                    />
                   </TableCell>
                 </TableRow>
               )}

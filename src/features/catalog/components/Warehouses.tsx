@@ -148,6 +148,7 @@ const Warehouses = () => {
         columns={columns}
         data={warehouses}
         showPagination={false}
+        minWidth="900px"
         columnWidths={["200px", "120px", "140px", "220px", "100px", "120px"]}
       />
 

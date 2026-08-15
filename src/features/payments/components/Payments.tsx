@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link } from "react-router-dom"
-import { EyeIcon } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
 import type { Payment, PaymentTransactionState } from "@/features/payments/types"
@@ -15,6 +15,7 @@ const statusStyles: Record<PaymentTransactionState, string> = {
 }
 
 const Payments = () => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: payments } = useAppSelector((state) => state.payments)
 
@@ -75,10 +76,10 @@ const Payments = () => {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => (
-        <Link to={`/payment_detail/${row.original.id}`} className="ml-1 text-xs text-primary flex gap-1">
-          <EyeIcon className="h-3.5 w-3.5" />
-          View
-        </Link>
+        <TableActions
+          itemName={`Payment for Order ${(row.getValue("order") as Payment["order"]).order_number}`}
+          viewUrl={`/payment_detail/${row.original.id}`}
+        />
       ),
     },
   ]
@@ -95,7 +96,9 @@ const Payments = () => {
       <DataTable
         columns={columns}
         data={payments}
+        onRowClick={(payment) => navigate(`/payment_detail/${payment.id}`)}
         showPagination={false}
+        minWidth="950px"
         columnWidths={["150px", "150px", "150px", "120px", "180px", "100px"]}
       />
 

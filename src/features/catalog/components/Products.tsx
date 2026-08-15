@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon, PlusIcon } from "lucide-react"
+import { DownloadIcon, PlusIcon, Package, Boxes } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -18,6 +18,7 @@ import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/productSlice"
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
+import { fetchAll as fetchAllProductImages } from "@/features/catalog/slices/productImageSlice"
 import { toast } from "sonner"
 
 const Products = () => {
@@ -25,6 +26,7 @@ const Products = () => {
   const dispatch = useAppDispatch()
   const { data: products } = useAppSelector((state) => state.products)
   const { data: categories } = useAppSelector((state) => state.categories)
+  const { data: allImages } = useAppSelector((state) => state.productImages)
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
@@ -35,6 +37,7 @@ const Products = () => {
     // Backend list endpoints don't support filter query params (confirmed live) —
     // fetch everything once and filter/paginate client-side instead.
     dispatch(fetchAll({ page: 1, page_size: 1000 }))
+    dispatch(fetchAllProductImages({ page: 1, page_size: 1000 }))
   }, [dispatch])
 
   useEffect(() => {
@@ -59,6 +62,34 @@ const Products = () => {
   })
 
   const columns: ColumnDef<Product>[] = [
+    {
+      id: "image",
+      header: "IMAGE",
+      cell: ({ row }) => {
+        const product = row.original
+        const primaryImage =
+          allImages.find((img) => img.product === product.id && img.is_primary) ||
+          allImages.find((img) => img.product === product.id)
+
+        return (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted/40 shadow-2xs">
+            {primaryImage?.image ? (
+              <img
+                src={primaryImage.image}
+                alt={primaryImage.alt_text || product.name}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none"
+                }}
+              />
+            ) : (
+              <Package className="h-5 w-5 text-muted-foreground/60" />
+            )}
+          </div>
+        )
+      },
+    },
+
     {
       accessorKey: "name",
       header: "PRODUCT",
@@ -100,11 +131,21 @@ const Products = () => {
     {
       accessorKey: "product_type",
       header: "TYPE",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground capitalize">
-          {row.getValue("product_type")}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const type = row.getValue("product_type") as string
+        if (type === "bundle") {
+          return (
+            <span className="inline-flex items-center rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-600 dark:text-purple-300 border border-purple-500/20">
+              Bundle
+            </span>
+          )
+        }
+        return (
+          <span className="text-sm text-muted-foreground capitalize">
+            {type}
+          </span>
+        )
+      },
     },
 
     {
@@ -187,11 +228,20 @@ const Products = () => {
           </h1>
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage your product catalog, pricing, and availability
+            Manage your product catalog, pricing, variations, and combo bundles
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="action"
+            onClick={() => navigate("/product_form/new?type=bundle")}
+            className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+          >
+            <Boxes className="size-5" /> Create Combo Bundle
+          </Button>
+
           <Button
             variant="default"
             size="action"
@@ -248,15 +298,18 @@ const Products = () => {
       <DataTable
         columns={columns}
         data={filteredProducts}
+        onRowClick={(product) => navigate(`/product_detail/${product.id}`)}
+        minWidth="1220px"
         columnWidths={[
-          "220px", // PRODUCT
-          "160px", // SLUG
+          "70px",  // IMAGE
+          "200px", // PRODUCT
+          "150px", // SLUG
           "140px", // CATEGORY
           "110px", // PRICE
           "110px", // TYPE
           "120px", // STATUS
-          "100px", // FEATURED
-          "150px", // CREATED AT
+          "90px",  // FEATURED
+          "130px", // CREATED AT
           "100px", // ACTION
         ]}
       />

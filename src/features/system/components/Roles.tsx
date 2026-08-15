@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { Edit2, Search, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/common/EmptyState"
 import {
   Card,
   CardContent,
@@ -111,9 +112,13 @@ const Roles = () => {
             </TableHeader>
             <TableBody>
               {filteredStaff.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    No staff members yet.
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={4} className="p-0 border-0">
+                    <EmptyState
+                      icon={ShieldCheck}
+                      title="No staff members found"
+                      description="No staff accounts match your current search criteria."
+                    />
                   </TableCell>
                 </TableRow>
               )}
