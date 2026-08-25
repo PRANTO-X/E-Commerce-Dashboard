@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -6,6 +6,8 @@ import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import type { Campaign, CampaignStatus } from "@/features/marketing/types"
@@ -13,24 +15,21 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/campaignSlice"
 import { toast } from "sonner"
 
-const statusStyles: Record<CampaignStatus, string> = {
-  draft: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
-  scheduled: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  active: "bg-green-500/10 text-green-400 border border-green-500/20",
-  ended: "bg-red-500/10 text-red-400 border border-red-500/20",
-}
-
 const Campaigns = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: allCampaigns } = useAppSelector((state) => state.campaigns)
+  const { data: allCampaigns, isLoading, error } = useAppSelector((state) => state.campaigns)
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
-  useEffect(() => {
+  const loadCampaigns = useCallback(() => {
     dispatch(fetchAll({ page: 1, page_size: 1000 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadCampaigns()
+  }, [loadCampaigns])
 
   const statusOptions = [
     { label: "Draft", value: "draft" },
@@ -75,14 +74,9 @@ const Campaigns = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as CampaignStatus
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as CampaignStatus} />
+      ),
     },
     {
       id: "actions",
@@ -120,12 +114,10 @@ const Campaigns = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Campaigns</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Schedule mega, landing, and seasonal marketing campaigns.
-          </p>
-        </div>
+        <PageHeading
+          title="Campaigns"
+          description="Schedule mega, landing, and seasonal marketing campaigns."
+        />
 
         <div className="flex gap-2">
           <Button variant="default" size="action" onClick={() => navigate("/campaign_form/new")}>
@@ -158,6 +150,9 @@ const Campaigns = () => {
       <DataTable
         columns={columns}
         data={campaigns}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadCampaigns}
         onRowClick={(campaign) => navigate(`/campaign_detail/${campaign.id}`)}
         minWidth="850px"
         columnWidths={["220px", "140px", "220px", "120px", "110px"]}

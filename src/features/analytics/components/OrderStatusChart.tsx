@@ -20,15 +20,7 @@ import { EmptyState } from "@/components/common/EmptyState"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 import type { OrderStatus } from "@/features/sales/types"
-
-const statusColors: Record<OrderStatus, string> = {
-  pending_payment: "#6b7280",
-  placed: "#3b82f6",
-  processing: "#3b82f6",
-  shipped: "#f59e0b",
-  delivered: "#10b981",
-  cancelled: "#ef4444",
-}
+import { STATUS_TONE_HEX, getStatusTone } from "@/components/common/StatusBadge"
 
 export function OrderStatusChart() {
   const dispatch = useAppDispatch()
@@ -53,7 +45,7 @@ export function OrderStatusChart() {
     ["count", { label: "Count" }],
     ...Object.keys(counts).map((status) => [
       status,
-      { label: status.replace("_", " "), color: statusColors[status as OrderStatus] ?? "#6b7280" },
+      { label: status.replace("_", " "), color: STATUS_TONE_HEX[getStatusTone(status as OrderStatus)] },
     ]),
   ])
 

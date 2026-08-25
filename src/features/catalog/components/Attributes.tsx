@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { PageHeading } from "@/components/common/PageHeading"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
@@ -100,12 +101,10 @@ const Attributes = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Attributes</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Define variant attributes (e.g. Color, Size) and their possible values
-        </p>
-      </div>
+      <PageHeading
+        title="Attributes"
+        description="Define variant attributes (e.g. Color, Size) and their possible values"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">

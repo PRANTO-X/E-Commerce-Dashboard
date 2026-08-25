@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { DownloadIcon, PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -14,12 +16,16 @@ import type { AdminUser } from "@/features/users/types"
 const Staffs = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: allStaffs } = useAppSelector((state) => state.staffs)
+  const { data: allStaffs, isLoading, error } = useAppSelector((state) => state.staffs)
   const [search, setSearch] = useState("")
 
-  useEffect(() => {
+  const loadStaffs = useCallback(() => {
     dispatch(fetchAll())
   }, [dispatch])
+
+  useEffect(() => {
+    loadStaffs()
+  }, [loadStaffs])
 
   const staffs = allStaffs.filter((staff) => {
     if (!search) return true
@@ -72,15 +78,7 @@ const Staffs = () => {
       accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-            row.getValue("is_active")
-              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-              : "bg-red-500/10 text-red-400 border border-red-500/20"
-          }`}
-        >
-          {row.getValue("is_active") ? "active" : "inactive"}
-        </span>
+        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
       ),
     },
     {
@@ -107,12 +105,10 @@ const Staffs = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Staff Members</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage your team members and their permissions.
-          </p>
-        </div>
+        <PageHeading
+          title="Staff Members"
+          description="Manage your team members and their permissions."
+        />
 
         <div className="flex items-center gap-3">
           <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Staffs")}>
@@ -134,6 +130,9 @@ const Staffs = () => {
         <DataTable
           columns={columns}
           data={staffs}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadStaffs}
           onRowClick={(staff) => navigate(`/staff_form/${staff.id}`)}
           minWidth="900px"
           columnWidths={["280px", "160px", "140px", "130px", "100px"]}

@@ -1,33 +1,33 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { CheckIcon, StarIcon, XIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, approveReview, rejectReview } from "@/features/marketing/slices/reviewSlice"
 import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 import type { Review, ReviewStatus } from "@/features/marketing/types"
 import { toast } from "sonner"
 
-const statusStyles: Record<ReviewStatus, string> = {
-  pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  approved: "bg-green-500/10 text-green-400 border border-green-500/20",
-  rejected: "bg-red-500/10 text-red-400 border border-red-500/20",
-}
-
 const Reviews = () => {
   const dispatch = useAppDispatch()
-  const { data: allReviews } = useAppSelector((state) => state.reviews)
+  const { data: allReviews, isLoading, error } = useAppSelector((state) => state.reviews)
   const { data: products } = useAppSelector((state) => state.products)
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
-  useEffect(() => {
+  const loadReviews = useCallback(() => {
     dispatch(fetchAll())
-    dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadReviews()
+    dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
+  }, [loadReviews, dispatch])
 
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
@@ -114,14 +114,9 @@ const Reviews = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as ReviewStatus
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as ReviewStatus} />
+      ),
     },
     {
       id: "actions",
@@ -155,12 +150,10 @@ const Reviews = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Reviews & Moderation</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Approve or reject customer product reviews.
-          </p>
-        </div>
+        <PageHeading
+          title="Reviews & Moderation"
+          description="Approve or reject customer product reviews."
+        />
       </div>
 
       <FilterToolbar
@@ -184,6 +177,9 @@ const Reviews = () => {
       <DataTable
         columns={columns}
         data={reviews}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadReviews}
         showPagination={false}
         minWidth="1080px"
         columnWidths={["180px", "180px", "110px", "260px", "140px", "110px", "100px"]}

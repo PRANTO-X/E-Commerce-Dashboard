@@ -2,18 +2,10 @@ import { useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { AlertCircle, ArrowLeft, Calendar, Edit } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle } from "@/features/marketing/slices/campaignSlice"
-import type { CampaignStatus } from "@/features/marketing/types"
-
-const statusStyles: Record<CampaignStatus, string> = {
-  draft: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-  scheduled: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  active: "bg-green-500/10 text-green-400 border-green-500/20",
-  ended: "bg-red-500/10 text-red-400 border-red-500/20",
-}
 
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -87,9 +79,7 @@ const CampaignDetail = () => {
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline" className={statusStyles[campaign.status]}>
-                {campaign.status}
-              </Badge>
+              <StatusBadge status={campaign.status} />
             </div>
           </CardContent>
         </Card>

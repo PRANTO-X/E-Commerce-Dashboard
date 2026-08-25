@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTable } from "@/components/common/data-table"
+import { PageHeading } from "@/components/common/PageHeading"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/marketing/slices/groupBuySlice"
@@ -24,7 +25,7 @@ import type { GroupBuy } from "@/features/marketing/types"
 const GroupBuys = () => {
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
-  const { data: groupBuys, totalItems, meta } = useAppSelector((state) => state.groupBuys)
+  const { data: groupBuys, totalItems, meta, isLoading, error } = useAppSelector((state) => state.groupBuys)
   const { data: products } = useAppSelector((state) => state.products)
 
   const [productId, setProductId] = useState("")
@@ -35,10 +36,14 @@ const GroupBuys = () => {
   const [endsAt, setEndsAt] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadGroupBuys = useCallback(() => {
     dispatch(fetchAll({ page }))
-    dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
   }, [dispatch, page])
+
+  useEffect(() => {
+    loadGroupBuys()
+    dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
+  }, [loadGroupBuys, dispatch])
 
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
@@ -104,12 +109,10 @@ const GroupBuys = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Group Buys</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Run group-buying promotions with target quantities and special pricing
-        </p>
-      </div>
+      <PageHeading
+        title="Group Buys"
+        description="Run group-buying promotions with target quantities and special pricing"
+      />
 
       <Card>
         <CardHeader>
@@ -175,6 +178,9 @@ const GroupBuys = () => {
       <DataTable
         columns={columns}
         data={groupBuys}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadGroupBuys}
         manualPagination
         pageIndex={page - 1}
         pageCount={meta?.totalPages ?? 1}

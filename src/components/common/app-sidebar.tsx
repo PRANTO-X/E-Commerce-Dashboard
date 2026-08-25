@@ -188,7 +188,7 @@ export function AppSidebar() {
     sidebarItems.find((s) => s.label === label)
 
   return (
-    <Sidebar variant="floating" collapsible="icon" className="z-50">
+    <Sidebar variant="floating" collapsible="icon" className="z-30">
       {/* HEADER */}
       <SidebarHeader className="mb-6 mt-2 flex items-center px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <NavLink

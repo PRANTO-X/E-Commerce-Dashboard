@@ -1,26 +1,25 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Link, useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchShipments } from "@/features/shipping/slices/shippingSlice"
 import type { CourierShipment, CourierShipmentStatus } from "@/features/shipping/types"
 
-const statusStyles: Record<CourierShipmentStatus, string> = {
-  draft: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
-  booked: "bg-green-500/10 text-green-400 border border-green-500/20",
-  failed: "bg-red-500/10 text-red-400 border border-red-500/20",
-  cancelled: "bg-red-500/10 text-red-400 border border-red-500/20",
-}
-
 const Shipments = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { shipments } = useAppSelector((state) => state.shipping)
+  const { shipments, isLoading, error } = useAppSelector((state) => state.shipping)
 
-  useEffect(() => {
+  const loadShipments = useCallback(() => {
     dispatch(fetchShipments())
   }, [dispatch])
+
+  useEffect(() => {
+    loadShipments()
+  }, [loadShipments])
 
   const columns: ColumnDef<CourierShipment>[] = [
     {
@@ -41,29 +40,25 @@ const Shipments = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as CourierShipmentStatus
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as CourierShipmentStatus} />
+      ),
     },
   ]
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Shipments</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Courier bookings made for customer orders
-        </p>
-      </div>
+      <PageHeading
+        title="Shipments"
+        description="Courier bookings made for customer orders"
+      />
 
       <DataTable
         columns={columns}
         data={shipments}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadShipments}
         onRowClick={(s) => navigate(`/order_detail/${s.order}`)}
         showPagination={false}
         minWidth="750px"

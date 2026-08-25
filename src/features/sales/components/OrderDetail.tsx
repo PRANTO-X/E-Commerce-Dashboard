@@ -13,6 +13,7 @@ import type { TrackingStatus } from "@/features/shipping/types"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
@@ -47,23 +48,6 @@ import {
   Clock,
   User,
 } from "lucide-react"
-
-const paymentStatusStyles: Record<string, string> = {
-  paid: "bg-green-500/10 text-green-500 border-green-500/20",
-  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  failed: "bg-red-500/10 text-red-500 border-red-500/20",
-  partially_refunded: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  refunded: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-}
-
-const fulfillmentStatusStyles: Record<string, string> = {
-  pending_payment: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-  placed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  processing: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  shipped: "bg-green-500/10 text-green-500 border-green-500/20",
-  delivered: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
-}
 
 const statusOptions: { label: string; value: UpdatableOrderStatus }[] = [
   { label: "Placed", value: "placed" },
@@ -246,18 +230,8 @@ const OrderDetail = () => {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{order.order_number}</h1>
-              <Badge
-                variant="outline"
-                className={paymentStatusStyles[order.payment_status] ?? "bg-muted text-muted-foreground"}
-              >
-                Payment: {order.payment_status.toUpperCase()}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={fulfillmentStatusStyles[order.status] ?? "bg-muted text-muted-foreground"}
-              >
-                {order.status.toUpperCase()}
-              </Badge>
+              <StatusBadge status={order.payment_status} label={`Payment: ${order.payment_status.replace(/_/g, " ")}`} />
+              <StatusBadge status={order.status} />
             </div>
             <p className="text-muted-foreground text-sm mt-0.5">
               Placed on {orderDate ? new Date(orderDate).toLocaleString() : "—"}

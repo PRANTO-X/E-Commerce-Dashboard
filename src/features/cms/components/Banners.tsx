@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon, Tag, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ import type { HomepageBanner } from "@/features/cms/types"
 const Banners = () => {
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
-  const { data: banners, totalItems, meta } = useAppSelector((state) => state.banners)
+  const { data: banners, totalItems, meta, isLoading, error } = useAppSelector((state) => state.banners)
   const { data: categories } = useAppSelector((state) => state.categories)
 
   const [title, setTitle] = useState("")
@@ -37,10 +38,14 @@ const Banners = () => {
   const [isActive, setIsActive] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadBanners = useCallback(() => {
     dispatch(fetchAllBanners({ page }))
-    dispatch(fetchAllCategories({ page: 1, page_size: 1000 }))
   }, [dispatch, page])
+
+  useEffect(() => {
+    loadBanners()
+    dispatch(fetchAllCategories({ page: 1, page_size: 1000 }))
+  }, [loadBanners, dispatch])
 
   // Map category ID or slug to target_url
   const targetUrl = useMemo(() => {
@@ -164,19 +169,7 @@ const Banners = () => {
       accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => {
-        const active = row.getValue("is_active") as boolean
-        return (
-          <Badge
-            variant="outline"
-            className={
-              active
-                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                : "bg-red-500/10 text-red-500 border-red-500/20"
-            }
-          >
-            {active ? "Active" : "Inactive"}
-          </Badge>
-        )
+        return <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
       },
     },
     {
@@ -312,6 +305,9 @@ const Banners = () => {
       <DataTable
         columns={columns}
         data={banners}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadBanners}
         manualPagination
         pageIndex={page - 1}
         pageCount={meta?.totalPages ?? 1}

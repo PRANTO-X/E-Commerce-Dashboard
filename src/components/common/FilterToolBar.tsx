@@ -37,7 +37,7 @@ const FilterToolbar = ({
   )
 
   return (
-    <div className="mt-[18px] pt-4">
+    <div className="mt-4 pt-4">
       {/* Desktop + Tablet */}
       <div className="hidden flex-wrap items-center justify-between gap-3 sm:flex">
         {/* Search — left side */}

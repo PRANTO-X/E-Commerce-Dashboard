@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTable } from "@/components/common/data-table"
+import { PageHeading } from "@/components/common/PageHeading"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/marketing/slices/automationSlice"
@@ -29,16 +30,20 @@ const eventTypeOptions: { label: string; value: AutomationEventType }[] = [
 const Automations = () => {
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
-  const { data: automations, totalItems, meta } = useAppSelector((state) => state.automations)
+  const { data: automations, totalItems, meta, isLoading, error } = useAppSelector((state) => state.automations)
 
   const [eventType, setEventType] = useState<AutomationEventType | "">("")
   const [customerId, setCustomerId] = useState("")
   const [scheduledAt, setScheduledAt] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadAutomations = useCallback(() => {
     dispatch(fetchAll({ page }))
   }, [dispatch, page])
+
+  useEffect(() => {
+    loadAutomations()
+  }, [loadAutomations])
 
   const handleCreate = async () => {
     if (!eventType || !customerId.trim()) return
@@ -93,12 +98,10 @@ const Automations = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Marketing Automations</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Scheduled lifecycle emails triggered by customer/catalog events
-        </p>
-      </div>
+      <PageHeading
+        title="Marketing Automations"
+        description="Scheduled lifecycle emails triggered by customer/catalog events"
+      />
 
       <Card>
         <CardHeader>
@@ -146,6 +149,9 @@ const Automations = () => {
       <DataTable
         columns={columns}
         data={automations}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadAutomations}
         manualPagination
         pageIndex={page - 1}
         pageCount={meta?.totalPages ?? 1}

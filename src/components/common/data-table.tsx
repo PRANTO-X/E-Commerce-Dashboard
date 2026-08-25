@@ -26,6 +26,9 @@ import {
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { EmptyState } from "./EmptyState"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertCircleIcon, Loader2Icon } from "lucide-react"
+import { getApiErrorMessage } from "@/lib/api/client"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -39,6 +42,14 @@ interface DataTableProps<TData, TValue> {
   emptyIcon?: LucideIcon
   emptyActionLabel?: string
   onEmptyAction?: () => void
+  /** True while the current page's data is being fetched. On first load (no data yet)
+   * this renders skeleton rows; on a refetch with existing data it dims the table and
+   * shows a small inline spinner instead of replacing the rows the user is looking at. */
+  isLoading?: boolean
+  /** Set when the fetch backing this table failed — from the slice's `error` field. */
+  error?: unknown
+  /** Shown as a "Retry" action on the error state, when the fetch can be re-dispatched. */
+  onRetry?: () => void
   /** Server-side pagination mode: `data` is just the current page, and page changes are
    * driven by `onPageChange` (e.g. dispatching `fetchAll({page})`) instead of client-side slicing. */
   manualPagination?: boolean
@@ -62,6 +73,9 @@ export function DataTable<TData, TValue>({
   emptyIcon,
   emptyActionLabel,
   onEmptyAction,
+  isLoading = false,
+  error = null,
+  onRetry,
   manualPagination = false,
   pageIndex: controlledPageIndex = 0,
   pageCount: controlledPageCount = 1,
@@ -128,7 +142,7 @@ export function DataTable<TData, TValue>({
   )
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-[#16312b] dark:bg-[#0b1a17]">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-border dark:bg-card">
 
       {/* Header — horizontally scrollable but scrollbar hidden, synced with body */}
       <div
@@ -162,6 +176,23 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
+      {Boolean(error) && data.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-gray-100 bg-destructive/5 px-4 py-2 text-xs text-destructive dark:border-border">
+          <AlertCircleIcon className="size-3.5 shrink-0" />
+          <span className="flex-1">{getApiErrorMessage(error, "Couldn't refresh this data.")}</span>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="font-medium underline underline-offset-2 hover:no-underline"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Scrollable body — vertical + horizontal */}
       <div
         ref={scrollRef}
@@ -171,8 +202,34 @@ export function DataTable<TData, TValue>({
         <div style={{ minWidth }}>
           <Table className="table-fixed w-full">
             <ColGroup />
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
+            <TableBody
+              className={cn(
+                isLoading && data.length > 0 && "pointer-events-none opacity-60 transition-opacity"
+              )}
+            >
+              {isLoading && data.length === 0 ? (
+                Array.from({ length: Math.min(pageSize, 8) }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
+                    {columns.map((_, j) => (
+                      <TableCell key={j} className="py-3.5">
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : error && data.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="p-0 border-0">
+                    <EmptyState
+                      icon={AlertCircleIcon}
+                      title="Couldn't load this data"
+                      description={getApiErrorMessage(error)}
+                      actionLabel={onRetry ? "Retry" : undefined}
+                      onAction={onRetry}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => {
                   const isClickable = Boolean(onRowClick || getRowLink)
                   return (
@@ -200,7 +257,7 @@ export function DataTable<TData, TValue>({
                         }
                       }}
                       className={cn(
-                        "border-b border-gray-100 transition-colors last:border-0 dark:border-[#16312b]",
+                        "border-b border-gray-100 transition-colors last:border-0 dark:border-border",
                         isClickable
                           ? "cursor-pointer hover:bg-gray-50/90 active:bg-gray-100/70 dark:hover:bg-gray-800/60 dark:active:bg-gray-800/80"
                           : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -237,8 +294,9 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {showPagination && 
-      <div className="flex items-center justify-center gap-4 border-t border-gray-100 bg-white px-4 py-2.5 text-center sm:justify-between flex-wrap dark:border-[#16312b] dark:bg-[#0b1a17]">
-        <p className="text-xs text-muted-foreground">
+      <div className="flex items-center justify-center gap-4 border-t border-gray-100 bg-white px-4 py-2.5 text-center sm:justify-between flex-wrap dark:border-border dark:bg-card">
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {isLoading && data.length > 0 && <Loader2Icon className="size-3 animate-spin" />}
           Showing <span className="font-medium text-foreground">{from}–{to}</span> of{" "}
           <span className="font-medium text-foreground">{totalRows}</span> results
         </p>

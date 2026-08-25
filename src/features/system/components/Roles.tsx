@@ -5,6 +5,7 @@ import { Edit2, Search, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/EmptyState"
+import { PageHeading } from "@/components/common/PageHeading"
 import {
   Card,
   CardContent,
@@ -72,14 +73,12 @@ const Roles = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="section-container">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Staff Permissions</h1>
-          <p className="text-muted-foreground">
-            Manage staff roles and permissions. Detailed permission checklists live on each staff member's edit page.
-          </p>
-        </div>
+        <PageHeading
+          title="Staff Permissions"
+          description="Manage staff roles and permissions. Detailed permission checklists live on each staff member's edit page."
+        />
       </div>
 
       <Card>

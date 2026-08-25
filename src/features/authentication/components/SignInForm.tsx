@@ -12,6 +12,7 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { login } from "@/features/authentication/slices/authSlice"
+import { getApiErrorMessage } from "@/lib/api/client"
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -41,8 +42,8 @@ const SignInForm = () => {
       toast.success("Signed in successfully")
       const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/"
       navigate(from, { replace: true })
-    } catch {
-      toast.error("Invalid email or password")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Invalid email or password"))
     }
   }
 

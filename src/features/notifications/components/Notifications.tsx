@@ -1,25 +1,25 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchNotifications, fetchNotificationPreferences } from "@/features/notifications/slices/notificationSlice"
 import type { AdminNotification, NotificationDeliveryStatus } from "@/features/notifications/types"
 
-const statusStyles: Record<NotificationDeliveryStatus, string> = {
-  pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  sent: "bg-green-500/10 text-green-400 border border-green-500/20",
-  failed: "bg-red-500/10 text-red-400 border border-red-500/20",
-}
-
 const Notifications = () => {
   const dispatch = useAppDispatch()
-  const { notifications, preferences } = useAppSelector((state) => state.notifications)
+  const { notifications, preferences, isLoading, error } = useAppSelector((state) => state.notifications)
+
+  const loadNotifications = useCallback(() => {
+    dispatch(fetchNotifications())
+  }, [dispatch])
 
   useEffect(() => {
-    dispatch(fetchNotifications())
+    loadNotifications()
     dispatch(fetchNotificationPreferences())
-  }, [dispatch])
+  }, [loadNotifications, dispatch])
 
   const columns: ColumnDef<AdminNotification>[] = [
     { accessorKey: "user_email", header: "USER" },
@@ -32,14 +32,9 @@ const Notifications = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as NotificationDeliveryStatus
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as NotificationDeliveryStatus} />
+      ),
     },
     {
       accessorKey: "created_at",
@@ -54,16 +49,17 @@ const Notifications = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Notifications</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          System-generated customer notifications and delivery preferences
-        </p>
-      </div>
+      <PageHeading
+        title="Notifications"
+        description="System-generated customer notifications and delivery preferences"
+      />
 
       <DataTable
         columns={columns}
         data={notifications}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadNotifications}
         showPagination={false}
         minWidth="950px"
         columnWidths={["220px", "120px", "300px", "110px", "200px"]}

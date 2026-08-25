@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 import type { DateRange } from "react-day-picker"
@@ -44,6 +44,8 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DatePicker } from "@/features/sales/components/DatePicker"
 import { TableActions } from "@/components/common/TableActions"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { exportToCSV } from "@/utility/ExportToCsv"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -74,13 +76,6 @@ const categoryConfig: Record<
   office: { label: "Office & Equipment", badgeClass: "bg-rose-500/10 text-rose-500 border-rose-500/20" },
   tax: { label: "Taxes & Duties", badgeClass: "bg-red-500/10 text-red-500 border-red-500/20" },
   other: { label: "Miscellaneous", badgeClass: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
-}
-
-const statusBadgeStyles: Record<ExpenseStatus, string> = {
-  paid: "bg-green-500/10 text-green-500 border-green-500/20",
-  approved: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  rejected: "bg-red-500/10 text-red-500 border-red-500/20",
 }
 
 const paymentMethodLabels: Record<ExpensePaymentMethod, string> = {
@@ -121,7 +116,7 @@ type FilterOption = {
 
 const Expenses = () => {
   const dispatch = useAppDispatch()
-  const { data: expenses } = useAppSelector((state) => state.expenses)
+  const { data: expenses, isLoading, error } = useAppSelector((state) => state.expenses)
 
   const [search, setSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<FilterOption | null>(null)
@@ -148,9 +143,13 @@ const Expenses = () => {
   // Detail Modal State
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null)
 
-  useEffect(() => {
+  const loadExpenses = useCallback(() => {
     dispatch(fetchAll(undefined))
   }, [dispatch])
+
+  useEffect(() => {
+    loadExpenses()
+  }, [loadExpenses])
 
   // Filtered expenses
   const filteredExpenses = useMemo(() => {
@@ -422,14 +421,9 @@ const Expenses = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const st = row.getValue("status") as ExpenseStatus
-        return (
-          <Badge variant="outline" className={`${statusBadgeStyles[st] ?? "bg-muted"} capitalize text-xs whitespace-nowrap`}>
-            {st}
-          </Badge>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as ExpenseStatus} className="text-xs whitespace-nowrap" />
+      ),
     },
     {
       id: "actions",
@@ -464,14 +458,10 @@ const Expenses = () => {
     <div className="section-container space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Business Expenses
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track operational spending, vendor invoices, logistics costs, and upload payment receipts
-          </p>
-        </div>
+        <PageHeading
+          title="Business Expenses"
+          description="Track operational spending, vendor invoices, logistics costs, and upload payment receipts"
+        />
         <div className="flex items-center gap-3">
           <Button
             variant="default"
@@ -589,6 +579,9 @@ const Expenses = () => {
         <DataTable
           columns={columns}
           data={filteredExpenses}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadExpenses}
           onRowClick={(exp) => setViewingExpense(exp)}
           minWidth="1260px"
           columnWidths={[
@@ -801,9 +794,7 @@ const Expenses = () => {
                 >
                   {categoryConfig[viewingExpense.category]?.label}
                 </Badge>
-                <Badge variant="outline" className={statusBadgeStyles[viewingExpense.status]}>
-                  {viewingExpense.status.toUpperCase()}
-                </Badge>
+                <StatusBadge status={viewingExpense.status} />
               </div>
               <DialogTitle className="text-xl font-bold mt-2">{viewingExpense.title}</DialogTitle>
               <DialogDescription>

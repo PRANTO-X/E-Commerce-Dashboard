@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { PageHeading } from "@/components/common/PageHeading"
 import { Separator } from "@/components/ui/separator"
 import {
   Select,
@@ -60,13 +61,11 @@ const Authentication = () => {
   ]
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Authentication Settings</h1>
-        <p className="text-muted-foreground">
-          Configure how users and staff members authenticate to the system.
-        </p>
-      </div>
+    <div className="section-container">
+      <PageHeading
+        title="Authentication Settings"
+        description="Configure how users and staff members authenticate to the system."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LOGIN METHODS */}

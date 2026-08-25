@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon, Image as ImageIcon, Sparkles, Loader2 } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
@@ -20,7 +20,7 @@ import type { BlogPost } from "@/features/cms/types"
 const BlogPosts = () => {
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
-  const { data: posts, totalItems, meta } = useAppSelector((state) => state.blogPosts)
+  const { data: posts, totalItems, meta, isLoading, error } = useAppSelector((state) => state.blogPosts)
 
   const [title, setTitle] = useState("")
   const [slug, setSlug] = useState("")
@@ -30,9 +30,13 @@ const BlogPosts = () => {
   const [isPublished, setIsPublished] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadPosts = useCallback(() => {
     dispatch(fetchAll({ page }))
   }, [dispatch, page])
+
+  useEffect(() => {
+    loadPosts()
+  }, [loadPosts])
 
   const uploadedImages: UploadedImageItem[] = useMemo(() => {
     return coverImage
@@ -125,21 +129,9 @@ const BlogPosts = () => {
     {
       accessorKey: "is_published",
       header: "STATUS",
-      cell: ({ row }) => {
-        const published = row.getValue("is_published") as boolean
-        return (
-          <Badge
-            variant="outline"
-            className={
-              published
-                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                : "bg-muted text-muted-foreground"
-            }
-          >
-            {published ? "Published" : "Draft"}
-          </Badge>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("is_published") ? "published" : "draft"} />
+      ),
     },
     {
       accessorKey: "created_at",
@@ -273,6 +265,9 @@ const BlogPosts = () => {
       <DataTable
         columns={columns}
         data={posts}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadPosts}
         manualPagination
         pageIndex={page - 1}
         pageCount={meta?.totalPages ?? 1}

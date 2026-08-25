@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, PlusIcon, Package, Boxes } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -7,10 +7,11 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import {
   productStatusOptions,
-  productStatusStyles,
   type Product,
   type ProductStatus,
 } from "@/features/catalog/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
@@ -24,7 +25,7 @@ import { toast } from "sonner"
 const Products = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: products } = useAppSelector((state) => state.products)
+  const { data: products, isLoading, error } = useAppSelector((state) => state.products)
   const { data: categories } = useAppSelector((state) => state.categories)
   const { data: allImages } = useAppSelector((state) => state.productImages)
 
@@ -33,12 +34,16 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState<{ label: string; value: string } | null>(null)
   const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null })
 
+  const loadProducts = useCallback(() => {
+    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+  }, [dispatch])
+
   useEffect(() => {
     // Backend list endpoints don't support filter query params (confirmed live) —
     // fetch everything once and filter/paginate client-side instead.
-    dispatch(fetchAll({ page: 1, page_size: 1000 }))
+    loadProducts()
     dispatch(fetchAllProductImages({ page: 1, page_size: 1000 }))
-  }, [dispatch])
+  }, [loadProducts, dispatch])
 
   useEffect(() => {
     dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
@@ -151,17 +156,9 @@ const Products = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as ProductStatus
-
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${productStatusStyles[status]}`}
-          >
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as ProductStatus} />
+      ),
     },
 
     {
@@ -222,15 +219,10 @@ const Products = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Products
-          </h1>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage your product catalog, pricing, variations, and combo bundles
-          </p>
-        </div>
+        <PageHeading
+          title="Products"
+          description="Manage your product catalog, pricing, variations, and combo bundles"
+        />
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -298,6 +290,9 @@ const Products = () => {
       <DataTable
         columns={columns}
         data={filteredProducts}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadProducts}
         onRowClick={(product) => navigate(`/product_detail/${product.id}`)}
         minWidth="1220px"
         columnWidths={[

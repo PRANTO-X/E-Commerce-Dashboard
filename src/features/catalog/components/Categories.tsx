@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -7,6 +7,8 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import type { Category } from "@/features/catalog/types"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/categorySlice"
@@ -20,14 +22,18 @@ const statusOptions = [
 const Categories = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: categories } = useAppSelector((state) => state.categories)
+  const { data: categories, isLoading, error } = useAppSelector((state) => state.categories)
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
-  useEffect(() => {
+  const loadCategories = useCallback(() => {
     dispatch(fetchAll({ page: 1, page_size: 1000 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
 
   const filteredCategories = categories.filter((category) => {
     if (search && !category.name.toLowerCase().includes(search.toLowerCase())) return false
@@ -80,21 +86,9 @@ const Categories = () => {
     {
       accessorKey: "is_active",
       header: "STATUS",
-      cell: ({ row }) => {
-        const isActive = row.getValue("is_active") as boolean
-
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-              isActive
-                ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                : "bg-red-500/10 text-red-400 border border-red-500/20"
-            }`}
-          >
-            {isActive ? "active" : "inactive"}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
+      ),
     },
 
     {
@@ -130,16 +124,10 @@ const Categories = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Categories
-          </h1>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Organize and manage product categories to structure your catalog
-            efficiently
-          </p>
-        </div>
+        <PageHeading
+          title="Categories"
+          description="Organize and manage product categories to structure your catalog efficiently"
+        />
 
         <Button variant="apply" size="action" onClick={() => navigate("/category_form/new")}>
           <PlusIcon className="size-5" />
@@ -168,6 +156,9 @@ const Categories = () => {
       <DataTable
         columns={columns}
         data={filteredCategories}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadCategories}
         onRowClick={(category) => navigate(`/category_form/${category.id}`)}
         minWidth="1080px"
         columnWidths={[

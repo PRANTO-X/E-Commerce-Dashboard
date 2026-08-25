@@ -1,5 +1,6 @@
 import { DownloadIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { PageHeading } from "@/components/common/PageHeading"
 import { RevenueOrdersChart } from "./RevenueOrdersChart"
 import { SalesByCategoryChart } from "./SalesByCategoryChart"
 import { OrderStatusChart } from "./OrderStatusChart"
@@ -11,14 +12,10 @@ const Reports = () => {
     <div className="section-container space-y-8 print-area">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Reports & Analytics
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Comprehensive insights across your enterprise operations.
-          </p>
-        </div>
+        <PageHeading
+          title="Reports & Analytics"
+          description="Comprehensive insights across your enterprise operations."
+        />
 
         <Button variant="primary" size="action" onClick={()=> window.print()}>
           <DownloadIcon className="size-5" />

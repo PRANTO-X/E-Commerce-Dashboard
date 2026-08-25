@@ -100,7 +100,7 @@ const Navbar = () => {
   }
 
   return (
-    <header className="bg-white dark:bg-[#06110f]">
+    <header className="bg-background">
       <nav className="flex items-center justify-between p-4 sm:p-5">
         <div className="flex items-center gap-4 flex-1 max-w-[460px]">
           <SidebarTrigger className="rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white/90 shrink-0" />
@@ -139,7 +139,7 @@ const Navbar = () => {
           {/* Theme */}
           <button
             onClick={toggleTheme}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-[#16312b] dark:bg-[#06110f] dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800"
           >
             {theme === "light" ? (
               <MoonIcon className="size-5" />
@@ -151,7 +151,10 @@ const Navbar = () => {
           {/* Notification */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-[#1e413a] dark:bg-[#06110f] dark:text-gray-400 dark:hover:bg-gray-800">
+              <button
+                aria-label="Notifications"
+                className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-input dark:bg-background dark:text-gray-400 dark:hover:bg-gray-800"
+              >
                 <BellIcon className="size-5" />
 
                 <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring ring-white dark:ring-gray-800" />
@@ -159,7 +162,7 @@ const Navbar = () => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-80 rounded-2xl">
-              <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-[#16312b] dark:text-white/90">
+              <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
                 Notifications
               </DropdownMenuLabel>
 
@@ -193,7 +196,7 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Open user profile menu"
-                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-200 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none dark:border-[#1e413a]"
+                className="flex size-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-200 ring-2 ring-transparent transition-all hover:ring-primary-500/20 focus:outline-none focus-visible:ring-primary-500/40 dark:border-input"
               >
                 <Avatar className="size-full">
                   {user?.profile_picture ? (

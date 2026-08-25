@@ -5,21 +5,13 @@ import { ArrowLeft, CreditCard, RotateCcw, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPayment, refundPayment } from "@/features/payments/slices/paymentSlice"
-import type { PaymentTransactionState } from "@/features/payments/types"
-
-const statusStyles: Record<PaymentTransactionState, string> = {
-  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  succeeded: "bg-green-500/10 text-green-500 border-green-500/20",
-  failed: "bg-red-500/10 text-red-500 border-red-500/20",
-  cancelled: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-}
 
 const PaymentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -110,9 +102,7 @@ const PaymentDetail = () => {
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline" className={statusStyles[payment.status]}>
-                {payment.status}
-              </Badge>
+              <StatusBadge status={payment.status} />
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Processed At</span>

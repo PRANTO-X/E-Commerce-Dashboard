@@ -32,12 +32,8 @@ export const productTypeOptions: { label: string; value: ProductType }[] = [
   { label: "Bundle", value: "bundle" },
 ]
 
-export const productStatusStyles: Record<ProductStatus, string> = {
-  draft: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  active: "bg-green-500/10 text-green-400 border border-green-500/20",
-  inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
-  archived: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
-}
+// Product status colors are resolved by the shared <StatusBadge> (src/components/common/StatusBadge.tsx)
+// via its canonical status->tone map — see that file rather than duplicating a color map here.
 
 // Hand-transcribed from AdminProduct — note there is no flat price/stock/image/rating/sales
 // here like the old mock ProductItem had. base_price is a decimal string per the API.

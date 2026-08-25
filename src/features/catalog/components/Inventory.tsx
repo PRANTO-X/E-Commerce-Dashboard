@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { DownloadIcon, SlidersHorizontal } from "lucide-react"
 import InventoryStatsCards from "./InventoryStatsCards"
@@ -23,16 +23,13 @@ import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productS
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
 import { adjustStock } from "@/features/catalog/slices/inventorySlice"
 import type { Variant } from "@/features/catalog/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { toast } from "sonner"
-
-const statusStyles = {
-  active: "bg-green-500/10 text-green-400 border border-green-500/20",
-  inactive: "bg-red-500/10 text-red-400 border border-red-500/20",
-} as const
 
 const Inventory = () => {
   const dispatch = useAppDispatch()
-  const { data: variants } = useAppSelector((state) => state.variants)
+  const { data: variants, isLoading, error } = useAppSelector((state) => state.variants)
   const { data: products } = useAppSelector((state) => state.products)
 
   const [adjustingVariant, setAdjustingVariant] = useState<Variant | null>(null)
@@ -41,11 +38,15 @@ const Inventory = () => {
   const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState("")
 
-  useEffect(() => {
+  const loadVariants = useCallback(() => {
     dispatch(fetchAllVariants({ page: 1, page_size: 1000 }))
+  }, [dispatch])
+
+  useEffect(() => {
+    loadVariants()
     dispatch(fetchAllProducts({ page: 1, page_size: 100 }))
     dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
-  }, [dispatch])
+  }, [loadVariants, dispatch])
 
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "—"
 
@@ -110,14 +111,9 @@ const Inventory = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as keyof typeof statusStyles
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as string} />
+      ),
     },
     {
       accessorKey: "price",
@@ -156,12 +152,10 @@ const Inventory = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Inventory</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track variant stock levels and record manual adjustments
-          </p>
-        </div>
+        <PageHeading
+          title="Inventory"
+          description="Track variant stock levels and record manual adjustments"
+        />
 
         <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Inventory")}>
           <DownloadIcon className="size-5" />
@@ -180,6 +174,9 @@ const Inventory = () => {
       <DataTable
         columns={columns}
         data={filteredVariants}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadVariants}
         onRowClick={(v) => setAdjustingVariant(v)}
         minWidth="980px"
         columnWidths={["220px", "180px", "140px", "100px", "110px", "110px", "120px"]}

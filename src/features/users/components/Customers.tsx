@@ -3,9 +3,11 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { DownloadIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -20,15 +22,19 @@ const status = [
 const Customers = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: users } = useAppSelector((state) => state.customers)
+  const { data: users, isLoading, error } = useAppSelector((state) => state.customers)
   const allCustomers = users.filter((u) => u.role === "customer")
 
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
 
-  useEffect(() => {
+  const loadCustomers = useCallback(() => {
     dispatch(fetchAll())
   }, [dispatch])
+
+  useEffect(() => {
+    loadCustomers()
+  }, [loadCustomers])
 
   const customers = allCustomers.filter((customer) => {
     if (search) {
@@ -80,15 +86,7 @@ const Customers = () => {
       accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-            row.getValue("is_active")
-              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-              : "bg-red-500/10 text-red-400 border border-red-500/20"
-          }`}
-        >
-          {row.getValue("is_active") ? "Active" : "Inactive"}
-        </span>
+        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
       ),
     },
     {
@@ -114,12 +112,10 @@ const Customers = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Customers</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage your registered customer accounts.
-          </p>
-        </div>
+        <PageHeading
+          title="Customers"
+          description="Manage your registered customer accounts."
+        />
 
         <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Customers")}>
           <DownloadIcon className="size-5" /> Export CSV
@@ -148,6 +144,9 @@ const Customers = () => {
         <DataTable
           columns={columns}
           data={customers}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadCustomers}
           onRowClick={(customer) => navigate(`/customer_detail/${customer.id}`)}
           minWidth="900px"
           columnWidths={["280px", "160px", "140px", "120px", "100px"]}

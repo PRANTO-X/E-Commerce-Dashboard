@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
+import { StatusBadge } from "@/components/common/StatusBadge"
 
 import {
   productStatusOptions,
@@ -1341,16 +1342,7 @@ const ProductForm = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-foreground">${Number(variant.price).toFixed(2)}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            variant.status === "active"
-                              ? "bg-green-500/10 text-green-500 border-green-500/20"
-                              : "bg-red-500/10 text-red-500 border-red-500/20"
-                          }
-                        >
-                          {variant.status}
-                        </Badge>
+                        <StatusBadge status={variant.status} />
                         <Button
                           type="button"
                           variant="ghost"

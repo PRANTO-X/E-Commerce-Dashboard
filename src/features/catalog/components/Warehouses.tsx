@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchWarehouses, createWarehouse } from "@/features/catalog/slices/inventorySlice"
@@ -16,7 +18,7 @@ import type { Warehouse } from "@/features/catalog/types"
 
 const Warehouses = () => {
   const dispatch = useAppDispatch()
-  const { warehouses } = useAppSelector((state) => state.inventory)
+  const { warehouses, isLoading, error } = useAppSelector((state) => state.inventory)
 
   const [name, setName] = useState("")
   const [code, setCode] = useState("")
@@ -26,9 +28,13 @@ const Warehouses = () => {
   const [isActive, setIsActive] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadWarehouses = useCallback(() => {
     dispatch(fetchWarehouses())
   }, [dispatch])
+
+  useEffect(() => {
+    loadWarehouses()
+  }, [loadWarehouses])
 
   const handleCreate = async () => {
     if (!name.trim() || !code.trim()) return
@@ -72,27 +78,17 @@ const Warehouses = () => {
       accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-            row.getValue("is_active")
-              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-              : "bg-red-500/10 text-red-400 border border-red-500/20"
-          }`}
-        >
-          {row.getValue("is_active") ? "active" : "inactive"}
-        </span>
+        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
       ),
     },
   ]
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Warehouses</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage warehouse locations used for stock allocation
-        </p>
-      </div>
+      <PageHeading
+        title="Warehouses"
+        description="Manage warehouse locations used for stock allocation"
+      />
 
       <Card>
         <CardHeader>
@@ -147,6 +143,9 @@ const Warehouses = () => {
       <DataTable
         columns={columns}
         data={warehouses}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadWarehouses}
         showPagination={false}
         minWidth="900px"
         columnWidths={["200px", "120px", "140px", "220px", "100px", "120px"]}

@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllFlashSales, postData as postFlashSale } from "@/features/marketing/slices/flashSaleSlice"
 import { fetchAll as fetchAllFlashSaleItems, postData as postFlashSaleItem } from "@/features/marketing/slices/flashSaleItemSlice"
@@ -107,12 +109,10 @@ const FlashSales = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Flash Sales</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Schedule time-boxed flash sales and set discounted variant pricing
-        </p>
-      </div>
+      <PageHeading
+        title="Flash Sales"
+        description="Schedule time-boxed flash sales and set discounted variant pricing"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
@@ -146,9 +146,7 @@ const FlashSales = () => {
                 >
                   <div className="flex justify-between">
                     <span>{sale.name}</span>
-                    <span className={sale.is_active ? "text-green-500" : "text-muted-foreground"}>
-                      {sale.is_active ? "active" : "inactive"}
-                    </span>
+                    <StatusBadge status={sale.is_active ? "active" : "inactive"} />
                   </div>
                 </div>
               ))}

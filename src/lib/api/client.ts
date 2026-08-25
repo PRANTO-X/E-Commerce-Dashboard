@@ -73,3 +73,20 @@ export function extractApiError(err: unknown): unknown {
   }
   return { error: String(err) }
 }
+
+// The backend's error shape varies by failure type (DRF field errors, a plain
+// detail/message string, or a generic envelope) — pull out whatever it actually
+// says rather than showing a generic message for every kind of failure.
+export function getApiErrorMessage(err: unknown, fallback = "Something went wrong. Please try again."): string {
+  if (err && typeof err === "object") {
+    const data = err as Record<string, unknown>
+    const detail = data.message ?? data.detail ?? data.error
+    if (typeof detail === "string" && detail.trim()) return detail
+
+    for (const key of ["non_field_errors", "email", "password"]) {
+      const value = data[key]
+      if (Array.isArray(value) && typeof value[0] === "string") return value[0]
+    }
+  }
+  return fallback
+}

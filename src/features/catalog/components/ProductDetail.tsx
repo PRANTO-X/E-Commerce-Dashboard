@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { productStatusStyles, type ProductStatus } from "@/features/catalog/types"
+import type { ProductStatus } from "@/features/catalog/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle } from "@/features/catalog/slices/productSlice"
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
@@ -155,9 +156,7 @@ const ProductDetail = () => {
           <CardContent className="p-6 flex-1 flex flex-col">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <Badge className={`${productStatusStyles[product.status as ProductStatus]} border-none mb-2`}>
-                  {product.status.toUpperCase()}
-                </Badge>
+                <StatusBadge status={product.status as ProductStatus} className="border-none mb-2" />
                 <h2 className="text-2xl font-bold text-foreground">
                   {product.name}
                 </h2>

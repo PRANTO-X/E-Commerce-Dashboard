@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useCallback } from "react"
 import { ShoppingCart, Users, Package, DollarSign, PackageOpen, ShoppingBag } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -13,19 +13,15 @@ import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
 import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 import { fetchAll as fetchAllCustomers } from "@/features/users/slices/customerSlice"
 import { fetchAnalyticsSummary } from "@/features/analytics/slices/analyticsSlice"
-
-const statusStyles = {
-  Paid: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500",
-  Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500",
-  Failed: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500",
-} as const
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 
 type OrderRow = {
   id: string
   order_number: string
   customer: string
   amount: string
-  status: keyof typeof statusStyles
+  status: "Paid" | "Pending" | "Failed"
   date: string
 }
 
@@ -33,17 +29,21 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const { data: orders } = useAppSelector((state) => state.orders)
+  const { data: orders, isLoading: ordersLoading, error: ordersError } = useAppSelector((state) => state.orders)
   const { data: products } = useAppSelector((state) => state.products)
   const { data: customers } = useAppSelector((state) => state.customers)
   const { summary: analyticsSummary } = useAppSelector((state) => state.analytics)
 
-  useEffect(() => {
+  const loadRecentOrders = useCallback(() => {
     dispatch(fetchAllOrders({ page: 1, page_size: 20 }))
+  }, [dispatch])
+
+  useEffect(() => {
+    loadRecentOrders()
     dispatch(fetchAllProducts({ page: 1, page_size: 20 }))
     dispatch(fetchAllCustomers())
     dispatch(fetchAnalyticsSummary())
-  }, [dispatch])
+  }, [loadRecentOrders, dispatch])
 
   // Compute live revenue from paid orders or analytics
   const computedRevenue = useMemo(() => {
@@ -115,17 +115,9 @@ const Dashboard = () => {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as keyof typeof statusStyles
-        return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status] || statusStyles.Pending}`}
-          >
-            <span className="size-1.5 rounded-full bg-current" />
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as string} />
+      ),
     },
     {
       accessorKey: "date",
@@ -144,7 +136,7 @@ const Dashboard = () => {
         ? [ord.customer.first_name, ord.customer.last_name].filter(Boolean).join(" ") || ord.customer.email
         : "Guest Customer"
       
-      const status: keyof typeof statusStyles =
+      const status: OrderRow["status"] =
         ord.payment_status === "paid"
           ? "Paid"
           : ord.status === "cancelled"
@@ -178,14 +170,10 @@ const Dashboard = () => {
   return (
     <div className="section-container">
       <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="mb-1 text-xl font-semibold text-gray-800 dark:text-white/90">
-            Overview
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Real-time dynamic performance metrics for your store.
-          </p>
-        </div>
+        <PageHeading
+          title="Overview"
+          description="Real-time dynamic performance metrics for your store."
+        />
       </div>
 
       {/* Metric stat cards */}
@@ -203,8 +191,8 @@ const Dashboard = () => {
       {/* Table & ProgressBar */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Order Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-[#16312b] dark:bg-[#0b1a17]">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-[#16312b]">
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-border dark:bg-card">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-border">
             <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
               Recent Orders
             </h2>
@@ -219,6 +207,9 @@ const Dashboard = () => {
             <DataTable
               columns={columns}
               data={recentOrders}
+              isLoading={ordersLoading}
+              error={ordersError}
+              onRetry={loadRecentOrders}
               onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
               showPagination={false}
               minWidth="600px"
@@ -231,7 +222,7 @@ const Dashboard = () => {
         </div>
 
         {/* Progress Bar Top Products */}
-        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-[#16312b] dark:bg-[#0b1a17] flex flex-col justify-between">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-border dark:bg-card flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">

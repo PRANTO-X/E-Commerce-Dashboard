@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import type { DateRange } from "react-day-picker"
 import { DatePicker } from "./DatePicker"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
@@ -8,42 +8,31 @@ import { DownloadIcon } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { Button } from "@/components/ui/button"
 import { exportToCSV } from "@/utility/ExportToCsv"
 import type { OrderDetail, OrderStatus, PaymentStatus } from "@/features/sales/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
 
-const paymentStatusStyle: Record<PaymentStatus, string> = {
-  paid: "bg-green-500/10 text-green-500",
-  pending: "bg-yellow-500/10 text-yellow-500",
-  failed: "bg-red-500/10 text-red-500",
-  partially_refunded: "bg-purple-500/10 text-purple-500",
-  refunded: "bg-purple-500/10 text-purple-500",
-}
-
-const fulfillmentStatusStyles: Record<OrderStatus, string> = {
-  pending_payment: "bg-gray-500/10 text-gray-500",
-  placed: "bg-blue-500/10 text-blue-500",
-  processing: "bg-blue-500/10 text-blue-500",
-  shipped: "bg-green-500/10 text-green-500",
-  delivered: "bg-emerald-500/10 text-emerald-500",
-  cancelled: "bg-red-500/10 text-red-500",
-}
-
 const Orders = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: orders } = useAppSelector((state) => state.orders)
+  const { data: orders, isLoading, error } = useAppSelector((state) => state.orders)
 
   const [search, setSearch] = useState("")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<{ label: string; value: string } | null>(null)
   const [fulfillmentStatusFilter, setFulfillmentStatusFilter] = useState<{ label: string; value: string } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
-  useEffect(() => {
+  const loadOrders = useCallback(() => {
     dispatch(fetchAll({ page: 1, page_size: 1000 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const filteredOrders = orders.filter((order) => {
     if (
@@ -112,26 +101,16 @@ const Orders = () => {
     {
       accessorKey: "payment_status",
       header: "PAYMENT",
-      cell: ({ row }) => {
-        const status = row.getValue("payment_status") as PaymentStatus
-        return (
-          <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${paymentStatusStyle[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("payment_status") as PaymentStatus} />
+      ),
     },
     {
       accessorKey: "status",
       header: "FULFILLMENT",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as OrderStatus
-        return (
-          <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${fulfillmentStatusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as OrderStatus} />
+      ),
     },
     {
       accessorKey: "created_at",
@@ -170,15 +149,10 @@ const Orders = () => {
     <div className="section-container">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Orders
-          </h1>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Monitor and manage all customer transactions.
-          </p>
-        </div>
+        <PageHeading
+          title="Orders"
+          description="Monitor and manage all customer transactions."
+        />
 
         <Button
           variant="primary"
@@ -223,6 +197,9 @@ const Orders = () => {
         <DataTable
           columns={columns}
           data={filteredOrders}
+          isLoading={isLoading}
+          error={error}
+          onRetry={loadOrders}
           onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
           minWidth="1050px"
           columnWidths={[

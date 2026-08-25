@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
@@ -196,9 +196,7 @@ const CustomerDetail = () => {
             </div>
             <div>
               <p className="font-bold text-lg">{name || "—"}</p>
-              <Badge variant="outline" className={customer.is_active ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}>
-                {customer.is_active ? "Active" : "Inactive"}
-              </Badge>
+              <StatusBadge status={customer.is_active ? "active" : "inactive"} />
             </div>
           </div>
           <Separator />
@@ -251,9 +249,7 @@ const CustomerDetail = () => {
                     <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>${Number(order.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={order.status === "shipped" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"}>
-                        {order.status}
-                      </Badge>
+                      <StatusBadge status={order.status} />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/order_detail/${order.id}`)}>

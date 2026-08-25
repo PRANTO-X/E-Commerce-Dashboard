@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -16,6 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchCouriers, createCourier } from "@/features/shipping/slices/shippingSlice"
@@ -30,7 +32,7 @@ const providerOptions: { label: string; value: CourierProvider }[] = [
 
 const Couriers = () => {
   const dispatch = useAppDispatch()
-  const { couriers } = useAppSelector((state) => state.shipping)
+  const { couriers, isLoading, error } = useAppSelector((state) => state.shipping)
 
   const [provider, setProvider] = useState<CourierProvider | "">("")
   const [displayName, setDisplayName] = useState("")
@@ -38,9 +40,13 @@ const Couriers = () => {
   const [isActive, setIsActive] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  const loadCouriers = useCallback(() => {
     dispatch(fetchCouriers())
   }, [dispatch])
+
+  useEffect(() => {
+    loadCouriers()
+  }, [loadCouriers])
 
   const handleCreate = async () => {
     if (!provider || !displayName.trim()) return
@@ -78,27 +84,17 @@ const Couriers = () => {
       accessorKey: "is_active",
       header: "STATUS",
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-            row.getValue("is_active")
-              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-              : "bg-red-500/10 text-red-400 border border-red-500/20"
-          }`}
-        >
-          {row.getValue("is_active") ? "active" : "inactive"}
-        </span>
+        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
       ),
     },
   ]
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Couriers</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage courier integrations used to ship orders
-        </p>
-      </div>
+      <PageHeading
+        title="Couriers"
+        description="Manage courier integrations used to ship orders"
+      />
 
       <Card>
         <CardHeader>
@@ -152,6 +148,9 @@ const Couriers = () => {
       <DataTable
         columns={columns}
         data={couriers}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadCouriers}
         showPagination={false}
         minWidth="750px"
         columnWidths={["200px", "140px", "260px", "120px"]}

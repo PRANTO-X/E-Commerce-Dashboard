@@ -1,32 +1,29 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
 import type { ReturnRequest, ReturnStatus } from "@/features/returns/types"
 
-const statusStyles: Partial<Record<ReturnStatus, string>> = {
-  pending_review: "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20",
-  approved: "bg-blue-500/10 text-blue-500 border border-blue-500/20",
-  rejected: "bg-red-500/10 text-red-500 border border-red-500/20",
-  refunded: "bg-green-500/10 text-green-500 border border-green-500/20",
-  replaced: "bg-green-500/10 text-green-500 border border-green-500/20",
-  completed: "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20",
-}
-
 const Returns = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: returns } = useAppSelector((state) => state.returns)
+  const { data: returns, isLoading, error } = useAppSelector((state) => state.returns)
   const { data: orders } = useAppSelector((state) => state.orders)
 
-  useEffect(() => {
+  const loadReturns = useCallback(() => {
     dispatch(fetchAllReturns())
-    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadReturns()
+    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
+  }, [loadReturns, dispatch])
 
   const orderNumber = (orderId: string) => orders.find((o) => o.id === orderId)?.order_number ?? orderId
 
@@ -57,18 +54,9 @@ const Returns = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as ReturnStatus
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-              statusStyles[status] ?? "bg-gray-500/10 text-gray-500 border border-gray-500/20"
-            }`}
-          >
-            {status.replace("_", " ")}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as ReturnStatus} />
+      ),
     },
     {
       accessorKey: "created_at",
@@ -93,16 +81,17 @@ const Returns = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Returns</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Review and process customer return requests
-        </p>
-      </div>
+      <PageHeading
+        title="Returns"
+        description="Review and process customer return requests"
+      />
 
       <DataTable
         columns={columns}
         data={returns}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadReturns}
         onRowClick={(ret) => navigate(`/return_detail/${ret.id}`)}
         showPagination={false}
         minWidth="950px"

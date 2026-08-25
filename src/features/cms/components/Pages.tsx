@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { TableActions } from "@/components/common/TableActions"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/cms/slices/pageSlice"
@@ -14,11 +16,15 @@ const Pages = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
-  const { data: pages, totalItems, meta } = useAppSelector((state) => state.pages)
+  const { data: pages, totalItems, meta, isLoading, error } = useAppSelector((state) => state.pages)
 
-  useEffect(() => {
+  const loadPages = useCallback(() => {
     dispatch(fetchAll({ page }))
   }, [dispatch, page])
+
+  useEffect(() => {
+    loadPages()
+  }, [loadPages])
 
   const columns: ColumnDef<ContentPage>[] = [
     { accessorKey: "title", header: "TITLE" },
@@ -32,15 +38,7 @@ const Pages = () => {
       accessorKey: "is_published",
       header: "STATUS",
       cell: ({ row }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-            row.getValue("is_published")
-              ? "bg-green-500/10 text-green-400 border border-green-500/20"
-              : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
-          }`}
-        >
-          {row.getValue("is_published") ? "published" : "draft"}
-        </span>
+        <StatusBadge status={row.getValue("is_published") ? "published" : "draft"} />
       ),
     },
     {
@@ -70,12 +68,10 @@ const Pages = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Content Pages</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage static and landing pages shown on the storefront
-          </p>
-        </div>
+        <PageHeading
+          title="Content Pages"
+          description="Manage static and landing pages shown on the storefront"
+        />
         <Button variant="primary" size="action" onClick={() => navigate("/page_form/new")}>
           <PlusIcon className="size-5" /> Add Page
         </Button>
@@ -84,6 +80,9 @@ const Pages = () => {
       <DataTable
         columns={columns}
         data={pages}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadPages}
         onRowClick={(contentPage) => navigate(`/page_form/${contentPage.id}`)}
         manualPagination
         pageIndex={page - 1}

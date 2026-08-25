@@ -1,27 +1,26 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
 import type { Payment, PaymentTransactionState } from "@/features/payments/types"
 
-const statusStyles: Record<PaymentTransactionState, string> = {
-  pending: "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20",
-  succeeded: "bg-green-500/10 text-green-500 border border-green-500/20",
-  failed: "bg-red-500/10 text-red-500 border border-red-500/20",
-  cancelled: "bg-gray-500/10 text-gray-500 border border-gray-500/20",
-}
-
 const Payments = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: payments } = useAppSelector((state) => state.payments)
+  const { data: payments, isLoading, error } = useAppSelector((state) => state.payments)
 
-  useEffect(() => {
+  const loadPayments = useCallback(() => {
     dispatch(fetchAllPayments())
   }, [dispatch])
+
+  useEffect(() => {
+    loadPayments()
+  }, [loadPayments])
 
   const columns: ColumnDef<Payment>[] = [
     {
@@ -54,14 +53,9 @@ const Payments = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as PaymentTransactionState
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as PaymentTransactionState} />
+      ),
     },
     {
       accessorKey: "created_at",
@@ -86,16 +80,17 @@ const Payments = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Payments</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Track payment transactions and process refunds
-        </p>
-      </div>
+      <PageHeading
+        title="Payments"
+        description="Track payment transactions and process refunds"
+      />
 
       <DataTable
         columns={columns}
         data={payments}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadPayments}
         onRowClick={(payment) => navigate(`/payment_detail/${payment.id}`)}
         showPagination={false}
         minWidth="950px"

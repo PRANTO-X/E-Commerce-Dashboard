@@ -1,27 +1,26 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchReservations } from "@/features/catalog/slices/inventorySlice"
 import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
 import type { StockReservation, StockReservationStatus } from "@/features/catalog/types"
 
-const statusStyles: Record<StockReservationStatus, string> = {
-  active: "bg-green-500/10 text-green-400 border border-green-500/20",
-  consumed: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  released: "bg-gray-500/10 text-gray-400 border border-gray-500/20",
-  expired: "bg-red-500/10 text-red-400 border border-red-500/20",
-}
-
 const Reservations = () => {
   const dispatch = useAppDispatch()
-  const { reservations } = useAppSelector((state) => state.inventory)
+  const { reservations, isLoading, error } = useAppSelector((state) => state.inventory)
   const { data: variants } = useAppSelector((state) => state.variants)
 
-  useEffect(() => {
+  const loadReservations = useCallback(() => {
     dispatch(fetchReservations())
-    dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
   }, [dispatch])
+
+  useEffect(() => {
+    loadReservations()
+    dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
+  }, [loadReservations, dispatch])
 
   const variantLabel = (id: string) => {
     const variant = variants.find((v) => v.id === id)
@@ -43,14 +42,9 @@ const Reservations = () => {
     {
       accessorKey: "status",
       header: "STATUS",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as StockReservationStatus
-        return (
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status]}`}>
-            {status}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.getValue("status") as StockReservationStatus} />
+      ),
     },
     {
       accessorKey: "expires_at",
@@ -74,16 +68,17 @@ const Reservations = () => {
 
   return (
     <div className="section-container">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Stock Reservations</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Active stock holds from in-progress checkouts and orders
-        </p>
-      </div>
+      <PageHeading
+        title="Stock Reservations"
+        description="Active stock holds from in-progress checkouts and orders"
+      />
 
       <DataTable
         columns={columns}
         data={reservations}
+        isLoading={isLoading}
+        error={error}
+        onRetry={loadReservations}
         showPagination={false}
         minWidth="900px"
         columnWidths={["260px", "110px", "120px", "200px", "200px"]}
