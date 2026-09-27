@@ -6,12 +6,15 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { AlertCircle, ArrowLeft, Calendar, Edit } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle } from "@/features/marketing/slices/campaignSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: campaign, isLoading } = useAppSelector((state) => state.campaigns)
+
+  useDocumentTitle(campaign?.name ? `${campaign.name} — Campaign` : "Campaign Details")
 
   useEffect(() => {
     if (id) dispatch(fetchSingle(id))
@@ -56,7 +59,12 @@ const CampaignDetail = () => {
 
       {campaign.banner_image && (
         <div className="rounded-xl overflow-hidden border border-border max-h-64">
-          <img src={campaign.banner_image} alt={campaign.name} className="w-full h-64 object-cover" />
+          <img
+            src={campaign.banner_image}
+            alt={campaign.name}
+            loading="lazy"
+            className="w-full h-40 sm:h-64 object-cover"
+          />
         </div>
       )}
 

@@ -21,8 +21,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/marketing/slices/groupBuySlice"
 import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 import type { GroupBuy } from "@/features/marketing/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const GroupBuys = () => {
+  useDocumentTitle("Group Buys")
+
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
   const { data: groupBuys, totalItems, meta, isLoading, error } = useAppSelector((state) => state.groupBuys)

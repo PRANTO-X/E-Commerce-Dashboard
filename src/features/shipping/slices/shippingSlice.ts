@@ -10,6 +10,10 @@ import type {
   TrackingUpdatePayload,
 } from "../types"
 
+// Not sliceFactory-backed: `couriers` and `shipments` are two separate collections, and
+// every mutating thunk is an action endpoint keyed by order/courier id (book, track, update)
+// rather than a generic `{id}` resource route.
+
 interface ShippingState {
   couriers: CourierIntegration[]
   shipments: CourierShipment[]

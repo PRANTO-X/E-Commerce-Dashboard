@@ -9,10 +9,11 @@ import { DownloadIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/users/slices/customerSlice"
 import type { AdminUser } from "@/features/users/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const status = [
   { label: "Active", value: "active" },
@@ -20,6 +21,8 @@ const status = [
 ]
 
 const Customers = () => {
+  useDocumentTitle("Customers")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: users, isLoading, error } = useAppSelector((state) => state.customers)
@@ -57,7 +60,12 @@ const Customers = () => {
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
               {customer.profile_picture ? (
-                <img src={customer.profile_picture} alt={name} className="h-full w-full object-cover" />
+                <img
+                  src={customer.profile_picture}
+                  alt={name}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 (name || customer.email).charAt(0).toUpperCase()
               )}

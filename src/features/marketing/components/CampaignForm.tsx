@@ -21,6 +21,7 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/marketing/slices/campaignSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const campaignSchema = z.object({
   name: z.string().min(2, "Campaign name must be at least 2 characters"),
@@ -45,6 +46,8 @@ const CampaignForm = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: existing, isLoading } = useAppSelector((state) => state.campaigns)
+
+  useDocumentTitle(existing?.name ? `${existing.name} — Campaign` : "Campaign Form")
 
   const isEditing = id !== "new"
 

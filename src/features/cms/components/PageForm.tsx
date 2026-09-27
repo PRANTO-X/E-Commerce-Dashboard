@@ -23,6 +23,7 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/cms/slices/pageSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const pageSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
@@ -43,6 +44,8 @@ const PageForm = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: existing, isLoading } = useAppSelector((state) => state.pages)
+
+  useDocumentTitle(existing?.title ? `${existing.title} — Page` : "Page Form")
 
   const isEditing = id !== "new"
 

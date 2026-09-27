@@ -35,8 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const CustomerDetail = () => {
+  useDocumentTitle("Customer Details")
+
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -62,6 +65,7 @@ const CustomerDetail = () => {
         await dispatch(activateUser(customer.id)).unwrap()
         toast.success("Customer activated")
       }
+      await refresh()
     } catch {
       toast.error("Failed to update customer status")
     } finally {
@@ -158,7 +162,7 @@ const CustomerDetail = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                <h3 className="text-2xl font-bold mt-1">{customerOrders.length}</h3>
+                <h2 className="text-2xl font-bold mt-1">{customerOrders.length}</h2>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                 <ShoppingBag className="h-6 w-6" />
@@ -172,7 +176,7 @@ const CustomerDetail = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                <h3 className="text-2xl font-bold mt-1">${totalSpent.toFixed(2)}</h3>
+                <h2 className="text-2xl font-bold mt-1">${totalSpent.toFixed(2)}</h2>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
                 <DollarSign className="h-6 w-6" />
@@ -184,7 +188,7 @@ const CustomerDetail = () => {
 
       <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle level={2} className="text-lg flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
             Contact Information
           </CardTitle>
@@ -223,7 +227,7 @@ const CustomerDetail = () => {
 
       <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden">
         <CardHeader className="border-b bg-muted/20">
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle level={2} className="text-lg flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-primary" />
             Recent Orders
           </CardTitle>

@@ -12,8 +12,11 @@ import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchPayment, refundPayment } from "@/features/payments/slices/paymentSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const PaymentDetail = () => {
+  useDocumentTitle("Payment Details")
+
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()

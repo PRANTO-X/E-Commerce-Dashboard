@@ -20,6 +20,7 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/marketing/slices/automationSlice"
 import type { AutomationEvent, AutomationEventType } from "@/features/marketing/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const eventTypeOptions: { label: string; value: AutomationEventType }[] = [
   { label: "Abandoned Cart", value: "abandoned_cart" },
@@ -28,6 +29,8 @@ const eventTypeOptions: { label: string; value: AutomationEventType }[] = [
 ]
 
 const Automations = () => {
+  useDocumentTitle("Automations")
+
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
   const { data: automations, totalItems, meta, isLoading, error } = useAppSelector((state) => state.automations)

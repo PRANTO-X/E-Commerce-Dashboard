@@ -9,8 +9,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
 import type { ReturnRequest, ReturnStatus } from "@/features/returns/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Returns = () => {
+  useDocumentTitle("Returns")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: returns, isLoading, error } = useAppSelector((state) => state.returns)

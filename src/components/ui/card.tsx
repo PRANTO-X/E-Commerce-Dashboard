@@ -33,17 +33,30 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
-        className
-      )}
-      {...props}
-    />
-  )
+type CardTitleLevel = 1 | 2 | 3 | 4 | 5 | 6
+
+type CardTitleProps = React.ComponentProps<"div"> & {
+  level?: CardTitleLevel
+}
+
+const CARD_TITLE_TAGS = {
+  1: "h1",
+  2: "h2",
+  3: "h3",
+  4: "h4",
+  5: "h5",
+  6: "h6",
+} as const satisfies Record<CardTitleLevel, keyof React.JSX.IntrinsicElements>
+
+function CardTitle({ className, level = 3, ...props }: CardTitleProps) {
+  return React.createElement(CARD_TITLE_TAGS[level], {
+    "data-slot": "card-title",
+    className: cn(
+      "m-0 font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+      className
+    ),
+    ...props,
+  })
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {

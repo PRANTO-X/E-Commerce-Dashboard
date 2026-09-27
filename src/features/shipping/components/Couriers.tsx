@@ -22,6 +22,7 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchCouriers, createCourier } from "@/features/shipping/slices/shippingSlice"
 import type { CourierIntegration, CourierProvider } from "@/features/shipping/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const providerOptions: { label: string; value: CourierProvider }[] = [
   { label: "Pathao", value: "pathao" },
@@ -31,6 +32,8 @@ const providerOptions: { label: string; value: CourierProvider }[] = [
 ]
 
 const Couriers = () => {
+  useDocumentTitle("Couriers")
+
   const dispatch = useAppDispatch()
   const { couriers, isLoading, error } = useAppSelector((state) => state.shipping)
 

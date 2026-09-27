@@ -26,8 +26,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Profile = () => {
+  useDocumentTitle("Profile")
+
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
 
@@ -228,16 +231,16 @@ const Profile = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md bg-muted/60 p-1">
-          <TabsTrigger value="general" className="gap-2">
+        <TabsList className="flex w-full max-w-md overflow-x-auto bg-muted/60 p-1">
+          <TabsTrigger value="general" className="min-w-max gap-2">
             <User className="size-4" />
             General
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
+          <TabsTrigger value="security" className="min-w-max gap-2">
             <KeyRound className="size-4" />
             Security
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="gap-2">
+          <TabsTrigger value="permissions" className="min-w-max gap-2">
             <Shield className="size-4" />
             Permissions
           </TabsTrigger>

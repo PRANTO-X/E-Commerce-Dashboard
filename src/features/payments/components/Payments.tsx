@@ -8,8 +8,11 @@ import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
 import type { Payment, PaymentTransactionState } from "@/features/payments/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Payments = () => {
+  useDocumentTitle("Payments")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: payments, isLoading, error } = useAppSelector((state) => state.payments)

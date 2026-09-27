@@ -13,6 +13,7 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { login } from "@/features/authentication/slices/authSlice"
 import { getApiErrorMessage } from "@/lib/api/client"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -22,6 +23,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 const SignInForm = () => {
+  useDocumentTitle("Sign In")
+
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useAppDispatch()

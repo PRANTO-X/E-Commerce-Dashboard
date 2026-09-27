@@ -15,14 +15,17 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { PriceRangeFilter } from "./PriceRangeFilter"
 import { DataTable } from "@/components/common/data-table"
 import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/productSlice"
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
 import { fetchAll as fetchAllProductImages } from "@/features/catalog/slices/productImageSlice"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Products = () => {
+  useDocumentTitle("Products")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: products, isLoading, error } = useAppSelector((state) => state.products)

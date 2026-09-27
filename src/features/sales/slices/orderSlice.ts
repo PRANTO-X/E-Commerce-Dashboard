@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory } from "@/utils/sliceFactory"
+import { createSliceFactory } from "@/lib/sliceFactory"
 import { api, extractApiError } from "@/lib/api/client"
 import { unwrapItem } from "@/lib/api/envelope"
 import type { OrderDetail, UpdatableOrderStatus } from "../types"

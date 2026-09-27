@@ -5,6 +5,10 @@ import type { AdminNotification, AdminNotificationPreference } from "../types"
 
 // Both endpoints are read-only (list only) — notifications are paginated (shape 3), while
 // preferences comes back as a bare array wrapped in {data, message} (shape 1).
+//
+// Not sliceFactory-backed: state holds two independent collections (`notifications` and
+// `preferences`) from two differently-shaped endpoints, so there is no single `data` list
+// for the factory to own.
 
 interface NotificationState {
   notifications: AdminNotification[]

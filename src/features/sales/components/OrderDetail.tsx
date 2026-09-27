@@ -48,6 +48,7 @@ import {
   Clock,
   User,
 } from "lucide-react"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const statusOptions: { label: string; value: UpdatableOrderStatus }[] = [
   { label: "Placed", value: "placed" },
@@ -69,6 +70,8 @@ const OrderDetail = () => {
     rawSingleData && "id" in rawSingleData && rawSingleData.id === id
       ? (rawSingleData as OrderDetailType)
       : allOrders.find((o) => o.id === id)
+
+  useDocumentTitle(order?.order_number ? `${order.order_number} — Order` : "Order Details")
 
   const [nextStatus, setNextStatus] = useState<UpdatableOrderStatus | "">("")
   const [submitting, setSubmitting] = useState(false)

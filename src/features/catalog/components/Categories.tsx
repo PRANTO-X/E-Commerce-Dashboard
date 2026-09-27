@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/catalog/slices/categorySlice"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const statusOptions = [
   { label: "Active", value: "active" },
@@ -20,6 +21,8 @@ const statusOptions = [
 ]
 
 const Categories = () => {
+  useDocumentTitle("Categories")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: categories, isLoading, error } = useAppSelector((state) => state.categories)

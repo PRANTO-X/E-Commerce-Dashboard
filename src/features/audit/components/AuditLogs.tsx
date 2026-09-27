@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/common/data-table"
+import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeading } from "@/components/common/PageHeading"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/audit/slices/auditLogSlice"
 import type { AuditLog } from "@/features/audit/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const AuditLogs = () => {
+  useDocumentTitle("Audit Logs")
+
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
   const [action, setAction] = useState("")
@@ -62,23 +66,32 @@ const AuditLogs = () => {
         description="Track administrative actions performed across the system"
       />
 
-      <div className="rounded-2xl border border-border bg-card/50 p-4 backdrop-blur-sm flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Filter by action (e.g. POST /api/v1/admin/orders/)"
-          value={action}
-          onChange={(e) => {
-            setPage(1)
-            setAction(e.target.value)
-          }}
-        />
-        <Input
-          placeholder="Filter by target type"
-          value={targetType}
-          onChange={(e) => {
-            setPage(1)
-            setTargetType(e.target.value)
-          }}
-        />
+      <FilterToolbar
+        searchPlaceholder="Filter by action (e.g. POST /api/v1/admin/orders/)"
+        searchValue={action}
+        onSearchChange={(value) => {
+          setPage(1)
+          setAction(value)
+        }}
+        filters={[
+          {
+            component: (
+              <Input
+                aria-label="Filter by target type"
+                placeholder="Filter by target type"
+                className="w-full sm:w-[220px]"
+                value={targetType}
+                onChange={(e) => {
+                  setPage(1)
+                  setTargetType(e.target.value)
+                }}
+              />
+            ),
+          },
+        ]}
+      />
+
+      <div className="mt-3 flex justify-end">
         <Button
           type="button"
           variant="outline"

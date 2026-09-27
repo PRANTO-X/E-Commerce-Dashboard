@@ -16,6 +16,7 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, patchData, updateStaffPermissions } from "@/features/users/slices/staffSlice"
 import { permissionCodes, type PermissionCode } from "@/features/users/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const createSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -40,6 +41,8 @@ const StaffForm = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: existing, isLoading } = useAppSelector((state) => state.staffs)
+
+  useDocumentTitle("Staff Form")
 
   const isEditing = id !== "new"
   const [selectedPermissions, setSelectedPermissions] = useState<Set<PermissionCode>>(new Set())

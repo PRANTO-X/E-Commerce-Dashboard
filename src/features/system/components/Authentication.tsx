@@ -26,6 +26,7 @@ import {
 import { SettingToggle } from "@/components/common/SettingToggle"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { updateAuthSettings } from "@/features/system/slices/authSettingsSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 interface LoginMethodMeta {
   id: "email" | "google" | "apple"
@@ -36,6 +37,8 @@ interface LoginMethodMeta {
 }
 
 const Authentication = () => {
+  useDocumentTitle("Authentication")
+
   const dispatch = useAppDispatch()
   const authSettings = useAppSelector((state) => state.authSettings)
   const [isSaving, setIsSaving] = useState(false)

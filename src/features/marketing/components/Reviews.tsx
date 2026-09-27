@@ -11,8 +11,11 @@ import { fetchAll, approveReview, rejectReview } from "@/features/marketing/slic
 import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
 import type { Review, ReviewStatus } from "@/features/marketing/types"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Reviews = () => {
+  useDocumentTitle("Reviews")
+
   const dispatch = useAppDispatch()
   const { data: allReviews, isLoading, error } = useAppSelector((state) => state.reviews)
   const { data: products } = useAppSelector((state) => state.products)

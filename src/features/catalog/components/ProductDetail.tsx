@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -35,6 +36,8 @@ const ProductDetail = () => {
   const { data: allImages } = useAppSelector((state) => state.productImages)
   const { data: allVariants } = useAppSelector((state) => state.variants)
   const { data: allBundleItems } = useAppSelector((state) => state.bundleItems)
+
+  useDocumentTitle(product?.name ? `${product.name} — Product` : "Product Details")
 
   useEffect(() => {
     if (id) {
@@ -179,7 +182,7 @@ const ProductDetail = () => {
             <div className="mt-auto">
               <Separator className="my-4" />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold flex items-center">
                     <Tag className="h-3 w-3 mr-1" /> Product Type

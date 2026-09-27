@@ -23,6 +23,7 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, fetchSingle, postData, updateData } from "@/features/catalog/slices/categorySlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const categorySchema = z.object({
   name: z.string().min(2, "Category name must be at least 2 characters"),
@@ -46,6 +47,8 @@ const CategoryForm = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: categories, singleData: existing, isLoading } = useAppSelector((state) => state.categories)
+
+  useDocumentTitle(existing?.name ? `${existing.name} — Category` : "Category Form")
 
   const isEditing = id !== "new"
 

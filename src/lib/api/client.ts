@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios"
 import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "./tokenStore"
+import { MOCK_API_ENABLED, mockAdapter } from "./mockAdapter"
 
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
@@ -8,6 +9,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
 export const api = axios.create({
   baseURL: API_BASE_URL,
 })
+
+// Swap in the dev-only mock backend when the real one is unreachable. Guarded by
+// import.meta.env.DEV inside the module, so this branch compiles away in production.
+if (MOCK_API_ENABLED) {
+  api.defaults.adapter = mockAdapter
+}
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken()

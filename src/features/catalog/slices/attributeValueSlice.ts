@@ -1,4 +1,4 @@
-import { createSliceFactory } from "@/utils/sliceFactory"
+import { createSliceFactory } from "@/lib/sliceFactory"
 import type { AttributeValue } from "../types"
 
 const { reducer, fetchAll, fetchSingle, postData, updateData, patchData, deleteData } =

@@ -9,13 +9,16 @@ import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import type { Campaign, CampaignStatus } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/campaignSlice"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Campaigns = () => {
+  useDocumentTitle("Campaigns")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: allCampaigns, isLoading, error } = useAppSelector((state) => state.campaigns)

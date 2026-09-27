@@ -1,4 +1,4 @@
-import { createSliceFactory } from "@/utils/sliceFactory"
+import { createSliceFactory } from "@/lib/sliceFactory"
 import type { FlashSale } from "../types"
 
 // Backend only exposes list+create for flash sales (no per-id retrieve/update/delete) —

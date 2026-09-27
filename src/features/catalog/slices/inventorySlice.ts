@@ -11,6 +11,10 @@ import type {
   WarehouseStock,
 } from "../types"
 
+// Not sliceFactory-backed: there is no list resource here. State is a mix of two collections
+// (warehouses, reservations) plus three per-variant maps keyed by variant id, and the
+// mutations (adjustStock, setWarehouseStock) address those sub-resources, not `{id}` records.
+
 // Inventory is not a generic CRUD list (see comment in types.ts) — this slice hand-rolls
 // thunks for the specific read/action endpoints the backend actually exposes.
 

@@ -1,4 +1,10 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
+import {
+  createAsyncThunk,
+  createReducer,
+  createSlice,
+  type ActionReducerMapBuilder,
+  type Reducer,
+} from "@reduxjs/toolkit"
 import { generateId } from "@/lib/utils"
 import { api, extractApiError } from "@/lib/api/client"
 import { unwrapList, unwrapItem, type ListMeta } from "@/lib/api/envelope"
@@ -25,10 +31,17 @@ export function createSliceFactory<T extends WithId>({
   name,
   endpoint,
   seed = [],
+  initialSingleData,
 }: {
   name: string
   endpoint?: string
   seed?: T[]
+  /**
+   * Initial `singleData`. Defaults to an empty object (the original behavior). Domains whose
+   * components distinguish "not loaded yet" from "loaded" by checking `!singleData` must pass
+   * `null` here, otherwise an empty object is truthy and detail pages render as broken.
+   */
+  initialSingleData?: T | null
 }) {
   const resourceUrl = (id: string) => `${endpoint}${id}/`
 
@@ -161,7 +174,7 @@ export function createSliceFactory<T extends WithId>({
     name,
     initialState: {
       data: seed, // For list of items
-      singleData: {} as T | Record<string, never>, // For single item details
+      singleData: (initialSingleData === undefined ? ({} as T) : initialSingleData) as unknown as T | Record<string, never>, // For single item details
       isLoading: false, // Loading state for all actions
       error: null as unknown, // Error handling
       totalItems: seed.length,
@@ -169,7 +182,7 @@ export function createSliceFactory<T extends WithId>({
     },
     reducers: {},
     extraReducers: (builder) => {
-      builder
+      return builder
         // Fetch All
         .addCase(fetchAll.pending, (state) => {
           state.isLoading = true
@@ -273,4 +286,33 @@ export function createSliceFactory<T extends WithId>({
     patchData,
     deleteData,
   }
+}
+
+/**
+ * Layers extra action cases on top of a factory-built reducer, for domains whose
+ * action-endpoint thunks (approve/refund/process/...) also need to write to state.
+ *
+ * This exists because a slice's own thunks must be declared BEFORE their cases are
+ * registered, while the factory call comes first — so the cases cannot be passed into
+ * `createSliceFactory` options. Wrap the exported reducer instead:
+ *
+ *   const { reducer, fetchAll } = createSliceFactory<Review>({ name: "reviews", endpoint })
+ *   export default withExtraCases(reducer, (builder) => {
+ *     builder.addCase(approveReview.fulfilled, (state, action) => { ... })
+ *   })
+ *
+ * Cases run after the factory's own, so they can rely on the factory's state shape.
+ */
+export function withExtraCases<S>(
+  base: Reducer<S>,
+  buildCases: (builder: ActionReducerMapBuilder<S>) => void
+): Reducer<S> {
+  const extra = createReducer(undefined as unknown as S, (builder) => {
+    buildCases(builder)
+    return builder
+  })
+
+  // `createReducer` returns the identical state reference for non-matching actions, so this
+  // composition is a no-op for every action the extra cases don't handle.
+  return (state, action) => extra(base(state, action), action)
 }

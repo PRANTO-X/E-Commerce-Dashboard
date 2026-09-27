@@ -9,13 +9,16 @@ import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import type { Coupon } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/couponSlice"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Coupons = () => {
+  useDocumentTitle("Coupons")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: allCoupons, isLoading, error } = useAppSelector((state) => state.coupons)

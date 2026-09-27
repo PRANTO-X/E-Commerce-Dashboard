@@ -15,6 +15,8 @@ import { fetchAll as fetchAllCustomers } from "@/features/users/slices/customerS
 import { fetchAnalyticsSummary } from "@/features/analytics/slices/analyticsSlice"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { Card } from "@/components/ui/card"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 type OrderRow = {
   id: string
@@ -26,6 +28,8 @@ type OrderRow = {
 }
 
 const Dashboard = () => {
+  useDocumentTitle("Overview")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
@@ -191,8 +195,8 @@ const Dashboard = () => {
       {/* Table & ProgressBar */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Order Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:col-span-8 dark:border-border dark:bg-card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-border">
+        <Card className="gap-0 p-0 md:col-span-8">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
               Recent Orders
             </h2>
@@ -219,10 +223,10 @@ const Dashboard = () => {
               emptyIcon={ShoppingBag}
             />
           </div>
-        </div>
+        </Card>
 
         {/* Progress Bar Top Products */}
-        <div className="rounded-xl border border-gray-100 bg-white p-5 md:col-span-4 dark:border-border dark:bg-card flex flex-col justify-between">
+        <Card className="p-5 md:col-span-4 justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
@@ -255,7 +259,7 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

@@ -11,12 +11,15 @@ import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { Button } from "@/components/ui/button"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import type { OrderDetail, OrderStatus, PaymentStatus } from "@/features/sales/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/sales/slices/orderSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Orders = () => {
+  useDocumentTitle("Orders")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: orders, isLoading, error } = useAppSelector((state) => state.orders)

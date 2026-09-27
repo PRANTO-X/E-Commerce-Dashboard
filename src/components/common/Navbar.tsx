@@ -11,6 +11,7 @@ import {
   Ticket,
   Megaphone,
   FileText,
+  SearchIcon,
 } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
 
@@ -24,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { logout } from "@/features/authentication/slices/authSlice"
@@ -39,6 +40,9 @@ const quickCreateItems = [
 
 const Navbar = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light")
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const mobileSearchTriggerRef = useRef<HTMLButtonElement>(null)
+  const wasMobileSearchOpen = useRef(false)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
@@ -99,6 +103,14 @@ const Navbar = () => {
     }
   }
 
+  // return focus to the mobile search trigger once the sheet closes
+  useEffect(() => {
+    if (wasMobileSearchOpen.current && !mobileSearchOpen) {
+      mobileSearchTriggerRef.current?.focus()
+    }
+    wasMobileSearchOpen.current = mobileSearchOpen
+  }, [mobileSearchOpen])
+
   return (
     <header className="bg-background">
       <nav className="flex items-center justify-between p-4 sm:p-5">
@@ -107,8 +119,22 @@ const Navbar = () => {
 
           {/* Search */}
           <div className="relative hidden sm:flex w-full">
-            <GlobalSearch />
+            <GlobalSearch
+              mobileOpen={mobileSearchOpen}
+              onMobileOpenChange={setMobileSearchOpen}
+            />
           </div>
+
+          <button
+            ref={mobileSearchTriggerRef}
+            type="button"
+            aria-label="Open search"
+            aria-expanded={mobileSearchOpen}
+            onClick={() => setMobileSearchOpen(true)}
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-gray-200 text-gray-700 shadow-xs transition-colors hover:bg-gray-50 dark:border-border dark:bg-background dark:text-gray-300 dark:hover:bg-gray-800 sm:hidden"
+          >
+            <SearchIcon className="size-5" />
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -161,7 +187,7 @@ const Navbar = () => {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-80 rounded-2xl">
+            <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl">
               <DropdownMenuLabel className="border-b border-gray-100 px-4 py-4 text-lg font-semibold text-gray-800 dark:border-border dark:text-white/90">
                 Notifications
               </DropdownMenuLabel>

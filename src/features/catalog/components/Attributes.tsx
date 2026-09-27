@@ -19,6 +19,7 @@ import {
   postData as postAttributeValue,
   deleteData as deleteAttributeValue,
 } from "@/features/catalog/slices/attributeValueSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const slugify = (value: string) =>
   value
@@ -28,6 +29,8 @@ const slugify = (value: string) =>
     .replace(/(^-|-$)/g, "")
 
 const Attributes = () => {
+  useDocumentTitle("Attributes")
+
   const dispatch = useAppDispatch()
   const { data: attributes } = useAppSelector((state) => state.attributes)
   const { data: attributeValues } = useAppSelector((state) => state.attributeValues)
@@ -131,8 +134,17 @@ const Attributes = () => {
               {attributes.map((attr) => (
                 <div
                   key={attr.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selectedAttributeId === attr.id}
                   onClick={() => setSelectedAttributeId(attr.id)}
-                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return
+                    if (e.key !== "Enter" && e.key !== " ") return
+                    e.preventDefault()
+                    setSelectedAttributeId(attr.id)
+                  }}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
                     selectedAttributeId === attr.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
                   }`}
                 >

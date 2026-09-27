@@ -7,8 +7,11 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchShipments } from "@/features/shipping/slices/shippingSlice"
 import type { CourierShipment, CourierShipmentStatus } from "@/features/shipping/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Shipments = () => {
+  useDocumentTitle("Shipments")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { shipments, isLoading, error } = useAppSelector((state) => state.shipping)

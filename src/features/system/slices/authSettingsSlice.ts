@@ -1,5 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
-import { defaultAuthSettings, type AuthSettings } from "@/assets/Data"
+import { defaultAuthSettings, type AuthSettings } from "@/features/system/settingsDefaults"
+
+// Not sliceFactory-backed: a single settings document mutated through a local reducer, with
+// no list, no detail fetch, and no backend endpoint.
 
 const authSettingsSlice = createSlice({
   name: "authSettings",

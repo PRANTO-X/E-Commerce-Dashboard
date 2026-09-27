@@ -21,8 +21,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllFlashSales, postData as postFlashSale } from "@/features/marketing/slices/flashSaleSlice"
 import { fetchAll as fetchAllFlashSaleItems, postData as postFlashSaleItem } from "@/features/marketing/slices/flashSaleItemSlice"
 import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const FlashSales = () => {
+  useDocumentTitle("Flash Sales")
+
   const dispatch = useAppDispatch()
   const { data: flashSales } = useAppSelector((state) => state.flashSales)
   const { data: items } = useAppSelector((state) => state.flashSaleItems)
@@ -137,10 +140,12 @@ const FlashSales = () => {
                 <p className="text-sm text-muted-foreground py-4 text-center">No flash sales yet.</p>
               )}
               {flashSales.map((sale) => (
-                <div
+                <button
                   key={sale.id}
+                  type="button"
+                  aria-pressed={selectedSaleId === sale.id}
                   onClick={() => setSelectedSaleId(sale.id)}
-                  className={`rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
+                  className={`w-full rounded-lg px-3 py-2 text-sm text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
                     selectedSaleId === sale.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
                   }`}
                 >
@@ -148,7 +153,7 @@ const FlashSales = () => {
                     <span>{sale.name}</span>
                     <StatusBadge status={sale.is_active ? "active" : "inactive"} />
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </CardContent>

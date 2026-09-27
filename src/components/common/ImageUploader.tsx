@@ -272,7 +272,7 @@ export function ImageUploader({
                 }}
               />
 
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <div className="absolute inset-0 bg-black/25 opacity-100 group-hover:bg-black/45 transition-colors flex items-center justify-center gap-2">
                 {!singleMode && (
                   <button
                     type="button"

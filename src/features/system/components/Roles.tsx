@@ -35,6 +35,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllStaff } from "@/features/users/slices/staffSlice"
 import { setUserRole } from "@/features/users/slices/customerSlice"
 import type { UserRole } from "@/features/users/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 // The backend has no custom Role-entity CRUD — only a fixed role enum (admin/staff/customer)
 // plus a raw permissions array per staff member (see StaffForm.tsx for the permission
@@ -44,6 +45,8 @@ import type { UserRole } from "@/features/users/types"
 const roleOptions: UserRole[] = ["admin", "staff", "customer"]
 
 const Roles = () => {
+  useDocumentTitle("Roles")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const [searchTerm, setSearchTerm] = useState("")

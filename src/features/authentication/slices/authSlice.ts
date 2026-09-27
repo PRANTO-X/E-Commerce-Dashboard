@@ -1,7 +1,12 @@
 import { createAsyncThunk, createSlice, createAction } from "@reduxjs/toolkit"
 import { api, extractApiError } from "@/lib/api/client"
 import { getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from "@/lib/api/tokenStore"
+import { DEV_AUTH_BYPASS, DEV_USER } from "../devAuth"
 import type { AuthUser, LoginPayload } from "../types"
+
+// Not sliceFactory-backed: this is a session store, not a CRUD collection. Its state
+// (user/isAuthenticated/bootstrapped) has no `data`/`singleData` concept, it owns extra
+// reducers (logout, sessionExpired, devBypassLogin), and its thunks manage refresh tokens.
 
 interface AuthState {
   user: AuthUser | null
@@ -113,6 +118,15 @@ const authSlice = createSlice({
         state.user = { ...state.user, ...action.payload }
       }
     },
+    // Marks the session authenticated without a backend round-trip. Only ever
+    // dispatched when DEV_AUTH_BYPASS is on.
+    devBypassLogin(state) {
+      state.user = DEV_USER
+      state.isAuthenticated = true
+      state.bootstrapped = true
+      state.isLoading = false
+      state.error = null
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -154,6 +168,9 @@ const authSlice = createSlice({
       })
 
       .addCase(sessionExpired, (state) => {
+        // With the dev bypass there is no real token, so every API call 401s.
+        // Staying signed in keeps the shell usable even though data won't load.
+        if (DEV_AUTH_BYPASS) return
         state.user = null
         state.isAuthenticated = false
       })
@@ -166,5 +183,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { patchUser } = authSlice.actions
+export const { patchUser, devBypassLogin } = authSlice.actions
 export default authSlice.reducer

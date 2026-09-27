@@ -19,7 +19,7 @@ const DashboardLayout = () => {
           {/* floating content panel */}
           <main
             data-scroll-container
-            className="m-3 flex-1 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-0 mt-0 dark:border-border dark:bg-background"
+            className="m-3 flex-1 overflow-y-auto rounded-xl border border-border bg-muted p-0 mt-0 dark:bg-background"
           >
             <ScrollToTop />
             <Outlet />

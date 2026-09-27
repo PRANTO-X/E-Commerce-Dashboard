@@ -11,8 +11,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/cms/slices/pageSlice"
 import type { ContentPage } from "@/features/cms/types"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Pages = () => {
+  useDocumentTitle("Pages")
+
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)

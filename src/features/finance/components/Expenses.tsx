@@ -46,7 +46,7 @@ import { TableActions } from "@/components/common/TableActions"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import {
@@ -61,6 +61,7 @@ import type {
   ExpensePaymentMethod,
   ExpenseStatus,
 } from "@/features/finance/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const categoryConfig: Record<
   ExpenseCategory,
@@ -115,6 +116,8 @@ type FilterOption = {
 }
 
 const Expenses = () => {
+  useDocumentTitle("Expenses")
+
   const dispatch = useAppDispatch()
   const { data: expenses, isLoading, error } = useAppSelector((state) => state.expenses)
 
@@ -326,19 +329,26 @@ const Expenses = () => {
       cell: ({ row }) => {
         const url = row.getValue("receipt_url") as string | undefined
         return (
-          <div
-            className="relative h-10 w-12 cursor-pointer overflow-hidden rounded-md border border-border bg-muted/60 hover:ring-2 hover:ring-primary/40 transition-all flex items-center justify-center shrink-0"
+          <button
+            type="button"
+            aria-label={`View receipt for ${row.original.title}`}
+            className="relative h-10 w-12 cursor-pointer overflow-hidden rounded-md border border-border bg-muted/60 hover:ring-2 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all flex items-center justify-center shrink-0"
             onClick={(e) => {
               e.stopPropagation()
               setViewingExpense(row.original)
             }}
           >
             {url ? (
-              <img src={url} alt="Receipt" className="h-full w-full object-cover" />
+              <img
+                src={url}
+                alt="Receipt"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
             ) : (
               <Receipt className="h-4 w-4 text-muted-foreground" />
             )}
-          </div>
+          </button>
         )
       },
     },
@@ -803,7 +813,7 @@ const Expenses = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-3">
-              <div className="rounded-lg bg-muted/40 p-4 grid grid-cols-2 gap-4 text-sm">
+              <div className="rounded-lg bg-muted/40 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground text-xs block">Total Amount</span>
                   <span className="text-2xl font-bold text-primary">

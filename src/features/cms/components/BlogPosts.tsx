@@ -16,8 +16,11 @@ import { ImageUploader, type UploadedImageItem } from "@/components/common/Image
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/cms/slices/blogPostSlice"
 import type { BlogPost } from "@/features/cms/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const BlogPosts = () => {
+  useDocumentTitle("Blog Posts")
+
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
   const { data: posts, totalItems, meta, isLoading, error } = useAppSelector((state) => state.blogPosts)

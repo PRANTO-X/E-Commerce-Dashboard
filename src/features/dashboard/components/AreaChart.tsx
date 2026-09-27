@@ -48,7 +48,7 @@ export function ChartAreaDefault() {
       : []
 
   return (
-    <Card className="rounded-xl border border-gray-100 bg-white p-5 shadow-none dark:border-border dark:bg-card">
+    <Card className="p-5 shadow-none">
       <CardHeader className="mb-4 flex flex-row items-center justify-between gap-4 px-0">
         <div>
           <CardTitle className="text-base font-semibold text-gray-800 dark:text-white/90">

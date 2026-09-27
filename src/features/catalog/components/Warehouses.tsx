@@ -15,8 +15,11 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchWarehouses, createWarehouse } from "@/features/catalog/slices/inventorySlice"
 import type { Warehouse } from "@/features/catalog/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Warehouses = () => {
+  useDocumentTitle("Warehouses")
+
   const dispatch = useAppDispatch()
   const { warehouses, isLoading, error } = useAppSelector((state) => state.inventory)
 

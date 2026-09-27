@@ -7,8 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchNotifications, fetchNotificationPreferences } from "@/features/notifications/slices/notificationSlice"
 import type { AdminNotification, NotificationDeliveryStatus } from "@/features/notifications/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Notifications = () => {
+  useDocumentTitle("Notifications")
+
   const dispatch = useAppDispatch()
   const { notifications, preferences, isLoading, error } = useAppSelector((state) => state.notifications)
 

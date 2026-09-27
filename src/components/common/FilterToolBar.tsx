@@ -28,6 +28,7 @@ const FilterToolbar = ({
       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
       <input
         type="text"
+        aria-label={searchPlaceholder}
         placeholder={searchPlaceholder}
         value={searchValue}
         onChange={(e) => onSearchChange?.(e.target.value)}
@@ -45,6 +46,7 @@ const FilterToolbar = ({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
           <input
             type="text"
+            aria-label={searchPlaceholder}
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange?.(e.target.value)}

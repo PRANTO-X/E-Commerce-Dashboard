@@ -22,6 +22,7 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, patchData } from "@/features/marketing/slices/couponSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const couponSchema = z.object({
   code: z.string().min(3, "Code must be at least 3 characters"),
@@ -60,6 +61,8 @@ const CouponForm = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { singleData: existing, isLoading } = useAppSelector((state) => state.coupons)
+
+  useDocumentTitle(existing?.code ? `${existing.code} — Coupon` : "Coupon Form")
 
   const isEditing = id !== "new"
 

@@ -27,6 +27,7 @@ import {
 } from "@/features/returns/slices/returnSlice"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
 import type { ReturnResolution, ReturnStatus } from "@/features/returns/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const resolutionOptions: { label: string; value: ReturnResolution }[] = [
   { label: "Refund", value: "refund" },
@@ -40,6 +41,8 @@ const ReturnDetail = () => {
   const dispatch = useAppDispatch()
   const { singleData: ret, isLoading } = useAppSelector((state) => state.returns)
   const { data: orders } = useAppSelector((state) => state.orders)
+
+  useDocumentTitle(ret?.return_number ? `${ret.return_number} — Return` : "Return Details")
 
   const [resolution, setResolution] = useState<ReturnResolution | "">("")
   const [refundAmount, setRefundAmount] = useState("")

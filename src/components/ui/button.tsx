@@ -33,12 +33,15 @@ const buttonVariants = cva(
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         action: "h-9 px-4 gap-1",
-        icon: "size-8",
+        // Icon-only buttons keep their compact visual box but carry a >=44x44px
+        // hit area via an absolutely-positioned ::before, so tapping is reliable
+        // on touch without inflating the icon or reflowing dense toolbars.
+        icon: "size-8 relative before:absolute before:-inset-1.5 before:content-['']",
         "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "size-6 relative before:absolute before:-inset-2.5 before:content-[''] rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+          "size-7 relative before:absolute before:-inset-2 before:content-[''] rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-9 relative before:absolute before:-inset-1 before:content-['']",
       },
     },
     defaultVariants: {

@@ -1,8 +1,9 @@
-import { createBrowserRouter } from "react-router-dom"
+import { createBrowserRouter, Navigate } from "react-router-dom"
 import { lazy, Suspense, type JSX } from "react"
 import DashboardLayout from "@/layouts/DashboardLayout"
 import Loader from "@/components/common/Loader"
 import RequireAuth from "@/routes/RequireAuth"
+import { DEV_AUTH_BYPASS } from "@/features/authentication/devAuth"
 
 const Load = (Component: React.LazyExoticComponent<() => JSX.Element>) => (
   <Suspense fallback={<Loader />}>
@@ -82,7 +83,9 @@ const SignInForm = lazy(
 )
 
 export const router = createBrowserRouter([
-  { path: "/login", element: Load(SignInForm) },
+  // With the dev bypass on there is no session to establish, so the sign-in
+  // screen would only ever dead-end. Send it straight to the dashboard.
+  { path: "/login", element: DEV_AUTH_BYPASS ? <Navigate to="/" replace /> : Load(SignInForm) },
   {
     path: "/",
     element: <RequireAuth />,

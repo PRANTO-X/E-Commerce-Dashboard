@@ -1,4 +1,4 @@
-import { createSliceFactory } from "@/utils/sliceFactory"
+import { createSliceFactory } from "@/lib/sliceFactory"
 import type { Expense } from "../types"
 import { initialExpenses } from "../data/initialExpenses"
 

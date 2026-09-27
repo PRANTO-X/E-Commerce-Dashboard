@@ -31,7 +31,8 @@ import { SettingToggle } from "@/components/common/SettingToggle"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { updateSettings, resetSettings } from "@/features/system/slices/settingsSlice"
-import { defaultStoreSettings, type StoreSettings } from "@/assets/Data"
+import { defaultStoreSettings, type StoreSettings } from "@/features/system/settingsDefaults"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 interface SettingTab {
   value: string
@@ -41,6 +42,8 @@ interface SettingTab {
 }
 
 const Settings = () => {
+  useDocumentTitle("Settings")
+
   const dispatch = useAppDispatch()
   const settings = useAppSelector((state) => state.settings)
   const [isSaving, setIsSaving] = useState(false)

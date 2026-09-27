@@ -6,8 +6,11 @@ import { SalesByCategoryChart } from "./SalesByCategoryChart"
 import { OrderStatusChart } from "./OrderStatusChart"
 import { AnalyticsSummary } from "./AnalyticsSummary"
 import { PaymentMethodChart } from "./PaymentMethodChart"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Reports = () => {
+  useDocumentTitle("Reports")
+
   return (
     <div className="section-container space-y-8 print-area">
       {/* Header */}

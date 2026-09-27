@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
-import { exportToCSV } from "@/utility/ExportToCsv"
+import { exportToCSV } from "@/lib/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
 import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productSlice"
@@ -26,8 +26,11 @@ import type { Variant } from "@/features/catalog/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { toast } from "sonner"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Inventory = () => {
+  useDocumentTitle("Inventory")
+
   const dispatch = useAppDispatch()
   const { data: variants, isLoading, error } = useAppSelector((state) => state.variants)
   const { data: products } = useAppSelector((state) => state.products)

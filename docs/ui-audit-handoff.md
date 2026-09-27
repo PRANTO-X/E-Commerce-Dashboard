@@ -1,11 +1,15 @@
-# UI Audit — Remaining Work (Batches 6–10)
+# UI Audit — Batches 6–10 (COMPLETE)
 
-Handoff for the work left from the UI Consistency & Responsiveness Audit. Batches 1–5
-(token/z-index foundation, scroll-restoration fix, StatusBadge consolidation, DataTable
-loading/error states, PageHeading consolidation) are done — see commit `4c27f0a`
-("Fix UI audit findings: tokens, status badges, loading states, page headers").
+**Status: all of Batches 6–10 are implemented and verified.** Batches 1–5 were already done in
+commit `4c27f0a` ("Fix UI audit findings: tokens, status badges, loading states, page headers").
+The per-batch sections below are kept as the original audit record of *what* was asked; the
+"Completion record" and "Design decisions" sections at the bottom record what was actually done
+and why. Read those two first.
 
-Each batch below is independent of the others unless noted. Effort/risk are rough estimates.
+All work was done against the **dev auth bypass + mock API**, because the real backend
+(`https://yoyo-ecom-production-88e8.up.railway.app`) now 404s on every route
+(`x-railway-fallback: true`). See "Verification" and "Still open" below.
+
 Finding IDs (`F-`, `CC-`, `TOK-`, `RESP-`, `A11Y-`, `CG-`, `FW-`) refer to the original audit
 report; they're included so you can cross-reference specifics if this doc's summary isn't enough.
 
@@ -16,7 +20,7 @@ report; they're included so you can cross-reference specifics if this doc's summ
 **Effort:** M (1–2 days) · **Risk:** Low · **Deps:** none
 
 13 of 31 Redux slices hand-roll `createSlice` instead of using the shared `sliceFactory`
-(`src/utils/sliceFactory.ts`). Field shapes happen to match today (`isLoading`/`error`/`data`
+(`src/lib/sliceFactory.ts`). Field shapes happen to match today (`isLoading`/`error`/`data`
 all line up), so there's no runtime bug — but any future fix to error normalization or loading
 semantics in `sliceFactory.ts` won't propagate to these 13, and they're pure duplicated
 boilerplate.
@@ -154,10 +158,10 @@ All independent, small items:
 
 - **Dead Vite scaffold assets** (`CG-03`): delete `src/assets/react.svg`, `src/assets/vite.svg`
   — unreferenced anywhere.
-- **`lib`/`utils`/`utility` directory sprawl** (`CG-02`): `src/lib/utils.ts`,
-  `src/utils/sliceFactory.ts`, `src/utility/ExportToCsv.ts` — three top-level dirs for
-  unrelated single-purpose helpers. Consolidate into one (recommend `src/lib/`). Touches
-  import paths broadly — run a full build/typecheck after.
+- **`lib`/`utils`/`utility` directory sprawl** (`CG-02`): **DONE** — consolidated into
+  `src/lib/`. `src/lib/utils.ts`, `src/lib/sliceFactory.ts`, `src/lib/ExportToCsv.ts`;
+  the now-empty `src/utils/` and `src/utility/` directories were deleted. Import specifiers
+  were rewritten to `@/lib/sliceFactory` and `@/lib/ExportToCsv`.
 - **Leftover mock data** (`CG-06`): `src/assets/Data.ts` still has `example.com` mock seed
   data from before the real backend integration. Confirm no live feature still imports from
   it (should be safe post-integration), then delete.
@@ -205,23 +209,168 @@ All independent, small items:
 
 ---
 
-## Open design questions, collected
+## Design decisions — answered
 
-These block specific items above — answer before starting that item, everything else can
-proceed without them:
+All seven open questions from the original pass are now resolved. These are the rulings to
+build on:
 
-1. Mobile table strategy (card/stacked vs. scroll-only vs. column reflow) — blocks batch 7 item 1
-2. Mobile global search entry point (sheet vs. inline collapse) — blocks batch 7 item 2
-3. Canonical "panel" idiom (Card vs. hex-hardcoded vs. backdrop-blur) — batch 9, optional
-4. Font strategy (DM Sans vs. Geist) — batch 10, optional
-5. Shell corner radius (match cards or stay distinct) — batch 10, optional
-6. Modal vs. routed form criterion — batch 10, optional (just needs documenting, not code)
-7. Named-export normalization for chart components — batch 10, optional, low stakes
+1. **Mobile table strategy** → **stacked cards below `sm`.** Implemented in
+   `src/components/common/data-table.tsx`; the real `<table>` is `hidden sm:block` and a
+   card list is `sm:hidden`. Row click and keyboard activation work in both.
+2. **Mobile global search entry point** → **icon-triggered full-screen sheet.** `Navbar.tsx`
+   renders a search icon below `sm`; the sheet is Radix `Dialog`, so focus trapping, Escape,
+   focus restore, and background inertness come for free.
+3. **Canonical panel idiom** → **plain `Card` primitive on design tokens.** Tokens only
+   (`bg-card`, `border-border`, `text-foreground`) — never raw `gray-*` palettes, never
+   `bg-card/70 backdrop-blur-sm`. Applied across the 5 remaining dashboard panel sites.
+   *Form controls and icon buttons are out of scope for this rule* — they style themselves.
+4. **Font strategy** → **self-host Geist.** The render-blocking Google Fonts `@import` for
+   DM Sans is gone; `@fontsource-variable/geist` is imported in `main.tsx` and all five
+   `--font-*` theme tokens now resolve to `"Geist Variable"`. Verified **zero external
+   requests** on page load. (Note: the bare specifier `@fontsource-variable/geist` fails
+   `tsc` under `moduleResolution: bundler` because the package is CSS-only with no types —
+   import the explicit subpath `@fontsource-variable/geist/index.css` so the `*.css` ambient
+   declaration from `vite/client` applies.)
+5. **Shell corner radius** → **match the cards: `rounded-xl`.** `DashboardLayout`'s main panel
+   was the only `rounded-2xl`. Also token-ised that panel (`border-border`, `bg-muted`).
+6. **Modal vs. routed form** → **rule of thumb: single-section or quick-edit → `Dialog`;
+   multi-section entity → dedicated routed form.** `Inventory` and `Expenses` use dialogs
+   (a few flat fields, edit-in-place); everything else routes to a `*Form` page (many
+   interdependent fields, deep-linkable, needs a URL). Existing pages were left as-is —
+   this only settles what to do for new features.
+7. **Named-export normalization** → **documented exception; no mass rename.** The 9
+   chart/utility subcomponents (`AreaChart`, `OrderStatusChart`, `PaymentMethodChart`,
+   `RevenueOrdersChart`, `SalesByCategoryChart`, `PriceRangeFilter`, `ProgressBar`,
+   `DatePicker`, `AnalyticsSummary`) keep **named** exports. The ~84 route/page/layout
+   components keep `export default`. Both are idiomatic in their own right; converting 53+
+   files would be pure churn with no runtime benefit.
 
-## Suggested order
+## Completion record
 
-Batches 6, 9, and 10 have no open questions and no dependency on each other — do those first
-in whatever order is convenient. Batch 7 needs decisions 1–2 before its two blocked items, but
-its mechanical items (touch targets, aria-labels, keyboard handlers) can start immediately.
-Batch 8 has no dependencies but shares `Card`/`CardTitle` with batch 7's mechanical items —
-sequencing after 7 avoids two people touching `ui/card.tsx` at once.
+**Batch 6 — slice-factory migration.** Migrated 6 slices to `sliceFactory`:
+`customerSlice`, `staffSlice`, `reviewSlice`, `couponSlice`, `paymentSlice`, `returnSlice`.
+Thunk names, state fields, and action endpoints preserved. Two factory options were added to
+support them: `initialSingleData` (preserves `singleData: null` on 4 slices) and
+`withExtraCases` (composes action-thunk reducer cases without losing them).
+`customerSlice`'s account actions don't return the updated user, so `CustomerDetail` now
+`await`s a `refresh()` after activate/deactivate to keep the UI correct.
+7 slices are **intentionally hand-rolled** and each carries a comment saying why:
+`authSlice`, `analyticsSlice`, `notificationSlice`, `shippingSlice`, `inventorySlice`,
+`settingsSlice`, `authSettingsSlice` — all need either a different data shape, a different
+endpoint contract, or state the factory can't express.
+Note: `sliceFactory` now lives at `src/lib/sliceFactory.ts` (moved in Batch 10).
+
+**Batch 7 — mobile & touch targets.** `Button` compact icon variants get ~44×44px hit areas
+via a `::after` pseudo-element (zero layout change). `TableActions` got item-specific
+`aria-label`s ("View Payment for Order NM-10000", not a bare tooltip).
+
+**Batch 8 — semantics & a11y.** `CardTitle` now takes a heading `level` prop
+(`h1`–`h6`, default `h3`) with `m-0`; heading hierarchy fixed in `CustomerDetail` and
+`ProductForm`. Placeholder contrast corrected — light `#6b7280` on `#f9fafb` is 4.63:1 (was
+failing), dark placeholder is now `#9ca3af`. Added missing labels to placeholder-only variant
+inputs, and keyboard-safe controls to `Attributes`, `FlashSales`, `Expenses`.
+`ImageUploader` controls are always visible; `FilterToolBar`'s search input has an
+`aria-label`; `GlobalSearch` has combobox/listbox/option semantics with `aria-activedescendant`.
+
+**Batch 9 — filter/row-action rollout.** Of the 15 unconfirmed candidates, **14 were already
+fine** and were deliberately left alone. Reasons: they already use `TableActions` and/or have
+no search row to migrate (Payments, Returns, Pages, Shipments, Couriers, Warehouses,
+Reservations, Banners, BlogPosts, Notifications, GroupBuys, Automations); or they are
+genuinely master/detail or form cards where a toolbar doesn't fit (Attributes, FlashSales,
+Couriers, Warehouses, GroupBuys, Automations, Banners, BlogPosts). **Only `AuditLogs.tsx` was
+migrated** — its hand-rolled filter card became `FilterToolBar`, keeping the server-side
+query params, `manualPagination`, columns, placeholder text, and its `Reset` button.
+`CC-04` (compose `buttonVariants` in `TableActions`) was already done in Batches 1–5.
+
+**Batch 10 — cleanup & polish.** All of it:
+- `CG-03`: deleted the dead `src/assets/react.svg` and `vite.svg`.
+- `CG-02`: consolidated three top-level utility dirs into `src/lib/`. `src/utils/sliceFactory.ts`
+  → `src/lib/sliceFactory.ts`, `src/utility/ExportToCsv.ts` → `src/lib/ExportToCsv.ts`
+  (both via `git mv`); 24 + 8 import specifiers updated; `src/utils/` and `src/utility/`
+  deleted. `src/lib/utils.ts` (`cn`, `generateId`) was **already** live and stayed put —
+  the audit's "it's dead" claim was wrong. `src/lib/` has no barrel and none was invented.
+- `CG-06`: `src/assets/Data.ts` was **not** safe to just delete — 3 files still imported it.
+  Extracted the 4 live symbols (`StoreSettings`, `defaultStoreSettings`, `AuthSettings`,
+  `defaultAuthSettings`) to `src/features/system/settingsDefaults.ts`, repointed the 3
+  importers, then deleted the 845-line file. The other ~30 mock-seed exports (products,
+  customers, orders, `example.com` URLs, …) were dead and are gone; `src/assets/` no longer
+  exists at all.
+- `FW-03`: added `src/hooks/use-document-title.ts` and called it once in all 44 page
+  components. 9 detail/form pages use a dynamic title from the loaded record
+  (`"NM-10000 — Order | NestmartIT"`); the rest are static. All 31 top-level routes now show
+  31 distinct titles, deep-link loads included.
+- `FW-05`: `Loader` uses `h-full w-full` instead of `h-[calc(100vh-200px)]`.
+- `FW-06`: `loading="lazy"` added to the below-the-fold images in `Expenses`, `Staffs`,
+  `Customers`, `CampaignDetail`.
+- `RESP-006`: 4-card KPI grids standardized on `lg:grid-cols-4` (was `xl:` in `InventoryStatsCards`).
+- `RESP-007`: `Profile`'s 3-column `TabsList` is now horizontally scrollable; no clipping at 320px.
+- `RESP-009/010`: ungated `grid-cols-2` gated behind `sm:` in `ProductDetail` and `Expenses`.
+- `RESP-012`: Navbar notification dropdown capped with `max-w-[calc(100vw-2rem)]`.
+- `RESP-013`: `CampaignDetail` banner is `h-40 sm:h-64` (not `aspect-video`, which would have
+  made it ~620px tall at desktop instead of the current 256px).
+
+## Verification
+
+- `npx tsc -p tsconfig.app.json` — exit 0. `npm run build` — exit 0 (~1.85s).
+- `npx eslint .` — **59 errors, 10 warnings, identical to the pre-existing baseline**
+  (52 `react-refresh/only-export-components`, 6 `set-state-in-effect`, 1 `no-explicit-any`).
+  No new lint debt. Cleaning these up is a separate pass.
+- Browser sweep, all 31 top-level routes at **1280px and 375px**: 62/62 pass — no console
+  errors, no horizontal overflow, Geist loaded, correct `document.title`, mock data rendering.
+- 63 extra title assertions passed (deep links, row-click into detail, back-nav, create vs
+  edit form modes, A→B→A round trips, `/login` redirect).
+- Slice-migration domains re-checked after the factory refactor: 6/6 lists render 15 rows;
+  review approval, customer activation, and coupon delete all still work.
+
+### The e2e suite cannot run here — do not read the failures as regressions
+
+`tests/e2e/dashboard-features.spec.ts` (12 tests, `@playwright/test` is installed but there is
+**no `test` npm script**) currently fails **12/12**, and always did in this environment:
+
+- `beforeEach` calls `loginAsAdmin()`, which does `goto("/login")` then waits for `#email`.
+  With `VITE_DEV_AUTH_BYPASS=true` the router redirects `/login` → `/`, so `#email` never
+  renders and the helper times out. This fails *before* any assertion about the app.
+- Even with the bypass off, the helper submits real credentials to a backend that 404s, so
+  login can never succeed.
+
+The suite needs a working backend **and** a bypass-aware `loginAsAdmin` (skip straight through
+when `VITE_DEV_AUTH_BYPASS` is on). There is no unit/component test layer at all — no vitest,
+jest, or testing-library. So the audit work was verified by typecheck + build + lint +
+manual browser sweeps, which is what the batches above actually call "verify".
+
+## Still open
+
+Non-blocking follow-ups, roughly in priority order:
+
+1. **Server-side search/filter on 10 list pages.** Batch 9 found Shipments, Couriers,
+   Warehouses, Reservations, Banners, BlogPosts, Pages, Payments, Returns, and Notifications
+   have no search or filter row at all. Adding a client-side toolbar would be a *bug* for the
+   6 that use `manualPagination` — it would filter only the current server page. The real fix
+   is `search`/`status` query params in each slice's `fetchAll`.
+2. **`FilterToolBar` renders every control twice** (a desktop `hidden sm:flex` copy and a
+   mobile `sm:hidden` copy), so the search input and each filter have two DOM nodes sharing
+   one `aria-label`, and `DatePicker` mounts twice. This is *functionally fine* — the hidden
+   copy is `display:none`, so it is out of the a11y tree and out of tab order — but it's
+   duplicate DOM and duplicate mounted state. A single-instance responsive layout would fix it.
+3. **`RequireAuth`'s `<Loader />` sits under `#root`, which has no height.** Now that
+   `Loader` is `h-full` it shrink-wraps instead of guessing 200px. Only visible during auth
+   bootstrap (never under the dev bypass). Fix by giving `#root { height: 100% }` in `index.css`.
+4. **Pre-existing minor layout issues**, not touched because they're outside the batches:
+   `/expenses` table is 31px wider than its scroll container at 320px; `ProductDetail`'s
+   product image overflows its `aspect-square` box by 8px (clipped by `overflow-hidden`); 4
+   progress-bar fills extend past the viewport at 375px on `/` (parent has `overflow-hidden`,
+   so no page-level overflow).
+5. **Stale comments**: `src/features/{catalog,users,marketing,sales}/types.ts` each have a
+   provenance comment naming `src/assets/Data.ts`, which Batch 10 deleted. The comments are
+   still accurate as history but reference a file that no longer exists.
+6. **Light-mode border shift from `CC-02`**: unifying the dashboard panels on `border-border`
+   moved their light border from `#f3f4f6` to `#e5e7eb` (slightly more defined hairlines).
+   Knock-on: the Recent Orders panel and the `DataTable` inside it now share one border colour
+   in light mode, so that nested edge is less differentiated. Dark mode is unaffected. Also
+   intentional: `MetricCard`'s inner icon ring is now `bg-card` instead of `gray-800`, so it
+   reads as a hole punched in the card in both modes rather than a raised disc in dark mode.
+7. **Production auth/data is still unverified** — everything above was exercised against the
+   dev mock. Re-run the sweeps once a working backend URL is available.
+8. `docs/` still has no AGENTS.md or test command recorded; worth adding a `test:e2e` script
+   to `package.json` so the suite is discoverable.
+

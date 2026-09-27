@@ -7,8 +7,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchReservations } from "@/features/catalog/slices/inventorySlice"
 import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
 import type { StockReservation, StockReservationStatus } from "@/features/catalog/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Reservations = () => {
+  useDocumentTitle("Reservations")
+
   const dispatch = useAppDispatch()
   const { reservations, isLoading, error } = useAppSelector((state) => state.inventory)
   const { data: variants } = useAppSelector((state) => state.variants)

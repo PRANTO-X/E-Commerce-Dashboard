@@ -24,8 +24,11 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllBanners, postData } from "@/features/cms/slices/bannerSlice"
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
 import type { HomepageBanner } from "@/features/cms/types"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Banners = () => {
+  useDocumentTitle("Banners")
+
   const dispatch = useAppDispatch()
   const [page, setPage] = useState(1)
   const { data: banners, totalItems, meta, isLoading, error } = useAppSelector((state) => state.banners)

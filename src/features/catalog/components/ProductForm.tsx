@@ -67,6 +67,7 @@ import {
   postData as postBundleItem,
   deleteData as deleteBundleItem,
 } from "@/features/catalog/slices/bundleItemSlice"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const productSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
@@ -139,6 +140,8 @@ const ProductForm = () => {
   const { data: allAttributes } = useAppSelector((state) => state.attributes)
   const { data: allAttributeValues } = useAppSelector((state) => state.attributeValues)
   const { data: allBundleItems } = useAppSelector((state) => state.bundleItems)
+
+  useDocumentTitle(existing?.name ? `${existing.name} — Product` : "Product Form")
 
   const isEditing = id !== "new"
   const images = isEditing ? allImages.filter((img) => img.product === id) : []
@@ -745,7 +748,7 @@ const ProductForm = () => {
         {/* Basic Details Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle level={2}>Basic Information</CardTitle>
             <CardDescription>General product metadata, taxonomy, and publishing status</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -936,7 +939,7 @@ const ProductForm = () => {
         {/* Feature 5: Image Upload Component */}
         <Card>
           <CardHeader>
-            <CardTitle>Product Images</CardTitle>
+            <CardTitle level={2}>Product Images</CardTitle>
             <CardDescription>
               Upload media files directly from your computer or provide URLs.
             </CardDescription>
@@ -957,7 +960,7 @@ const ProductForm = () => {
           <Card className="border-purple-500/30 shadow-sm bg-purple-50/10 dark:bg-purple-950/10">
             <CardHeader className="flex flex-row items-center justify-between border-b border-purple-500/10 pb-4">
               <div>
-                <CardTitle className="text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                <CardTitle level={2} className="text-purple-700 dark:text-purple-300 flex items-center gap-2">
                   <Boxes className="h-5 w-5" /> Combo Bundle Builder
                 </CardTitle>
                 <CardDescription>
@@ -1012,10 +1015,10 @@ const ProductForm = () => {
 
               {/* Add Items to Bundle */}
               <div className="space-y-3">
-                <h4 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                   <PackagePlus className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   Select Component Products for this Bundle
-                </h4>
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                   <div className="sm:col-span-8">
                     <label className="text-xs text-muted-foreground mb-1 block">Component Item / Variant</label>
@@ -1131,7 +1134,7 @@ const ProductForm = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle level={2} className="flex items-center gap-2">
                 <Layers className="h-5 w-5" /> Product Variations
               </CardTitle>
               <CardDescription>
@@ -1163,9 +1166,9 @@ const ProductForm = () => {
             {variationMode === "generator" ? (
               /* Attribute Combinator / Generator */
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
-                <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-primary" /> Generate Variations from Attribute
-                </h4>
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-foreground mb-1 block">Select Attribute (e.g. Size, Color)</label>
@@ -1233,7 +1236,7 @@ const ProductForm = () => {
             ) : (
               /* Manual Variation Creator */
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                <h4 className="text-sm font-semibold">Add Custom Variation</h4>
+                <h3 className="text-sm font-semibold">Add Custom Variation</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">SKU</label>
@@ -1299,10 +1302,21 @@ const ProductForm = () => {
                 {displayVariants.map((variant) =>
                   editingVariantId === variant.key ? (
                     <div key={variant.key} className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3 items-center bg-muted/40">
-                      <Input placeholder="SKU" value={editSku} onChange={(e) => setEditSku(e.target.value)} />
-                      <Input placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                      <Input
+                        placeholder="SKU"
+                        aria-label={`SKU for ${variant.name || variant.sku || "this variant"}`}
+                        value={editSku}
+                        onChange={(e) => setEditSku(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Name"
+                        aria-label={`Variant name for ${variant.name || variant.sku || "this variant"}`}
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
                       <Input
                         placeholder="Price"
+                        aria-label={`Price for ${variant.name || variant.sku || "this variant"}`}
                         type="number"
                         step="0.01"
                         value={editPrice}
@@ -1310,6 +1324,7 @@ const ProductForm = () => {
                       />
                       <Input
                         placeholder="Stock"
+                        aria-label={`Stock for ${variant.name || variant.sku || "this variant"}`}
                         type="number"
                         value={editStock}
                         onChange={(e) => setEditStock(e.target.value)}
