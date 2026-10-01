@@ -6,13 +6,14 @@ import type { AdminAddress, AdminUser } from "../types"
 
 // /admin/users/ (admin-only). List filters: role, is_active, search, include_deleted.
 // Callers pass role: "customer" — the endpoint lists every account otherwise.
-const { reducer, fetchAll, fetchSingle, patchData } = createSliceFactory<AdminUser>({
+const { reducer, fetchAll, fetchSingle, postData, patchData } = createSliceFactory<AdminUser>({
   name: "customers",
   endpoint: "/admin/users/",
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle, patchData }
+// postData (POST /admin/users/) backs the customer CSV import; callers send role: "customer".
+export { fetchAll, fetchSingle, postData, patchData }
 
 const userAction = (name: string, path: string) =>
   createAsyncThunk(`customers/${name}`, async (id: string, { rejectWithValue }) => {

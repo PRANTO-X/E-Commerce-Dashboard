@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
@@ -25,11 +24,14 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 
 import { deleteData, fetchAll } from "../slices/brandSlice"
-import { bulkBrandStatus, createBrand, restoreBrand, updateBrand, uploadBrandImage } from "../api"
+import { bulkBrandStatus, createBrand, fetchAllCategories, restoreBrand, updateBrand, uploadBrandImage } from "../api"
 import type { Brand, BrandPayload } from "../types"
 import { usePermission } from "../lib/usePermission"
 import { useDebounced } from "../lib/useDebounced"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { createImportLookup, splitList } from "../lib/importLookup"
 
 type Option = { label: string; value: string }
 const PAGE_SIZE = 20
@@ -50,6 +52,26 @@ const Brands = () => {
   const [selected, setSelected] = useState<string[]>([])
   const [editing, setEditing] = useState<Brand | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+
+  // CSV import: "Categories" holds names/slugs separated by ";" (or "|"), resolved to ids.
+  const categoryLookup = useMemo(
+    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
+    []
+  )
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "name", label: "Name", required: true, aliases: ["brand", "brand name"], example: "Aarong" },
+      { key: "description", label: "Description", example: "Bangladeshi lifestyle brand known for handcrafted clothing." },
+      {
+        key: "category_ids",
+        label: "Categories",
+        aliases: ["category", "category names"],
+        example: "Panjabi & Kurta; Home & Lifestyle",
+        resolve: (raw: string) => Promise.all(splitList(raw).map(categoryLookup.resolve)),
+      },
+    ],
+    [categoryLookup]
+  )
 
   const params = useMemo(
     () => ({
@@ -204,15 +226,26 @@ const Brands = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Brands" description="Brands shown on the storefront, linked to categories" />
         {canManage && (
-          <Button
-            size="action"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <PlusIcon className="size-5" /> Add Brand
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="brands"
+              fields={importFields}
+              createRow={(payload) => createBrand(payload as BrandPayload)}
+              onComplete={() => {
+                categoryLookup.reset()
+                load()
+              }}
+            />
+            <Button
+              size="action"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <PlusIcon className="size-5" /> Add Brand
+            </Button>
+          </div>
         )}
       </div>
 
@@ -257,19 +290,10 @@ const Brands = () => {
             ? [
                 {
                   component: (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="brands-include-deleted"
-                        checked={includeDeleted}
-                        onCheckedChange={(v) => {
+                    <DeletedToggle pressed={includeDeleted} onPressedChange={(v) => {
                           setIncludeDeleted(v)
                           resetPaging()
-                        }}
-                      />
-                      <Label htmlFor="brands-include-deleted" className="whitespace-nowrap text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

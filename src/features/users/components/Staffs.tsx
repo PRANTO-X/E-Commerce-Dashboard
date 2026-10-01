@@ -4,23 +4,54 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { PlusIcon, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteData, fetchAll, restoreStaff } from "@/features/users/slices/staffSlice"
+import { deleteData, fetchAll, postData, restoreStaff } from "@/features/users/slices/staffSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatDateTime } from "@/lib/format"
 import { UserAvatar } from "./UserAvatar"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 const PAGE_SIZE = 20
+
+// Mirrors StaffCreateSerializer (POST /admin/staff/).
+const STAFF_IMPORT_FIELDS: ImportField[] = [
+  { key: "email", label: "Email", required: true, example: "rahim.uddin@example.com" },
+  {
+    key: "password",
+    label: "Initial Password",
+    required: true,
+    aliases: ["password", "temporary password"],
+    example: "set-a-unique-initial-password",
+    resolve: (raw) => {
+      if (raw.length < 8) throw new Error("Initial Password must be at least 8 characters")
+      return raw
+    },
+  },
+  { key: "first_name", label: "First Name", example: "Rahim" },
+  { key: "last_name", label: "Last Name", example: "Uddin" },
+  { key: "phone", label: "Phone", example: "+8801712345678" },
+  {
+    key: "permissions",
+    label: "Permissions",
+    aliases: ["permission codes"],
+    example: "orders.view;catalog.view",
+    // Permission codes separated by ";" or "|"; the backend rejects unknown codes.
+    resolve: (raw) =>
+      raw
+        .split(/[;|,]/)
+        .map((code) => code.trim())
+        .filter(Boolean),
+  },
+]
 
 const Staffs = () => {
   useDocumentTitle("Staff")
@@ -155,9 +186,17 @@ const Staffs = () => {
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Staff Members" description="Manage your team members and what they can access." />
-        <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
-          <PlusIcon className="size-5" /> Add Staff
-        </Button>
+        <div className="flex items-center gap-3">
+          <CsvImportButton
+            entityName="staff members"
+            fields={STAFF_IMPORT_FIELDS}
+            createRow={(payload) => dispatch(postData({ payload: payload as Partial<AdminUser> })).unwrap()}
+            onComplete={() => void loadStaffs()}
+          />
+          <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
+            <PlusIcon className="size-5" /> Add Staff
+          </Button>
+        </div>
       </div>
 
       <FilterToolbar
@@ -170,19 +209,10 @@ const Staffs = () => {
         filters={[
           {
             component: (
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="staff-include-deleted"
-                  checked={includeDeleted}
-                  onCheckedChange={(checked) => {
+              <DeletedToggle pressed={includeDeleted} onPressedChange={(checked) => {
                     setIncludeDeleted(checked)
                     setPage(1)
-                  }}
-                />
-                <Label htmlFor="staff-include-deleted" className="text-sm">
-                  Show deleted
-                </Label>
-              </div>
+                  }} />
             ),
           },
         ]}

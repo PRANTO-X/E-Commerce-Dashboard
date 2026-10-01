@@ -2,8 +2,7 @@ import type { ReactNode } from "react"
 import { RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
 
 /** Start/end calendar-day inputs ("YYYY-MM-DD"), matching the backend's `start` / `end` params. */
 export function DateRangeInputs({
@@ -46,22 +45,15 @@ export function DateRangeInputs({
 
 /** "Show deleted" toggle — backed by the backend's `include_deleted=true` (needs accounting.post). */
 export function ShowDeletedToggle({
-  id,
   checked,
   onCheckedChange,
 }: {
-  id: string
+  /** Kept for call-site compatibility; the chip needs no external id. */
+  id?: string
   checked: boolean
   onCheckedChange: (v: boolean) => void
 }) {
-  return (
-    <div className="flex h-11 items-center gap-2">
-      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
-      <Label htmlFor={id} className="text-sm text-muted-foreground whitespace-nowrap">
-        Show deleted
-      </Label>
-    </div>
-  )
+  return <DeletedToggle pressed={checked} onPressedChange={onCheckedChange} />
 }
 
 export function RestoreButton({ onClick, label }: { onClick: () => void; label: string }) {

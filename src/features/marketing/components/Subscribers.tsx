@@ -29,8 +29,15 @@ import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { extractApiError, getApiErrorMessage } from "@/lib/api/client"
 import { formatDateTime } from "@/lib/format"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 const PAGE_SIZE = 20
+
+// Mirrors AdminNewsletterSubscriberWriteSerializer (POST /admin/marketing/subscribers/).
+const SUBSCRIBER_IMPORT_FIELDS: ImportField[] = [
+  { key: "email", label: "Email", required: true, example: "farhana.akter@example.com" },
+  { key: "is_active", label: "Subscribed", type: "boolean", aliases: ["active", "status"], example: "yes" },
+]
 
 const statusOptions = [
   { label: "Subscribed", value: "true" },
@@ -183,6 +190,14 @@ const Subscribers = () => {
           <Button variant="primary" size="action" onClick={handleExport} disabled={exporting}>
             {exporting ? <Loader2 className="size-5 animate-spin" /> : <DownloadIcon className="size-5" />} Export CSV
           </Button>
+          {canManage && (
+            <CsvImportButton
+              entityName="subscribers"
+              fields={SUBSCRIBER_IMPORT_FIELDS}
+              createRow={(payload) => dispatch(postData({ payload: payload as Partial<NewsletterSubscriber> })).unwrap()}
+              onComplete={() => void loadSubscribers()}
+            />
+          )}
           {canManage && (
             <Button variant="apply" size="action" onClick={() => setAddOpen(true)}>
               <PlusIcon className="size-5" /> Add Subscriber

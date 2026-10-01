@@ -4,22 +4,45 @@ import { toast } from "sonner"
 import { PlusIcon, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeading } from "@/components/common/PageHeading"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteCarrier, fetchCarriers, restoreCarrier } from "@/features/shipping/slices/carrierSlice"
-import { CARRIER_PROVIDER_OPTIONS, type Carrier } from "@/features/shipping/types"
+import { createCarrier, deleteCarrier, fetchCarriers, restoreCarrier } from "@/features/shipping/slices/carrierSlice"
+import { CARRIER_PROVIDER_OPTIONS, type Carrier, type CarrierPayload } from "@/features/shipping/types"
 import { useCan } from "@/features/sales/shared/useCan"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { CarrierFormDialog } from "./CarrierFormDialog"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 const PAGE_SIZE = 20
+// API keys/secrets are deliberately not importable: set them per carrier in the form.
+const importFields: ImportField[] = [
+  { key: "name", label: "Name", required: true, aliases: ["carrier", "carrier name"], example: "eCourier" },
+  {
+    key: "code",
+    label: "Provider",
+    type: "enum",
+    options: CARRIER_PROVIDER_OPTIONS.map((o) => o.value),
+    aliases: ["code", "provider code"],
+    example: "manual",
+  },
+  { key: "phone", label: "Phone", example: "+8809612345678" },
+  { key: "contact_email", label: "Contact email", aliases: ["email"], example: "support@ecourier.com.bd" },
+  { key: "api_base_url", label: "API base URL", aliases: ["api url", "base url"], example: "https://api.ecourier.com.bd" },
+  {
+    key: "is_integration_enabled",
+    label: "Integration enabled",
+    type: "boolean",
+    aliases: ["integration", "api enabled"],
+    example: "no",
+  },
+]
+
 const providerLabel = (code: string) => CARRIER_PROVIDER_OPTIONS.find((o) => o.value === code)?.label ?? code
 
 const Carriers = () => {
@@ -170,9 +193,17 @@ const Carriers = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Carriers" description="Courier partners used to ship orders." />
         {canUpdate && (
-          <Button size="action" onClick={() => openForm(null)}>
-            <PlusIcon className="size-5" /> Add Carrier
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="carriers"
+              fields={importFields}
+              createRow={(payload) => dispatch(createCarrier(payload as CarrierPayload)).unwrap()}
+              onComplete={() => void load()}
+            />
+            <Button size="action" onClick={() => openForm(null)}>
+              <PlusIcon className="size-5" /> Add Carrier
+            </Button>
+          </div>
         )}
       </div>
 
@@ -185,19 +216,10 @@ const Carriers = () => {
             ? [
                 {
                   component: (
-                    <div className="flex h-9 items-center gap-2">
-                      <Switch
-                        id="carriers-show-deleted"
-                        checked={showDeleted}
-                        onCheckedChange={(v) => {
+                    <DeletedToggle pressed={showDeleted} onPressedChange={(v) => {
                           setShowDeleted(v)
                           setPage(1)
-                        }}
-                      />
-                      <Label htmlFor="carriers-show-deleted" className="text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

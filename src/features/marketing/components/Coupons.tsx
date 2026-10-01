@@ -4,8 +4,6 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { PlusIcon, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -14,14 +12,69 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import type { Coupon } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteData, fetchAll, restoreCoupon } from "@/features/marketing/slices/couponSlice"
+import { deleteData, fetchAll, patchData, postData, restoreCoupon } from "@/features/marketing/slices/couponSlice"
 import { useCan } from "@/features/system/permissions"
 import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 const PAGE_SIZE = 20
+
+/** "YYYY-MM-DD" (end of that day) or "YYYY-MM-DD HH:mm", in local time → ISO string. */
+function parseImportDateTime(raw: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/.exec(raw.trim())
+  if (!m) throw new Error(`"${raw}" is not a date like 2026-12-31 or 2026-12-31 23:59`)
+  const [, y, mo, d, h, mi] = m
+  const date = h
+    ? new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi))
+    : new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59)
+  if (Number.isNaN(date.getTime()) || date.getMonth() !== Number(mo) - 1) throw new Error(`"${raw}" is not a valid date`)
+  return date.toISOString()
+}
+
+// Mirrors CouponCreateSerializer (POST /admin/coupons/) plus is_active, which — like the
+// coupon form — is applied with a follow-up PATCH because create has no is_active field.
+const COUPON_IMPORT_FIELDS: ImportField[] = [
+  {
+    key: "code",
+    label: "Code",
+    required: true,
+    example: "EID25",
+    resolve: (raw) => {
+      const code = raw.trim().toUpperCase()
+      if (code.length > 32) throw new Error("Code must be 32 characters or fewer")
+      return code
+    },
+  },
+  { key: "value", label: "Value", required: true, type: "number", aliases: ["discount", "amount"], example: "10" },
+  {
+    key: "discount_type",
+    label: "Discount Type",
+    type: "enum",
+    options: ["percentage", "fixed"],
+    aliases: ["type"],
+    example: "percentage",
+  },
+  {
+    key: "min_order_amount",
+    label: "Min Order Amount (BDT)",
+    type: "number",
+    aliases: ["min order amount", "minimum order"],
+    example: "1000",
+  },
+  { key: "usage_limit", label: "Usage Limit", type: "integer", example: "500" },
+  {
+    key: "expires_at",
+    label: "Expires At",
+    aliases: ["expires", "expiry"],
+    example: "2026-12-31 23:59",
+    resolve: parseImportDateTime,
+  },
+  { key: "is_active", label: "Active", type: "boolean", aliases: ["status"], example: "yes" },
+]
 
 const ORDERING_OPTIONS = [
   { value: "-created_at", label: "Newest first" },
@@ -185,9 +238,24 @@ const Coupons = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Coupons" description="Discount codes customers can apply at checkout." />
         {canManage && (
-          <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
-            <PlusIcon className="size-5" /> Add Coupon
-          </Button>
+          <div className="flex items-center gap-3">
+            <CsvImportButton
+              entityName="coupons"
+              fields={COUPON_IMPORT_FIELDS}
+              createRow={async ({ is_active, ...payload }) => {
+                const created = await dispatch(postData({ payload: payload as Partial<Coupon> })).unwrap()
+                // New coupons start active; deactivate afterwards, as the coupon form does.
+                if (is_active === false) {
+                  await dispatch(patchData({ id: created.id, payload: { is_active: false } })).unwrap()
+                }
+                return created
+              }}
+              onComplete={() => void loadCoupons()}
+            />
+            <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
+              <PlusIcon className="size-5" /> Add Coupon
+            </Button>
+          </div>
         )}
       </div>
 
@@ -225,19 +293,10 @@ const Coupons = () => {
             ? [
                 {
                   component: (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="coupons-include-deleted"
-                        checked={includeDeleted}
-                        onCheckedChange={(checked) => {
+                    <DeletedToggle pressed={includeDeleted} onPressedChange={(checked) => {
                           setIncludeDeleted(checked)
                           setPage(1)
-                        }}
-                      />
-                      <Label htmlFor="coupons-include-deleted" className="text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

@@ -5,8 +5,6 @@ import { toast } from "sonner"
 import { Boxes, Package, PlusIcon, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
@@ -23,6 +21,7 @@ import { restoreBundle } from "../api"
 import type { Bundle } from "../types"
 import { usePermission } from "../lib/usePermission"
 import { useDebounced } from "../lib/useDebounced"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
 
 type Option = { label: string; value: string }
 const PAGE_SIZE = 20
@@ -210,19 +209,10 @@ const Bundles = () => {
             ? [
                 {
                   component: (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="bundles-include-deleted"
-                        checked={includeDeleted}
-                        onCheckedChange={(v) => {
+                    <DeletedToggle pressed={includeDeleted} onPressedChange={(v) => {
                           setIncludeDeleted(v)
                           setPage(1)
-                        }}
-                      />
-                      <Label htmlFor="bundles-include-deleted" className="whitespace-nowrap text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

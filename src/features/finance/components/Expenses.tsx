@@ -11,15 +11,17 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { exportToCSV } from "@/lib/ExportToCsv"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
-import { fetchAll, deleteData, restoreExpense } from "../slices/expenseSlice"
-import type { Expense } from "../types"
+import { fetchAll, deleteData, postData, restoreExpense } from "../slices/expenseSlice"
+import type { Account, Expense, ExpenseCategory } from "../types"
 import { accountLabel, useAccounts, useCan, useDebouncedValue, useExpenseCategories } from "../hooks/useFinanceHelpers"
+import { findAccount, findExpenseCategory, useImportLookup } from "../hooks/useImportLookups"
 import { DateRangeInputs, RestoreButton, ShowDeletedToggle } from "./shared"
 import { ExpenseFormDialog } from "./ExpenseFormDialog"
 import { ExpenseDetailDialog } from "./ExpenseDetailDialog"
@@ -87,6 +89,42 @@ const Expenses = () => {
     () => accounts.filter((a) => a.type === "expense").map((a) => ({ label: accountLabel(a), value: a.id })),
     [accounts]
   )
+  const accountLookup = useImportLookup<Account>("/admin/accounting/accounts/")
+  const categoryLookup = useImportLookup<ExpenseCategory>("/admin/accounting/expense-categories/")
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "expense_date", label: "Date", required: true, type: "date", aliases: ["Expense date"], example: "2026-09-15" },
+      { key: "payee", label: "Payee", required: true, aliases: ["Vendor", "Paid to"], example: "Dhaka Electric Supply Co." },
+      { key: "amount", label: "Amount", required: true, type: "number", aliases: ["Amount (BDT)", "Total"], example: "4500.00" },
+      {
+        key: "payment_account_id",
+        label: "Payment account",
+        required: true,
+        aliases: ["Paid from", "PaidFrom"],
+        example: "1200",
+        resolve: async (raw) => findAccount(raw, await accountLookup.get(), { what: "Payment account" }),
+      },
+      {
+        key: "expense_account_id",
+        label: "Expense account",
+        aliases: ["ExpenseAccount"],
+        example: "6200",
+        resolve: async (raw) =>
+          findAccount(raw, await accountLookup.get(), { type: "expense", what: "Expense account" }),
+      },
+      {
+        key: "category_id",
+        label: "Category",
+        aliases: ["Expense category"],
+        example: "Utilities",
+        resolve: async (raw) => findExpenseCategory(raw, await categoryLookup.get()),
+      },
+      { key: "description", label: "Description", aliases: ["Notes", "Memo"], example: "September electricity bill (DESCO)" },
+      { key: "reference_number", label: "Reference", aliases: ["Reference number", "Ref"], example: "DESCO-2026-09" },
+    ],
+    [accountLookup, categoryLookup]
+  )
+
   const orderingOptions: Option[] = [
     { label: "Newest first", value: "-expense_date" },
     { label: "Oldest first", value: "expense_date" },
@@ -228,6 +266,18 @@ const Expenses = () => {
           <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Expenses")}>
             <DownloadIcon className="size-5" /> Export CSV
           </Button>
+          {canPost && (
+            <CsvImportButton
+              entityName="expenses"
+              fields={importFields}
+              createRow={(payload) => dispatch(postData({ payload: payload as Partial<Expense> })).unwrap()}
+              onComplete={() => {
+                accountLookup.reset()
+                categoryLookup.reset()
+                load()
+              }}
+            />
+          )}
           {canPost && (
             <Button
               size="action"

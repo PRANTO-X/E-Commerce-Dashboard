@@ -26,6 +26,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -33,6 +34,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { deleteData, fetchAll, patchData, postData, restoreExpenseCategory } from "../slices/expenseCategorySlice"
 import type { Account, ExpenseCategory, ExpenseCategoryPayload } from "../types"
 import { accountLabel, useAccounts, useCan, useDebouncedValue } from "../hooks/useFinanceHelpers"
+import { findAccount, useImportLookup } from "../hooks/useImportLookups"
 import { RestoreButton, ShowDeletedToggle } from "./shared"
 
 const PAGE_SIZE = 20
@@ -213,6 +215,23 @@ const ExpenseCategories = () => {
     return () => request.abort()
   }, [load])
 
+  const accountLookup = useImportLookup<Account>("/admin/accounting/accounts/")
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "name", label: "Name", required: true, aliases: ["Category", "Category name"], example: "Utilities" },
+      {
+        key: "expense_account_id",
+        label: "Expense account",
+        aliases: ["Account"],
+        example: "6200",
+        resolve: async (raw) =>
+          findAccount(raw, await accountLookup.get(), { type: "expense", what: "Expense account" }),
+      },
+      { key: "description", label: "Description", example: "Electricity, water and gas bills" },
+    ],
+    [accountLookup]
+  )
+
   const handleDelete = async (category: ExpenseCategory) => {
     try {
       await dispatch(deleteData(category.id)).unwrap()
@@ -295,15 +314,26 @@ const ExpenseCategories = () => {
           <PageHeading title="Expense Categories" description="Group spending and map it to the right expense account." />
         </div>
         {canPost && (
-          <Button
-            size="action"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus className="size-5" /> New Category
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <CsvImportButton
+              entityName="expense categories"
+              fields={importFields}
+              createRow={(payload) => dispatch(postData({ payload: payload as Partial<ExpenseCategory> })).unwrap()}
+              onComplete={() => {
+                accountLookup.reset()
+                load()
+              }}
+            />
+            <Button
+              size="action"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus className="size-5" /> New Category
+            </Button>
+          </div>
         )}
       </div>
 

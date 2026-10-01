@@ -214,34 +214,33 @@ export function AppSidebar() {
         <NavLink
           to="/profile"
           title="View profile & account settings"
-          className="block rounded-xl border border-border bg-card p-3 shadow-sm group-data-[collapsible=icon]:hidden transition-all hover:bg-muted/60 hover:border-primary/40 cursor-pointer"
+          className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-2 group-data-[collapsible=icon]:hidden transition-colors hover:bg-muted/60 hover:border-primary/40 cursor-pointer"
         >
-          <div className="flex items-center gap-3">
-            <Avatar className="size-10 shrink-0 ring-2 ring-primary/20">
-              {user?.profile_picture ? (
-                <AvatarImage src={user.profile_picture} alt={displayName} />
-              ) : null}
-              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+          {/* Compact: avatar, then name + role on one line and the email on the next. The
+              role sits on the name line so the email gets the full text width. */}
+          <Avatar className="size-8 shrink-0 ring-2 ring-primary/20">
+            {user?.profile_picture ? (
+              <AvatarImage src={user.profile_picture} alt={displayName} />
+            ) : null}
+            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
 
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="flex items-center justify-between gap-1">
-                <p className="truncate text-sm font-semibold text-foreground leading-tight" title={displayName}>
-                  {displayName}
-                </p>
-                <span className="shrink-0 text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                  {userRole}
-                </span>
-              </div>
-              <p
-                className="truncate text-xs text-muted-foreground mt-0.5 font-normal select-all"
-                title={userEmail}
-              >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground leading-tight" title={displayName}>
+                {displayName}
+              </p>
+              <span className="shrink-0 rounded bg-primary/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-primary">
+                {userRole}
+              </span>
+            </div>
+            {userEmail && (
+              <p className="truncate text-[11px] leading-tight text-muted-foreground mt-0.5" title={userEmail}>
                 {userEmail}
               </p>
-            </div>
+            )}
           </div>
         </NavLink>
       </SidebarFooter>

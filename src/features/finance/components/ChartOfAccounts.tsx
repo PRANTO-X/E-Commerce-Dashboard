@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 import { BookText, CheckCircle2, Loader2, Plus } from "lucide-react"
@@ -25,6 +25,7 @@ import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { humanize } from "@/lib/format"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
@@ -33,6 +34,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { deleteData, fetchAll, patchData, postData, restoreAccount } from "../slices/accountSlice"
 import type { Account, AccountPayload, AccountType } from "../types"
 import { accountLabel, useAccounts, useCan, useDebouncedValue } from "../hooks/useFinanceHelpers"
+import { findAccount, useImportLookup } from "../hooks/useImportLookups"
 import { RestoreButton, ShowDeletedToggle } from "./shared"
 
 const PAGE_SIZE = 50
@@ -258,6 +260,23 @@ const ChartOfAccounts = () => {
     return () => request.abort()
   }, [load])
 
+  const accountLookup = useImportLookup<Account>("/admin/accounting/accounts/")
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "code", label: "Code", required: true, aliases: ["Account code"], example: "6500" },
+      { key: "name", label: "Name", required: true, aliases: ["Account name"], example: "Courier & Delivery Expense" },
+      { key: "type", label: "Type", required: true, type: "enum", options: ACCOUNT_TYPES, aliases: ["Account type"], example: "expense" },
+      {
+        key: "parent_id",
+        label: "Parent account",
+        aliases: ["Parent", "Parent code"],
+        example: "6900",
+        resolve: async (raw) => findAccount(raw, await accountLookup.get(), { what: "Parent account" }),
+      },
+    ],
+    [accountLookup]
+  )
+
   const handleDelete = async (account: Account) => {
     try {
       await dispatch(deleteData(account.id)).unwrap()
@@ -340,15 +359,32 @@ const ChartOfAccounts = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Chart of Accounts" description="The ledger accounts every posting is booked against." />
         {canPost && (
-          <Button
-            size="action"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus className="size-5" /> New Account
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <CsvImportButton
+              entityName="accounts"
+              fields={importFields}
+              createRow={async (payload) => {
+                const created = await dispatch(postData({ payload: payload as Partial<Account> })).unwrap()
+                // Lets later rows in the same file use this account as their parent.
+                accountLookup.add(created)
+                return created
+              }}
+              onComplete={() => {
+                accountLookup.reset()
+                reloadLookup()
+                load()
+              }}
+            />
+            <Button
+              size="action"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus className="size-5" /> New Account
+            </Button>
+          </div>
         )}
       </div>
 

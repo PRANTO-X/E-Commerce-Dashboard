@@ -23,12 +23,21 @@ import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { formatDate } from "@/lib/format"
 import { usePermission } from "@/features/catalog/lib/usePermission"
 import { useDebounced } from "@/features/catalog/lib/useDebounced"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 import { deleteData, fetchAll } from "../slices/warehouseSlice"
 import { createWarehouse, updateWarehouse } from "../api"
 import type { Warehouse, WarehousePayload } from "../types"
 
 const PAGE_SIZE = 20
+
+const importFields: ImportField[] = [
+  { key: "name", label: "Name", required: true, aliases: ["warehouse", "warehouse name"], example: "Chattogram Hub" },
+  { key: "code", label: "Code", required: true, aliases: ["warehouse code"], example: "CTG-01" },
+  { key: "address", label: "Address", example: "Agrabad C/A, Chattogram 4100" },
+  { key: "is_active", label: "Active", type: "boolean", aliases: ["is active", "status"], example: "yes" },
+  { key: "is_default", label: "Default", type: "boolean", aliases: ["is default", "default warehouse"], example: "no" },
+]
 
 const Warehouses = () => {
   useDocumentTitle("Warehouses")
@@ -127,15 +136,23 @@ const Warehouses = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Warehouses" description="Locations that hold stock. The default warehouse receives unassigned movements." />
         {canManage && (
-          <Button
-            size="action"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <PlusIcon className="size-5" /> Add Warehouse
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="warehouses"
+              fields={importFields}
+              createRow={(payload) => createWarehouse(payload as WarehousePayload)}
+              onComplete={load}
+            />
+            <Button
+              size="action"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <PlusIcon className="size-5" /> Add Warehouse
+            </Button>
+          </div>
         )}
       </div>
 

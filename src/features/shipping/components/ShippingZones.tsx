@@ -6,23 +6,36 @@ import { PlusIcon, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { PageHeading } from "@/components/common/PageHeading"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { deleteZone, fetchZones, restoreZone } from "@/features/shipping/slices/zoneSlice"
-import type { ShippingZone } from "@/features/shipping/types"
+import { createZone, deleteZone, fetchZones, restoreZone } from "@/features/shipping/slices/zoneSlice"
+import type { ShippingZone, ShippingZonePayload } from "@/features/shipping/types"
 import { useCan } from "@/features/sales/shared/useCan"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { ZoneFormDialog } from "./ZoneFormDialog"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { splitList } from "@/features/catalog/lib/importLookup"
 
 const PAGE_SIZE = 20
 const MAX_AREAS_SHOWN = 6
+
+const importFields: ImportField[] = [
+  { key: "name", label: "Name", required: true, aliases: ["zone", "zone name"], example: "Chattogram City" },
+  {
+    key: "country_codes",
+    label: "Areas",
+    aliases: ["area", "areas covered", "country codes", "districts"],
+    example: "chattogram; agrabad; halishahar; pahartali",
+    // Address keywords, separated by ";", "|" or ",". Leave empty for a catch-all zone.
+    resolve: (raw: string) => splitList(raw, true),
+  },
+]
 
 const ShippingZones = () => {
   useDocumentTitle("Delivery Zones")
@@ -181,9 +194,17 @@ const ShippingZones = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Delivery Zones" description="Areas that share delivery pricing." />
         {canUpdate && (
-          <Button size="action" onClick={() => openForm(null)}>
-            <PlusIcon className="size-5" /> New Zone
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="delivery zones"
+              fields={importFields}
+              createRow={(payload) => dispatch(createZone(payload as ShippingZonePayload)).unwrap()}
+              onComplete={() => void load()}
+            />
+            <Button size="action" onClick={() => openForm(null)}>
+              <PlusIcon className="size-5" /> New Zone
+            </Button>
+          </div>
         )}
       </div>
 
@@ -196,19 +217,10 @@ const ShippingZones = () => {
             ? [
                 {
                   component: (
-                    <div className="flex h-9 items-center gap-2">
-                      <Switch
-                        id="zones-show-deleted"
-                        checked={showDeleted}
-                        onCheckedChange={(v) => {
+                    <DeletedToggle pressed={showDeleted} onPressedChange={(v) => {
                           setShowDeleted(v)
                           setPage(1)
-                        }}
-                      />
-                      <Label htmlFor="zones-show-deleted" className="text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

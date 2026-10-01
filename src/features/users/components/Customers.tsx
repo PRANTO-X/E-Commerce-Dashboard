@@ -5,8 +5,6 @@ import { toast } from "sonner"
 import { BanIcon, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
@@ -14,15 +12,37 @@ import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { bulkDeactivateUsers, fetchAll, restoreUser } from "@/features/users/slices/customerSlice"
+import { bulkDeactivateUsers, fetchAll, postData, restoreUser } from "@/features/users/slices/customerSlice"
 import { displayNameOf, type AdminUser } from "@/features/users/types"
 import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatDate } from "@/lib/format"
 import { UserAvatar } from "./UserAvatar"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 
 const PAGE_SIZE = 20
+
+// Mirrors AdminUserCreateSerializer (POST /admin/users/); role is always sent as "customer".
+const CUSTOMER_IMPORT_FIELDS: ImportField[] = [
+  { key: "email", label: "Email", required: true, example: "nusrat.jahan@example.com" },
+  {
+    key: "password",
+    label: "Initial Password",
+    required: true,
+    aliases: ["password", "temporary password"],
+    example: "set-a-unique-initial-password",
+    resolve: (raw) => {
+      if (raw.length < 8) throw new Error("Initial Password must be at least 8 characters")
+      return raw
+    },
+  },
+  { key: "first_name", label: "First Name", example: "Nusrat" },
+  { key: "last_name", label: "Last Name", example: "Jahan" },
+  { key: "phone", label: "Phone", example: "+8801812345678" },
+  { key: "is_active", label: "Active", type: "boolean", aliases: ["status"], example: "yes" },
+]
 
 const statusOptions = [
   { label: "Active", value: "true" },
@@ -187,11 +207,21 @@ const Customers = () => {
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Customers" description="Manage your registered customer accounts." />
-        {selected.size > 0 && (
-          <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
-            <BanIcon className="size-4" /> Deactivate {selected.size} selected
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {selected.size > 0 && (
+            <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
+              <BanIcon className="size-4" /> Deactivate {selected.size} selected
+            </Button>
+          )}
+          <CsvImportButton
+            entityName="customers"
+            fields={CUSTOMER_IMPORT_FIELDS}
+            createRow={(payload) =>
+              dispatch(postData({ payload: { ...payload, role: "customer" } as Partial<AdminUser> })).unwrap()
+            }
+            onComplete={() => void loadCustomers()}
+          />
+        </div>
       </div>
 
       <FilterToolbar
@@ -217,19 +247,10 @@ const Customers = () => {
           },
           {
             component: (
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="customers-include-deleted"
-                  checked={includeDeleted}
-                  onCheckedChange={(checked) => {
+              <DeletedToggle pressed={includeDeleted} onPressedChange={(checked) => {
                     setIncludeDeleted(checked)
                     setPage(1)
-                  }}
-                />
-                <Label htmlFor="customers-include-deleted" className="text-sm">
-                  Show deleted
-                </Label>
-              </div>
+                  }} />
             ),
           },
         ]}

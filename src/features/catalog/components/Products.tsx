@@ -6,8 +6,6 @@ import { Boxes, Package, PlusIcon, RotateCcw, ToggleLeft, ToggleRight } from "lu
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
@@ -20,11 +18,14 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 
 import { fetchAll, deleteData } from "../slices/productSlice"
-import { bulkProductStatus, restoreProduct } from "../api"
-import { categoryTypeOptions, productTypeOptions, type Product } from "../types"
+import { bulkProductStatus, createProduct, fetchAllCategories, restoreProduct } from "../api"
+import { categoryTypeOptions, productTypeOptions, type Product, type ProductPayload } from "../types"
 import { usePermission } from "../lib/usePermission"
 import { useDebounced } from "../lib/useDebounced"
 import { useCategoryOptions } from "../lib/useCategoryOptions"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { createImportLookup, splitList } from "../lib/importLookup"
 
 type Option = { label: string; value: string }
 
@@ -49,6 +50,40 @@ const Products = () => {
   const canManage = usePermission("catalog.manage")
   const { data: products, isFetchingList, error, totalItems } = useAppSelector((s) => s.products)
   const { options: categoryOptions, nameById } = useCategoryOptions()
+
+  // CSV import: simple products only (one variant created from price/SKU in the same call).
+  const categoryLookup = useMemo(
+    () => createImportLookup("Category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
+    []
+  )
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "name", label: "Name", required: true, aliases: ["product", "product name", "title"], example: "Cotton Panjabi - Navy" },
+      {
+        key: "category_id",
+        label: "Category",
+        required: true,
+        aliases: ["category name", "category slug", "category id"],
+        example: "Panjabi & Kurta",
+        resolve: categoryLookup.resolve,
+      },
+      { key: "price", label: "Price (BDT)", required: true, type: "number", aliases: ["price", "selling price", "mrp"], example: "2450" },
+      { key: "sku", label: "SKU", aliases: ["product code"], example: "PJ-NAVY-001" },
+      { key: "cost_price", label: "Cost price (BDT)", type: "number", aliases: ["cost price", "cost", "purchase price"], example: "1600" },
+      { key: "discount_price", label: "Discount price (BDT)", type: "number", aliases: ["discount price", "sale price", "offer price"], example: "2200" },
+      { key: "description", label: "Description", example: "Soft cotton panjabi with embroidered placket, ideal for Eid." },
+      {
+        key: "highlights",
+        label: "Highlights",
+        aliases: ["features"],
+        example: "100% cotton; Regular fit; Made in Bangladesh",
+        // Separated by ";" or "|" (commas are kept, highlights are sentences).
+        resolve: (raw: string) => splitList(raw),
+      },
+      { key: "meta_keywords", label: "Meta keywords", aliases: ["keywords", "tags"], example: "panjabi, eid, cotton" },
+    ],
+    [categoryLookup]
+  )
 
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
@@ -287,6 +322,15 @@ const Products = () => {
             <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
               <Boxes className="size-5" /> New Bundle
             </Button>
+            <CsvImportButton
+              entityName="products"
+              fields={importFields}
+              createRow={(payload) => createProduct({ ...(payload as ProductPayload), product_type: "simple" })}
+              onComplete={() => {
+                categoryLookup.reset()
+                load()
+              }}
+            />
             <Button size="action" onClick={() => navigate("/product_form/new")}>
               <PlusIcon className="size-5" /> Add Product
             </Button>
@@ -371,19 +415,10 @@ const Products = () => {
             ? [
                 {
                   component: (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="products-include-deleted"
-                        checked={includeDeleted}
-                        onCheckedChange={(v) => {
+                    <DeletedToggle pressed={includeDeleted} onPressedChange={(v) => {
                           setIncludeDeleted(v)
                           resetPaging()
-                        }}
-                      />
-                      <Label htmlFor="products-include-deleted" className="text-sm whitespace-nowrap">
-                        Show deleted
-                      </Label>
-                    </div>
+                        }} />
                   ),
                 },
               ]

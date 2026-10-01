@@ -23,6 +23,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -189,6 +190,12 @@ function TaxRateFormDialog({
   )
 }
 
+const IMPORT_FIELDS: ImportField[] = [
+  { key: "name", label: "Name", required: true, aliases: ["Tax name"], example: "VAT 15%" },
+  { key: "rate_percent", label: "Rate (%)", required: true, type: "number", aliases: ["Rate", "Rate percent", "Percent"], example: "15" },
+  { key: "region", label: "Region", example: "Bangladesh" },
+]
+
 const TaxRates = () => {
   useDocumentTitle("Tax Rates")
   const dispatch = useAppDispatch()
@@ -298,15 +305,25 @@ const TaxRates = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Tax Rates" description="Rates charged on orders. The starred rate is the store default." />
         {canPost && (
-          <Button
-            size="action"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus className="size-5" /> New Tax Rate
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <CsvImportButton
+              entityName="tax rates"
+              fields={IMPORT_FIELDS}
+              createRow={(payload) => dispatch(postData({ payload: payload as Partial<TaxRate> })).unwrap()}
+              onComplete={() => {
+                load()
+              }}
+            />
+            <Button
+              size="action"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus className="size-5" /> New Tax Rate
+            </Button>
+          </div>
         )}
       </div>
 

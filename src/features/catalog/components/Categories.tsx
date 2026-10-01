@@ -5,8 +5,6 @@ import { toast } from "sonner"
 import { CornerDownRight, FolderTree, PlusIcon, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
@@ -16,10 +14,13 @@ import { TableActions } from "@/components/common/TableActions"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 
-import { deleteCategory, restoreCategory } from "../api"
-import { categoryTypeOptions } from "../types"
+import { createCategory, deleteCategory, fetchAllCategories, restoreCategory } from "../api"
+import { categoryTypeOptions, type Category, type CategoryPayload } from "../types"
 import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
 import { usePermission } from "../lib/usePermission"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { createImportLookup } from "../lib/importLookup"
 
 type Option = { label: string; value: string }
 
@@ -31,6 +32,42 @@ const Categories = () => {
   const { options, isLoading, error, reload } = useCategoryOptions(includeDeleted)
   const [search, setSearch] = useState("")
   const [type, setType] = useState<Option | null>(null)
+
+  // CSV import. Parents are looked up by name/slug; categories created earlier in the same
+  // file are added to the lookup, so a parent row can precede its children.
+  const parentLookup = useMemo(
+    () => createImportLookup<Category>("Parent category", () => fetchAllCategories(), (c) => [c.name, c.slug]),
+    []
+  )
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "name", label: "Name", required: true, aliases: ["category", "category name"], example: "Eid Panjabi" },
+      {
+        key: "parent_id",
+        label: "Parent category",
+        aliases: ["parent", "parent name", "parent slug", "parent id"],
+        example: "Panjabi & Kurta",
+        resolve: parentLookup.resolve,
+      },
+      {
+        key: "category_type",
+        label: "Category type",
+        type: "enum",
+        options: ["stock", "preorder"],
+        aliases: ["type"],
+        example: "stock",
+        // Root categories only; a subcategory always takes its parent's type.
+      },
+      { key: "description", label: "Description", example: "Festive embroidered panjabis for Eid." },
+    ],
+    [parentLookup]
+  )
+  const importCategory = async (payload: Record<string, unknown>) => {
+    // A subcategory inherits its parent's type (the backend rejects a mismatching one).
+    const created = await createCategory(payload as CategoryPayload)
+    parentLookup.add(created)
+    return created
+  }
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -138,9 +175,20 @@ const Categories = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Categories" description="Organise products into a category tree" />
         {canManage && (
-          <Button size="action" onClick={() => navigate("/category_form/new")}>
-            <PlusIcon className="size-5" /> Add Category
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="categories"
+              fields={importFields}
+              createRow={importCategory}
+              onComplete={() => {
+                parentLookup.reset()
+                reload()
+              }}
+            />
+            <Button size="action" onClick={() => navigate("/category_form/new")}>
+              <PlusIcon className="size-5" /> Add Category
+            </Button>
+          </div>
         )}
       </div>
 
@@ -163,12 +211,7 @@ const Categories = () => {
             ? [
                 {
                   component: (
-                    <div className="flex items-center gap-2">
-                      <Switch id="categories-include-deleted" checked={includeDeleted} onCheckedChange={setIncludeDeleted} />
-                      <Label htmlFor="categories-include-deleted" className="whitespace-nowrap text-sm">
-                        Show deleted
-                      </Label>
-                    </div>
+                    <DeletedToggle pressed={includeDeleted} onPressedChange={setIncludeDeleted} />
                   ),
                 },
               ]

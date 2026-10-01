@@ -24,6 +24,7 @@ import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { useAppDispatch } from "@/app/hooks"
 import { useDocumentTitle } from "@/hooks/use-document-title"
@@ -31,6 +32,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title"
 import { deleteData, fetchAll, patchData, postData, restoreSupplier } from "../slices/supplierSlice"
 import type { Supplier, SupplierPayload } from "../types"
 import { useCanManagePurchasing, useDebouncedValue, useProcurementSelector } from "../hooks/useProcurement"
+import { DeletedToggle } from "@/components/common/DeletedToggle"
 
 const PAGE_SIZE = 20
 
@@ -164,6 +166,13 @@ function SupplierFormDialog({
   )
 }
 
+const IMPORT_FIELDS: ImportField[] = [
+  { key: "name", label: "Name", required: true, aliases: ["Supplier", "Supplier name", "Vendor"], example: "Pran-RFL Distribution Ltd." },
+  { key: "contact_email", label: "Contact email", aliases: ["Email"], example: "orders@pranrfl.com.bd" },
+  { key: "phone", label: "Phone", aliases: ["Phone number", "Mobile"], example: "+8801712345678" },
+  { key: "payment_terms", label: "Payment terms", aliases: ["Terms"], example: "Net 30" },
+]
+
 const Suppliers = () => {
   useDocumentTitle("Suppliers")
   const dispatch = useAppDispatch()
@@ -288,9 +297,19 @@ const Suppliers = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Suppliers" description="Vendors you buy stock from." />
         {canManage && (
-          <Button size="action" onClick={() => openForm(null)}>
-            <Plus className="size-5" /> Add Supplier
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <CsvImportButton
+              entityName="suppliers"
+              fields={IMPORT_FIELDS}
+              createRow={(payload) => dispatch(postData({ payload: payload as Partial<Supplier> })).unwrap()}
+              onComplete={() => {
+                load()
+              }}
+            />
+            <Button size="action" onClick={() => openForm(null)}>
+              <Plus className="size-5" /> Add Supplier
+            </Button>
+          </div>
         )}
       </div>
 
@@ -306,19 +325,13 @@ const Suppliers = () => {
             ? [
                 {
                   component: (
-                    <div className="flex h-11 items-center gap-2">
-                      <Switch
-                        id="suppliers-deleted"
-                        checked={includeDeleted}
-                        onCheckedChange={(v) => {
-                          setIncludeDeleted(v)
-                          setPage(1)
-                        }}
-                      />
-                      <Label htmlFor="suppliers-deleted" className="text-sm text-muted-foreground whitespace-nowrap">
-                        Show deleted
-                      </Label>
-                    </div>
+                    <DeletedToggle
+                      pressed={includeDeleted}
+                      onPressedChange={(v) => {
+                        setIncludeDeleted(v)
+                        setPage(1)
+                      }}
+                    />
                   ),
                 },
               ]

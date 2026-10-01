@@ -11,14 +11,16 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { deleteRate, fetchRates } from "@/features/shipping/slices/rateSlice"
-import { fetchZoneOptions } from "@/features/shipping/slices/zoneSlice"
+import { createZoneRate, fetchZoneOptions } from "@/features/shipping/slices/zoneSlice"
 import { fetchCarrierOptions } from "@/features/shipping/slices/carrierSlice"
-import type { Carrier, ShippingRate, ShippingZone } from "@/features/shipping/types"
+import type { Carrier, ShippingRate, ShippingRatePayload, ShippingZone } from "@/features/shipping/types"
 import { useCan } from "@/features/sales/shared/useCan"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatCurrency } from "@/lib/format"
 import { RateFormDialog } from "./RateFormDialog"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+import { createImportLookup, fetchAllPages } from "@/features/catalog/lib/importLookup"
 
 const PAGE_SIZE = 20
 const ALL = "__all__"
@@ -51,6 +53,40 @@ const ShippingRates = () => {
       carrierReq.abort()
     }
   }, [dispatch])
+
+  // CSV import: zone and carrier are given by name (carrier also by provider code, e.g. "pathao").
+  const importLookups = useMemo(
+    () => ({
+      zone: createImportLookup<ShippingZone>(
+        "Zone",
+        () => fetchAllPages<ShippingZone>("/admin/logistics/zones/"),
+        (z) => [z.name]
+      ),
+      carrier: createImportLookup<Carrier>(
+        "Carrier",
+        () => fetchAllPages<Carrier>("/admin/logistics/carriers/"),
+        (c) => [c.name, c.code]
+      ),
+    }),
+    []
+  )
+  const importFields = useMemo<ImportField[]>(
+    () => [
+      { key: "zone_id", label: "Zone", required: true, aliases: ["zone name", "delivery zone"], example: "Inside Dhaka", resolve: importLookups.zone.resolve },
+      { key: "carrier_id", label: "Carrier", required: true, aliases: ["carrier name", "courier"], example: "Pathao Courier", resolve: importLookups.carrier.resolve },
+      { key: "base_weight", label: "Base weight (kg)", required: true, type: "number", aliases: ["base weight"], example: "1" },
+      { key: "base_charge", label: "Base charge (BDT)", required: true, type: "number", aliases: ["base charge"], example: "60" },
+      { key: "increment_weight", label: "Extra weight step (kg)", required: true, type: "number", aliases: ["increment weight"], example: "0.5" },
+      { key: "increment_charge", label: "Extra charge per step (BDT)", required: true, type: "number", aliases: ["increment charge"], example: "15" },
+    ],
+    [importLookups]
+  )
+  const importRate = (payload: Record<string, unknown>) => {
+    const { zone_id, ...rate } = payload
+    return dispatch(
+      createZoneRate({ zoneId: String(zone_id), payload: rate as unknown as ShippingRatePayload & { carrier_id: string } })
+    ).unwrap()
+  }
 
   const zoneNames = useMemo(() => new Map(zones.map((z) => [z.id, z.name])), [zones])
   const carrierNames = useMemo(() => new Map(carriers.map((c) => [c.id, c.name])), [carriers])
@@ -149,9 +185,21 @@ const ShippingRates = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <PageHeading title="Shipping Rates" description="What each carrier charges per delivery zone, by weight." />
         {canUpdate && (
-          <Button size="action" onClick={() => openForm(null)} disabled={zones.length === 0 || carriers.length === 0}>
-            <PlusIcon className="size-5" /> Add Rate
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CsvImportButton
+              entityName="shipping rates"
+              fields={importFields}
+              createRow={importRate}
+              onComplete={() => {
+                importLookups.zone.reset()
+                importLookups.carrier.reset()
+                void load()
+              }}
+            />
+            <Button size="action" onClick={() => openForm(null)} disabled={zones.length === 0 || carriers.length === 0}>
+              <PlusIcon className="size-5" /> Add Rate
+            </Button>
+          </div>
         )}
       </div>
 

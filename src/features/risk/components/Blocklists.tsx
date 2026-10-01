@@ -33,6 +33,46 @@ import { useCan } from "@/features/system/permissions"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { formatDateTime, fromDatetimeLocal } from "@/lib/format"
+import { CsvImportButton, type ImportField } from "@/components/common/CsvImportDialog"
+
+/** "YYYY-MM-DD" (end of that day) or "YYYY-MM-DD HH:mm", in local time → ISO string. */
+function parseImportDateTime(raw: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/.exec(raw.trim())
+  if (!m) throw new Error(`"${raw}" is not a date like 2026-12-31 or 2026-12-31 23:59`)
+  const [, y, mo, d, h, mi] = m
+  const date = h
+    ? new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi))
+    : new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59)
+  if (Number.isNaN(date.getTime()) || date.getMonth() !== Number(mo) - 1) throw new Error(`"${raw}" is not a valid date`)
+  return date.toISOString()
+}
+
+// Mirrors BlockPhoneSerializer (POST /admin/risk/phone-blocklist/).
+const PHONE_BLOCK_IMPORT_FIELDS: ImportField[] = [
+  { key: "phone_number", label: "Phone Number", required: true, aliases: ["phone"], example: "+8801712345678" },
+  { key: "reason", label: "Reason", required: true, example: "Refused 3 COD deliveries" },
+  {
+    key: "strength",
+    label: "Rule",
+    type: "enum",
+    options: ["advance_only", "blocked"],
+    aliases: ["strength"],
+    example: "advance_only",
+  },
+]
+
+// Mirrors IPBlockSerializer (POST /admin/risk/ip-blocklist/).
+const IP_BLOCK_IMPORT_FIELDS: ImportField[] = [
+  { key: "ip_address", label: "IP Address", required: true, aliases: ["ip"], example: "203.0.113.45" },
+  { key: "reason", label: "Reason", required: true, example: "Repeated fake orders" },
+  {
+    key: "expires_at",
+    label: "Expires At",
+    aliases: ["expires", "expiry"],
+    example: "2026-12-31 23:59",
+    resolve: parseImportDateTime,
+  },
+]
 
 /** A small confirm-with-reason dialog used for unblocking / lifting. */
 function ConfirmDialog({
@@ -176,9 +216,17 @@ function IPBlocklistTab({ canManage }: { canManage: boolean }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">Requests from these addresses are refused by the storefront.</p>
         {canManage && (
-          <Button variant="apply" size="action" onClick={() => setAdding(true)}>
-            <PlusIcon className="size-5" /> Block IP
-          </Button>
+          <div className="flex items-center gap-3">
+            <CsvImportButton
+              entityName="IP blocks"
+              fields={IP_BLOCK_IMPORT_FIELDS}
+              createRow={(payload) => dispatch(blockIP({ payload: payload as Partial<IPBlock> })).unwrap()}
+              onComplete={() => void load()}
+            />
+            <Button variant="apply" size="action" onClick={() => setAdding(true)}>
+              <PlusIcon className="size-5" /> Block IP
+            </Button>
+          </div>
         )}
       </div>
       <DataTable
@@ -370,9 +418,17 @@ function PhoneBlocklistTab({ canManage }: { canManage: boolean }) {
           </Label>
         </div>
         {canManage && (
-          <Button variant="apply" size="action" onClick={() => setAdding(true)}>
-            <PlusIcon className="size-5" /> Block number
-          </Button>
+          <div className="flex items-center gap-3">
+            <CsvImportButton
+              entityName="phone blocks"
+              fields={PHONE_BLOCK_IMPORT_FIELDS}
+              createRow={(payload) => dispatch(blockPhone({ payload: payload as Partial<PhoneBlock> })).unwrap()}
+              onComplete={() => void load()}
+            />
+            <Button variant="apply" size="action" onClick={() => setAdding(true)}>
+              <PlusIcon className="size-5" /> Block number
+            </Button>
+          </div>
         )}
       </div>
       <DataTable
