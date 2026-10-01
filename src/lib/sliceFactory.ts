@@ -3,6 +3,7 @@ import {
   createReducer,
   createSlice,
   type ActionReducerMapBuilder,
+  type Draft,
   type Reducer,
 } from "@reduxjs/toolkit"
 import { generateId } from "@/lib/utils"
@@ -122,7 +123,7 @@ export function createSliceFactory<T extends WithId>({
 
   const updateData = createAsyncThunk(
     `${name}/updateData`,
-    async ({ id, payload }: { id: string; payload: Partial<T> }, { rejectWithValue }) => {
+    async ({ id, payload }: { id: string; payload: Partial<T> }, { getState, rejectWithValue }) => {
       if (endpoint) {
         try {
           const res = await api.put(resourceUrl(id), payload)
@@ -132,7 +133,10 @@ export function createSliceFactory<T extends WithId>({
         }
       }
 
-      return { ...payload, id } as T
+      // Merge so fields absent from a partial payload aren't dropped from the record.
+      const state = getState() as Record<string, { data: T[] } | undefined>
+      const existing = (state[name]?.data ?? seed).find((i) => i.id === id)
+      return { ...(existing as object), ...payload, id } as T
     }
   )
 
@@ -170,108 +174,173 @@ export function createSliceFactory<T extends WithId>({
     }
   )
 
+  type SingleStatus = "idle" | "loading" | "succeeded" | "failed"
+  const emptySingle = (initialSingleData === undefined ? ({} as T) : initialSingleData) as unknown as
+    | T
+    | Record<string, never>
+
+  const initialState = {
+    data: seed, // For list of items
+    singleData: emptySingle, // For single item details
+    // True while ANY request is in flight. Counter-backed so one request finishing can't
+    // clear the flag while another (e.g. a detail fetch next to a list fetch) is pending.
+    isLoading: false,
+    pendingCount: 0,
+    isFetchingList: false,
+    isMutating: false,
+    // Lets detail pages tell "not loaded yet" / "not found" / "request failed" apart.
+    singleStatus: "idle" as SingleStatus,
+    singleError: null as unknown,
+    error: null as unknown, // Error handling
+    totalItems: seed.length,
+    meta: null as ListMeta | null, // server pagination info, populated once endpoint-backed
+    // requestId of the latest list/detail fetch; responses from older requests are dropped.
+    listRequestId: null as string | null,
+    singleRequestId: null as string | null,
+  }
+  type State = typeof initialState
+
+  const start = (state: Draft<State>) => {
+    state.pendingCount += 1
+    state.isLoading = true
+  }
+  const finish = (state: Draft<State>) => {
+    state.pendingCount = Math.max(0, state.pendingCount - 1)
+    state.isLoading = state.pendingCount > 0
+  }
+  const replaceItem = (state: Draft<State>, item: T) => {
+    state.data = state.data.map((existing) => (existing.id === item.id ? (item as Draft<T>) : existing)) as typeof state.data
+    if ((state.singleData as Partial<WithId>)?.id === item.id) {
+      state.singleData = item as typeof state.singleData
+    }
+  }
+
   const slice = createSlice({
     name,
-    initialState: {
-      data: seed, // For list of items
-      singleData: (initialSingleData === undefined ? ({} as T) : initialSingleData) as unknown as T | Record<string, never>, // For single item details
-      isLoading: false, // Loading state for all actions
-      error: null as unknown, // Error handling
-      totalItems: seed.length,
-      meta: null as ListMeta | null, // server pagination info, populated once endpoint-backed
-    },
+    initialState,
     reducers: {},
     extraReducers: (builder) => {
       return builder
         // Fetch All
-        .addCase(fetchAll.pending, (state) => {
-          state.isLoading = true
+        .addCase(fetchAll.pending, (state, action) => {
+          start(state)
+          state.isFetchingList = true
+          state.listRequestId = action.meta.requestId
         })
         .addCase(fetchAll.fulfilled, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          if (state.listRequestId !== action.meta.requestId) return
+          state.isFetchingList = false
           state.data = action.payload.data as typeof state.data
           state.totalItems = action.payload.total
           state.meta = action.payload.meta
           state.error = null
         })
         .addCase(fetchAll.rejected, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          if (state.listRequestId !== action.meta.requestId) return
+          state.isFetchingList = false
+          if (action.meta.aborted) return
           state.error = action.payload ?? action.error
         })
 
         // Fetch Single
-        .addCase(fetchSingle.pending, (state) => {
-          state.isLoading = true
+        .addCase(fetchSingle.pending, (state, action) => {
+          start(state)
+          state.singleRequestId = action.meta.requestId
+          state.singleStatus = "loading"
+          state.singleError = null
+          // Don't keep showing the previously viewed record while a different one loads.
+          if ((state.singleData as Partial<WithId>)?.id !== action.meta.arg) {
+            state.singleData = emptySingle as typeof state.singleData
+          }
         })
         .addCase(fetchSingle.fulfilled, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          if (state.singleRequestId !== action.meta.requestId) return
           state.singleData = action.payload as typeof state.singleData
+          state.singleStatus = "succeeded"
           state.error = null
         })
         .addCase(fetchSingle.rejected, (state, action) => {
-          state.isLoading = false
-          state.error = action.payload ?? action.error
+          finish(state)
+          if (state.singleRequestId !== action.meta.requestId) return
+          state.singleStatus = "failed"
+          state.singleError = action.payload ?? action.error
+          state.error = state.singleError
         })
 
         // Post Data
         .addCase(postData.pending, (state) => {
-          state.isLoading = true
+          start(state)
+          state.isMutating = true
         })
         .addCase(postData.fulfilled, (state, action) => {
-          state.isLoading = false
-          state.data = [action.payload, ...state.data] as typeof state.data
-          state.totalItems = state.data.length
+          finish(state)
+          state.isMutating = false
+          // Only prepend while the first page is showing; on later pages the new row
+          // belongs elsewhere in the server's ordering.
+          if (!state.meta || state.meta.page <= 1) {
+            state.data = [action.payload, ...state.data] as typeof state.data
+          }
+          state.totalItems += 1
           state.error = null
         })
         .addCase(postData.rejected, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          state.isMutating = false
           state.error = action.payload ?? action.error
         })
 
         // Update Data
         .addCase(updateData.pending, (state) => {
-          state.isLoading = true
+          start(state)
+          state.isMutating = true
         })
         .addCase(updateData.fulfilled, (state, action) => {
-          state.isLoading = false
-          state.data = state.data.map((item) =>
-            item.id === action.payload.id ? action.payload : item
-          ) as typeof state.data
+          finish(state)
+          state.isMutating = false
+          replaceItem(state, action.payload)
           state.error = null
         })
         .addCase(updateData.rejected, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          state.isMutating = false
           state.error = action.payload ?? action.error
         })
 
         // Patch Data
         .addCase(patchData.pending, (state) => {
-          state.isLoading = true
+          start(state)
+          state.isMutating = true
         })
         .addCase(patchData.fulfilled, (state, action) => {
-          state.isLoading = false
-          state.data = state.data.map((item) =>
-            item.id === action.payload.id ? action.payload : item
-          ) as typeof state.data
+          finish(state)
+          state.isMutating = false
+          replaceItem(state, action.payload)
           state.error = null
         })
         .addCase(patchData.rejected, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          state.isMutating = false
           state.error = action.payload ?? action.error
         })
 
         // Delete Data
         .addCase(deleteData.pending, (state) => {
-          state.isLoading = true
+          start(state)
+          state.isMutating = true
         })
         .addCase(deleteData.fulfilled, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          state.isMutating = false
           state.data = state.data.filter((item) => item.id !== action.payload)
-          state.totalItems = state.data.length
+          state.totalItems = Math.max(0, state.totalItems - 1)
           state.error = null
         })
         .addCase(deleteData.rejected, (state, action) => {
-          state.isLoading = false
+          finish(state)
+          state.isMutating = false
           state.error = action.payload ?? action.error
         })
     },

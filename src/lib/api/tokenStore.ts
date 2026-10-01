@@ -1,8 +1,13 @@
 // Single source of truth for auth tokens, kept outside Redux so the axios client
 // (client.ts) never needs to import the store/authSlice and risk a circular import.
 // authSlice mirrors these values into Redux state for components to read/react to.
+//
+// The access token lives only in memory. The refresh token is persisted in localStorage
+// so sessions survive reloads; moving it to an httpOnly cookie (immune to XSS theft)
+// needs the backend to set/read that cookie on /auth/login and /auth/refresh.
 
-const REFRESH_KEY = "refreshToken"
+export const REFRESH_TOKEN_KEY = "refreshToken"
+const REFRESH_KEY = REFRESH_TOKEN_KEY
 
 let accessToken: string | null = null
 

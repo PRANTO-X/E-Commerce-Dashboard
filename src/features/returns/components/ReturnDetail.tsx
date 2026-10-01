@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, AlertCircle, CheckCircle2, XCircle, PackageCheck, Cog } from "lucide-react"
+import { ArrowLeft, CheckCircle2, XCircle, PackageCheck, Cog } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -25,9 +25,12 @@ import {
   markReturnReceived,
   processReturn,
 } from "@/features/returns/slices/returnSlice"
-import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
+import { fetchOrderById } from "@/features/sales/slices/orderSlice"
 import type { ReturnResolution, ReturnStatus } from "@/features/returns/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const resolutionOptions: { label: string; value: ReturnResolution }[] = [
   { label: "Refund", value: "refund" },
@@ -39,8 +42,12 @@ const ReturnDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: ret, isLoading } = useAppSelector((state) => state.returns)
-  const { data: orders } = useAppSelector((state) => state.orders)
+  const { singleData, singleStatus, singleError } = useAppSelector((state) => state.returns)
+  const ret = singleData && singleData.id === id ? singleData : null
+  // Order number for the header link, looked up by id (not from whatever page of orders is
+  // in the orders slice, which may not contain this return's order).
+  const [orderRef, setOrderRef] = useState<{ id: string; order_number: string } | null>(null)
+  const orderId = ret?.order
 
   useDocumentTitle(ret?.return_number ? `${ret.return_number} — Return` : "Return Details")
 
@@ -49,10 +56,33 @@ const ReturnDetail = () => {
   const [rejectionReason, setRejectionReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (id) dispatch(fetchReturn(id))
-    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
+  const load = useCallback(() => {
+    if (!id) return undefined
+    return dispatch(fetchReturn(id))
   }, [dispatch, id])
+
+  useEffect(() => {
+    const request = load()
+    return () => request?.abort()
+  }, [load])
+
+  useEffect(() => {
+    if (!orderId) return
+    let active = true
+    const request = dispatch(fetchOrderById(orderId))
+    request
+      .unwrap()
+      .then((o) => {
+        if (active) setOrderRef({ id: o.id, order_number: o.order_number })
+      })
+      .catch(() => {
+        // Non-critical: the header just omits the order link.
+      })
+    return () => {
+      active = false
+      request.abort()
+    }
+  }, [dispatch, orderId])
 
   const handleApprove = async () => {
     if (!ret || !resolution) return
@@ -108,26 +138,23 @@ const ReturnDetail = () => {
     }
   }
 
-  if (isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading return...</div>
-  }
-
-  if (!ret || ret.id !== id) {
+  const pageState = resolveDetailState(singleStatus, singleError, !!ret)
+  if (pageState || !ret) {
     return (
-      <div className="section-container py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-        <h2 className="text-2xl font-bold">Return not found</h2>
-        <Button asChild className="mt-6">
-          <Link to="/returns">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Returns
-          </Link>
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState ?? "loading"}
+        entity="Return"
+        backTo="/returns"
+        backLabel="Back to Returns"
+        error={singleError}
+        onRetry={() => {
+          load()
+        }}
+      />
     )
   }
 
-  const order = orders.find((o) => o.id === ret.order)
+  const order = orderRef && orderRef.id === ret.order ? orderRef : null
   const canApproveReject = ret.status === "pending_review"
   const canMarkReceived: ReturnStatus[] = ["approved", "awaiting_return", "in_transit"]
   const canMarkReceivedNow = canMarkReceived.includes(ret.status)
@@ -163,19 +190,19 @@ const ReturnDetail = () => {
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline">{ret.status.replace("_", " ")}</Badge>
+              <Badge variant="outline" className="capitalize">{humanize(ret.status)}</Badge>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Reason</span>
-              <span className="capitalize">{ret.reason.replace("_", " ")}</span>
+              <span className="capitalize">{humanize(ret.reason)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Resolution</span>
-              <span className="capitalize">{ret.resolution?.replace("_", " ") || "—"}</span>
+              <span className="capitalize">{ret.resolution ? humanize(ret.resolution) : "—"}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Refund Amount</span>
-              <span>{ret.refund_amount ? `$${Number(ret.refund_amount).toFixed(2)}` : "—"}</span>
+              <span>{ret.refund_amount ? formatCurrency(ret.refund_amount) : "—"}</span>
             </div>
             {ret.comments && (
               <div className="text-sm pt-2">
@@ -285,16 +312,21 @@ const ReturnDetail = () => {
         </Card>
       </div>
 
-      {ret.status_history.length > 0 && (
+      {(ret.status_history?.length ?? 0) > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Status History</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {ret.status_history.map((entry, idx) => (
-              <div key={idx} className="text-sm flex justify-between border-b border-border pb-2 last:border-0">
-                <span>{entry.from_status || "—"} → {entry.to_status}</span>
-                <span className="text-muted-foreground">{new Date(entry.created_at).toLocaleString()}</span>
+            {ret.status_history.map((entry) => (
+              <div
+                key={`${entry.created_at}-${entry.from_status}-${entry.to_status}`}
+                className="text-sm flex justify-between border-b border-border pb-2 last:border-0"
+              >
+                <span className="capitalize">
+                  {entry.from_status ? humanize(entry.from_status) : "—"} → {humanize(entry.to_status)}
+                </span>
+                <span className="text-muted-foreground">{formatDateTime(entry.created_at)}</span>
               </div>
             ))}
           </CardContent>

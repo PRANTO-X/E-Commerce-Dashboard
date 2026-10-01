@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAppSelector } from "@/app/hooks"
@@ -152,25 +152,26 @@ export function AppSidebar() {
     }
   }
 
-  // auto open active section
-  useEffect(() => {
-    if (isCollapsed) return
+  // Close all sections when collapsed, and auto-open the active route's section when
+  // the route changes or the sidebar expands. Adjusted during render rather than in
+  // effects, which would paint once with stale sections and then re-render.
+  const [syncedWith, setSyncedWith] = useState({ pathname: "", isCollapsed: !isCollapsed })
+  if (syncedWith.pathname !== location.pathname || syncedWith.isCollapsed !== isCollapsed) {
+    setSyncedWith({ pathname: location.pathname, isCollapsed })
 
-    const active = sidebarItems.find((section) =>
-      section.items.some((item) => item.url === location.pathname),
-    )
-
-    if (active) {
-      setOpenSections((prev) =>
-        prev.includes(active.label) ? prev : [...prev, active.label],
+    if (isCollapsed) {
+      setOpenSections([])
+    } else {
+      const active = sidebarItems.find((section) =>
+        section.items.some((item) => item.url === location.pathname),
       )
+      if (active) {
+        setOpenSections((prev) =>
+          prev.includes(active.label) ? prev : [...prev, active.label],
+        )
+      }
     }
-  }, [location.pathname, isCollapsed])
-
-  // close all when collapsed
-  useEffect(() => {
-    if (isCollapsed) setOpenSections([])
-  }, [isCollapsed])
+  }
 
   const toggleSection = (label: string) => {
     if (isCollapsed) {

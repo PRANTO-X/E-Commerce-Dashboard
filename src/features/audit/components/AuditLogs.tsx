@@ -9,6 +9,9 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll } from "@/features/audit/slices/auditLogSlice"
 import type { AuditLog } from "@/features/audit/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDateTime } from "@/lib/format"
+
+const SEARCH_DEBOUNCE_MS = 300
 
 const AuditLogs = () => {
   useDocumentTitle("Audit Logs")
@@ -19,18 +22,36 @@ const AuditLogs = () => {
   const [targetType, setTargetType] = useState("")
   const { data: logs, totalItems, meta, isLoading, error } = useAppSelector((state) => state.auditLogs)
 
-  const loadLogs = useCallback(() => {
-    dispatch(
-      fetchAll({
-        page,
-        ...(action.trim() ? { action: action.trim() } : {}),
-        ...(targetType.trim() ? { target_type: targetType.trim() } : {}),
-      })
-    )
-  }, [dispatch, page, action, targetType])
+  // Filters actually sent to the server — lag the inputs by SEARCH_DEBOUNCE_MS so typing
+  // doesn't fire a request per keystroke.
+  const [appliedFilters, setAppliedFilters] = useState({ action: "", targetType: "" })
 
   useEffect(() => {
-    loadLogs()
+    const next = { action: action.trim(), targetType: targetType.trim() }
+    if (next.action === appliedFilters.action && next.targetType === appliedFilters.targetType) return
+    const timer = setTimeout(() => {
+      setAppliedFilters(next)
+      setPage(1)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [action, targetType, appliedFilters])
+
+  const loadLogs = useCallback(
+    () =>
+      dispatch(
+        fetchAll({
+          page,
+          ...(appliedFilters.action ? { action: appliedFilters.action } : {}),
+          ...(appliedFilters.targetType ? { target_type: appliedFilters.targetType } : {}),
+        })
+      ),
+    [dispatch, page, appliedFilters]
+  )
+
+  useEffect(() => {
+    // Abort the in-flight request when filters/page change or the page unmounts.
+    const request = loadLogs()
+    return () => request.abort()
   }, [loadLogs])
 
   const columns: ColumnDef<AuditLog>[] = [
@@ -53,7 +74,7 @@ const AuditLogs = () => {
       header: "DATE",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {new Date(row.getValue("created_at")).toLocaleString()}
+          {formatDateTime(row.getValue("created_at") as string)}
         </span>
       ),
     },
@@ -69,10 +90,7 @@ const AuditLogs = () => {
       <FilterToolbar
         searchPlaceholder="Filter by action (e.g. POST /api/v1/admin/orders/)"
         searchValue={action}
-        onSearchChange={(value) => {
-          setPage(1)
-          setAction(value)
-        }}
+        onSearchChange={setAction}
         filters={[
           {
             component: (
@@ -81,10 +99,7 @@ const AuditLogs = () => {
                 placeholder="Filter by target type"
                 className="w-full sm:w-[220px]"
                 value={targetType}
-                onChange={(e) => {
-                  setPage(1)
-                  setTargetType(e.target.value)
-                }}
+                onChange={(e) => setTargetType(e.target.value)}
               />
             ),
           },

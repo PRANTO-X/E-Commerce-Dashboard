@@ -12,7 +12,7 @@ export function ProgressBar({
   useEffect(() => {
     const timer = setTimeout(() => setProgress(value), 400)
     return () => clearTimeout(timer)
-  }, [])
+  }, [value])
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center">

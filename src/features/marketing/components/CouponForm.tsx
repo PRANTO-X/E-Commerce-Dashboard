@@ -23,20 +23,46 @@ import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/fie
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, patchData } from "@/features/marketing/slices/couponSlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
-const couponSchema = z.object({
-  code: z.string().min(3, "Code must be at least 3 characters"),
-  description: z.string().min(1, "Description is required"),
-  discount_type: z.enum(["percentage", "fixed_amount"]),
-  discount_value: z.number().min(0, "Value cannot be negative"),
-  min_order_value: z.number().min(0),
-  max_discount_amount: z.number().nullable(),
-  max_usage_count: z.number().int().nullable(),
-  per_customer_limit: z.number().int().min(0),
-  valid_from: z.string().min(1, "Start date is required"),
-  valid_until: z.string(),
-  is_active: z.boolean(),
-})
+const couponSchema = z
+  .object({
+    code: z.string().min(3, "Code must be at least 3 characters"),
+    description: z.string().min(1, "Description is required"),
+    discount_type: z.enum(["percentage", "fixed_amount"]),
+    discount_value: z
+      .number({ error: "Enter a discount value" })
+      .gt(0, "Discount must be greater than 0"),
+    min_order_value: z.number({ error: "Enter a minimum order value" }).min(0, "Value cannot be negative"),
+    max_discount_amount: z.number().min(0, "Value cannot be negative").nullable(),
+    max_usage_count: z.number().int("Must be a whole number").min(1, "Must be at least 1").nullable(),
+    per_customer_limit: z.number({ error: "Enter a limit" }).int("Must be a whole number").min(0, "Value cannot be negative"),
+    valid_from: z.string().min(1, "Start date is required"),
+    valid_until: z.string(),
+    is_active: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.discount_type === "percentage" && values.discount_value > 100) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discount_value"],
+        message: "Percentage discount cannot exceed 100%",
+      })
+    }
+    if (values.valid_from && values.valid_until) {
+      const from = new Date(values.valid_from).getTime()
+      const until = new Date(values.valid_until).getTime()
+      if (!(until > from)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["valid_until"],
+          message: "End date must be after the start date",
+        })
+      }
+    }
+  })
 
 type CouponFormValues = z.infer<typeof couponSchema>
 
@@ -54,13 +80,11 @@ const defaultValues: CouponFormValues = {
   is_active: true,
 }
 
-const toDatetimeLocal = (iso: string | null) => (iso ? iso.slice(0, 16) : "")
-
 const CouponForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: existing, isLoading } = useAppSelector((state) => state.coupons)
+  const { singleData: existing, singleStatus, singleError } = useAppSelector((state) => state.coupons)
 
   useDocumentTitle(existing?.code ? `${existing.code} — Coupon` : "Coupon Form")
 
@@ -104,19 +128,17 @@ const CouponForm = () => {
     }
   }, [existing, id, isEditing, reset])
 
-  if (isEditing && isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading coupon...</div>
-  }
-
-  if (isEditing && existing?.id !== id) {
+  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, existing?.id === id) : null
+  if (pageState) {
     return (
-      <div className="section-container py-12 text-center">
-        <h2 className="text-2xl font-bold">Coupon not found</h2>
-        <Button className="mt-6" onClick={() => navigate("/coupons")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Coupons
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState}
+        entity="Coupon"
+        backTo="/coupons"
+        backLabel="Back to Coupons"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 
@@ -130,8 +152,8 @@ const CouponForm = () => {
       max_discount_amount: values.max_discount_amount != null ? String(values.max_discount_amount) : null,
       max_usage_count: values.max_usage_count,
       per_customer_limit: values.per_customer_limit,
-      valid_from: new Date(values.valid_from).toISOString(),
-      valid_until: values.valid_until ? new Date(values.valid_until).toISOString() : null,
+      valid_from: fromDatetimeLocal(values.valid_from) ?? "",
+      valid_until: fromDatetimeLocal(values.valid_until),
       is_active: values.is_active,
     }
 
@@ -235,6 +257,7 @@ const CouponForm = () => {
                     />
                   )}
                 />
+                <FieldError errors={[errors.max_discount_amount]} />
               </FieldContent>
             </Field>
 
@@ -253,6 +276,7 @@ const CouponForm = () => {
                     />
                   )}
                 />
+                <FieldError errors={[errors.max_usage_count]} />
               </FieldContent>
             </Field>
 
@@ -289,6 +313,7 @@ const CouponForm = () => {
               <FieldLabel htmlFor="valid_until">Valid Until (optional)</FieldLabel>
               <FieldContent>
                 <Input id="valid_until" type="datetime-local" {...register("valid_until")} />
+                <FieldError errors={[errors.valid_until]} />
               </FieldContent>
             </Field>
 

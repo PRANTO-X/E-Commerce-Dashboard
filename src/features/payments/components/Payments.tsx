@@ -9,6 +9,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllPayments } from "@/features/payments/slices/paymentSlice"
 import type { Payment, PaymentTransactionState } from "@/features/payments/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
 
 const Payments = () => {
   useDocumentTitle("Payments")
@@ -40,7 +41,7 @@ const Payments = () => {
       header: "PROVIDER",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
-          {(row.getValue("provider") as string).replace("_", " ")}
+          {humanize(row.getValue("provider") as string)}
         </span>
       ),
     },
@@ -49,7 +50,7 @@ const Payments = () => {
       header: "AMOUNT",
       cell: ({ row }) => (
         <span className="text-sm font-semibold text-foreground">
-          {row.original.currency} {Number(row.getValue("amount")).toFixed(2)}
+          {formatCurrency(row.getValue("amount") as string, row.original.currency)}
         </span>
       ),
     },
@@ -65,7 +66,7 @@ const Payments = () => {
       header: "DATE",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {new Date(row.getValue("created_at")).toLocaleString()}
+          {formatDateTime(row.getValue("created_at") as string)}
         </span>
       ),
     },

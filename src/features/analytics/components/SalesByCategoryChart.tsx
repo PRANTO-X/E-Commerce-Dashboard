@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 import { Pie, PieChart } from "recharts"
 import { Package } from "lucide-react"
 
@@ -19,16 +19,21 @@ import {
 import { EmptyState } from "@/components/common/EmptyState"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchTopProducts } from "@/features/analytics/slices/analyticsSlice"
+import { ChartError, ChartLoading } from "./ChartState"
 
 const palette = ["#14b8a6", "#f59e0b", "#38bdf8", "#f43f5e", "#8b5cf6", "#94a3b8"]
 
 export function SalesByCategoryChart() {
   const dispatch = useAppDispatch()
-  const { topProducts } = useAppSelector((state) => state.analytics)
+  const { topProducts, requests } = useAppSelector((state) => state.analytics)
+  const request = requests.topProducts
+
+  const load = useCallback(() => dispatch(fetchTopProducts()), [dispatch])
 
   useEffect(() => {
-    dispatch(fetchTopProducts())
-  }, [dispatch])
+    const pending = load()
+    return () => pending.abort()
+  }, [load])
 
   const chartData = topProducts.slice(0, 6).map((product, i) => ({
     product: product.product__name,
@@ -48,7 +53,11 @@ export function SalesByCategoryChart() {
         <CardDescription>Best-selling products this period</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        {chartData.length === 0 ? (
+        {request.status === "failed" ? (
+          <ChartError error={request.error} onRetry={load} />
+        ) : request.status !== "succeeded" && chartData.length === 0 ? (
+          <ChartLoading />
+        ) : chartData.length === 0 ? (
           <EmptyState
             icon={Package}
             title="No top products yet"
@@ -69,8 +78,7 @@ export function SalesByCategoryChart() {
                 label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
               />
               <ChartLegend
-                content={<ChartLegendContent nameKey="product" />}
-                className="-translate-y-2 flex-wrap"
+                content={<ChartLegendContent nameKey="product" className="-translate-y-2 flex-wrap" />}
               />
             </PieChart>
           </ChartContainer>

@@ -1,22 +1,18 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchSingle, fetchAll as fetchAllOrders, cancelOrder, collectCod, updateOrderStatus } from "@/features/sales/slices/orderSlice"
 import {
-  fetchCouriers,
-  fetchShipments,
-  bookCourierShipment,
-  addTracking,
-  updateTracking,
-} from "@/features/shipping/slices/shippingSlice"
-import type { TrackingStatus } from "@/features/shipping/types"
+  fetchSingle,
+  cancelOrder,
+  collectCod,
+  updateOrderStatus,
+  selectOrderDetail,
+} from "@/features/sales/slices/orderSlice"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -24,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
 import {
   Table,
   TableBody,
@@ -33,22 +28,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { UpdatableOrderStatus, OrderDetail as OrderDetailType } from "@/features/sales/types"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import type { UpdatableOrderStatus } from "@/features/sales/types"
 import {
   Mail,
   CreditCard,
   Package,
-  AlertCircle,
   Ban,
   DollarSign,
-  Truck,
-  ArrowLeft,
   Loader2,
   CheckCircle2,
   Clock,
   User,
+  ArrowLeft,
 } from "lucide-react"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatCurrency, formatDateTime, humanize } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
+import { OrderShippingPanel } from "./OrderShippingPanel"
 
 const statusOptions: { label: string; value: UpdatableOrderStatus }[] = [
   { label: "Placed", value: "placed" },
@@ -62,87 +70,34 @@ const OrderDetail = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const { singleData: rawSingleData, data: allOrders, isLoading } = useAppSelector((state) => state.orders)
-  const { couriers, shipments } = useAppSelector((state) => state.shipping)
+  const singleData = useAppSelector(selectOrderDetail)
+  const { singleStatus, singleError } = useAppSelector((state) => state.orders)
 
-  // Resolve order from singleData or fallback to list
-  const order: OrderDetailType | undefined =
-    rawSingleData && "id" in rawSingleData && rawSingleData.id === id
-      ? (rawSingleData as OrderDetailType)
-      : allOrders.find((o) => o.id === id)
+  // Only the detail endpoint's response is used. List rows lack items/tax/shipping, so
+  // falling back to them would render a misleading summary (e.g. $0 tax).
+  const order = singleData && singleData.id === id ? singleData : null
 
   useDocumentTitle(order?.order_number ? `${order.order_number} — Order` : "Order Details")
 
   const [nextStatus, setNextStatus] = useState<UpdatableOrderStatus | "">("")
   const [submitting, setSubmitting] = useState(false)
 
-  const [selectedCourier, setSelectedCourier] = useState("")
-  const [carrier, setCarrier] = useState("")
-  const [trackingNumber, setTrackingNumber] = useState("")
-  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus | "">("")
-
-  useEffect(() => {
-    if (id) {
-      dispatch(fetchSingle(id))
-    }
-    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
-    dispatch(fetchCouriers())
-    dispatch(fetchShipments())
+  const load = useCallback(() => {
+    if (!id) return undefined
+    return dispatch(fetchSingle(id))
   }, [dispatch, id])
 
-  const refresh = () => id && dispatch(fetchSingle(id))
+  useEffect(() => {
+    const request = load()
+    return () => request?.abort()
+  }, [load])
 
-  const safeShipments = Array.isArray(shipments) ? shipments : []
-  const safeCouriers = Array.isArray(couriers) ? couriers : []
-  const shipment = safeShipments.find((s) => s.order === id)
-
-  const handleBookCourier = async () => {
-    if (!order || !selectedCourier) return
-    setSubmitting(true)
-    try {
-      await dispatch(bookCourierShipment({ orderId: order.id, payload: { integration_id: selectedCourier } })).unwrap()
-      toast.success("Courier booked successfully")
-    } catch {
-      toast.error("Failed to book courier")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleAddTracking = async () => {
-    if (!order || !carrier.trim() || !trackingNumber.trim()) return
-    setSubmitting(true)
-    try {
-      await dispatch(
-        addTracking({ orderId: order.id, payload: { carrier: carrier.trim(), tracking_number: trackingNumber.trim() } })
-      ).unwrap()
-      toast.success("Tracking information added")
-      setCarrier("")
-      setTrackingNumber("")
-    } catch {
-      toast.error("Failed to add tracking")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleUpdateTracking = async () => {
-    if (!order || !trackingStatus) return
-    setSubmitting(true)
-    try {
-      await dispatch(updateTracking({ orderId: order.id, payload: { status: trackingStatus } })).unwrap()
-      toast.success("Tracking status updated")
-      setTrackingStatus("")
-    } catch {
-      toast.error("Failed to update tracking")
-    } finally {
-      setSubmitting(false)
-    }
+  const refresh = () => {
+    load()
   }
 
   const handleCancelOrder = async () => {
     if (!order) return
-    if (!window.confirm(`Cancel order ${order.order_number}? This cannot be undone.`)) return
     setSubmitting(true)
     try {
       await dispatch(cancelOrder({ id: order.id })).unwrap()
@@ -160,7 +115,7 @@ const OrderDetail = () => {
     setSubmitting(true)
     try {
       await dispatch(updateOrderStatus({ id: order.id, status: nextStatus })).unwrap()
-      toast.success(`Order status updated to ${nextStatus}`)
+      toast.success(`Order status updated to ${humanize(nextStatus)}`)
       setNextStatus("")
       refresh()
     } catch {
@@ -184,30 +139,17 @@ const OrderDetail = () => {
     }
   }
 
-  if (isLoading && !order) {
+  const pageState = resolveDetailState(singleStatus, singleError, !!order)
+  if (pageState || !order) {
     return (
-      <div className="section-container py-16 flex flex-col items-center justify-center text-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground text-sm">Loading order details...</p>
-      </div>
-    )
-  }
-
-  if (!order) {
-    return (
-      <div className="section-container py-16 flex flex-col items-center justify-center text-center space-y-4">
-        <div className="rounded-full bg-destructive/10 p-4">
-          <AlertCircle className="h-10 w-10 text-destructive" />
-        </div>
-        <h2 className="text-2xl font-bold">Order Not Found</h2>
-        <p className="text-muted-foreground text-sm max-w-sm">
-          The order you're looking for doesn't exist or may have been deleted.
-        </p>
-        <Button onClick={() => navigate("/orders")} className="mt-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Orders
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState ?? "loading"}
+        entity="Order"
+        backTo="/orders"
+        backLabel="Back to Orders"
+        error={singleError}
+        onRetry={refresh}
+      />
     )
   }
 
@@ -233,11 +175,11 @@ const OrderDetail = () => {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{order.order_number}</h1>
-              <StatusBadge status={order.payment_status} label={`Payment: ${order.payment_status.replace(/_/g, " ")}`} />
+              <StatusBadge status={order.payment_status} label={`Payment: ${humanize(order.payment_status)}`} />
               <StatusBadge status={order.status} />
             </div>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Placed on {orderDate ? new Date(orderDate).toLocaleString() : "—"}
+              Placed on {formatDateTime(orderDate)}
             </p>
           </div>
         </div>
@@ -263,7 +205,7 @@ const OrderDetail = () => {
             {order.payment_method === "cash_on_delivery" && (
               <div className="flex justify-between py-1 border-b border-border/50">
                 <span className="text-muted-foreground">COD Status</span>
-                <span className="font-semibold capitalize">{order.cod_status || "Pending"}</span>
+                <span className="font-semibold capitalize">{order.cod_status ? humanize(order.cod_status) : "Pending"}</span>
               </div>
             )}
             <div className="flex justify-between py-1 border-b border-border/50">
@@ -273,7 +215,7 @@ const OrderDetail = () => {
             <div className="flex justify-between py-1">
               <span className="text-muted-foreground">Total Amount</span>
               <span className="font-bold text-primary text-base">
-                ${Number(order.total_amount || 0).toFixed(2)}
+                {formatCurrency(order.total_amount)}
               </span>
             </div>
           </CardContent>
@@ -309,16 +251,31 @@ const OrderDetail = () => {
             </div>
 
             <div className="flex flex-wrap gap-3 pt-1 border-t border-border/50">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                disabled={order.status === "cancelled" || submitting}
-                onClick={handleCancelOrder}
-              >
-                <Ban className="h-4 w-4 mr-1.5" />
-                Cancel Order
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={order.status === "cancelled" || submitting}
+                  >
+                    <Ban className="h-4 w-4 mr-1.5" />
+                    Cancel Order
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent size="sm">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel order {order.order_number}?</AlertDialogTitle>
+                    <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep order</AlertDialogCancel>
+                    <AlertDialogAction variant="destructive" onClick={handleCancelOrder}>
+                      Cancel order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {order.payment_method === "cash_on_delivery" && order.cod_status === "pending_collection" && (
                 <Button variant="outline" size="sm" disabled={submitting} onClick={handleCollectCod}>
@@ -364,89 +321,7 @@ const OrderDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Shipping & Tracking */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Truck className="h-4 w-4 text-primary" />
-              Shipping & Fulfillment
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {shipment ? (
-              <div className="rounded-lg bg-muted/40 p-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-semibold">{shipment.provider || "Courier"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Tracking #: <span className="font-mono">{shipment.tracking_number || "—"}</span>
-                  </p>
-                </div>
-                <Badge variant="outline">{shipment.status}</Badge>
-              </div>
-            ) : safeCouriers.length > 0 ? (
-              <div className="flex gap-2">
-                <Select value={selectedCourier} onValueChange={setSelectedCourier}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select courier..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {safeCouriers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleBookCourier} disabled={!selectedCourier || submitting}>
-                  Book Courier
-                </Button>
-              </div>
-            ) : null}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field>
-                <FieldLabel htmlFor="carrier">Carrier</FieldLabel>
-                <FieldContent>
-                  <Input id="carrier" value={carrier} onChange={(e) => setCarrier(e.target.value)} placeholder="e.g. DHL, FedEx" />
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="tracking_number">Tracking Number</FieldLabel>
-                <FieldContent>
-                  <Input id="tracking_number" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="e.g. TRK12345" />
-                </FieldContent>
-              </Field>
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleAddTracking}
-                disabled={submitting || !carrier.trim() || !trackingNumber.trim()}
-              >
-                Add Tracking
-              </Button>
-
-              <div className="flex-1 flex gap-2">
-                <Select value={trackingStatus} onValueChange={(v) => setTrackingStatus(v as TrackingStatus)}>
-                  <SelectTrigger className="h-8 text-xs flex-1">
-                    <SelectValue placeholder="Update status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="in_transit">In Transit</SelectItem>
-                    <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="exception">Exception</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" variant="ghost" onClick={handleUpdateTracking} disabled={!trackingStatus || submitting}>
-                  Update
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <OrderShippingPanel orderId={order.id} />
       </div>
 
       {/* Row 3: Ordered Products Table */}
@@ -476,9 +351,9 @@ const OrderDetail = () => {
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-xs uppercase">{item.sku}</TableCell>
                   <TableCell className="text-center font-semibold">{item.quantity}x</TableCell>
-                  <TableCell className="text-right">${Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
                   <TableCell className="text-right font-bold text-foreground">
-                    ${Number(item.line_total || 0).toFixed(2)}
+                    {formatCurrency(item.line_total)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -504,24 +379,24 @@ const OrderDetail = () => {
           <CardContent className="pt-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>${Number(order.subtotal || 0).toFixed(2)}</span>
+              <span>{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Discount</span>
-              <span className="text-green-600">-${Number(order.discount_amount || 0).toFixed(2)}</span>
+              <span className="text-green-600">-{formatCurrency(order.discount_amount)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping Cost</span>
-              <span>${Number(order.shipping_cost || 0).toFixed(2)}</span>
+              <span>{formatCurrency(order.shipping_cost)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tax</span>
-              <span>${Number(order.tax_amount || 0).toFixed(2)}</span>
+              <span>{formatCurrency(order.tax_amount)}</span>
             </div>
             <Separator className="my-2" />
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total Amount</span>
-              <span className="text-primary">${Number(order.total_amount || 0).toFixed(2)}</span>
+              <span className="text-primary">{formatCurrency(order.total_amount)}</span>
             </div>
             <div className="bg-primary/5 p-3 rounded-lg flex items-center gap-3 mt-4 border border-primary/10">
               <CreditCard className="h-5 w-5 text-primary" />
@@ -550,15 +425,15 @@ const OrderDetail = () => {
                     <div className="absolute left-0 mt-0.5 h-6 w-6 rounded-full border-4 border-background ring-2 bg-primary ring-primary/20" />
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-foreground capitalize">
-                        {entry.from_status ? `${entry.from_status} → ` : ""}
-                        {entry.to_status}
+                        {entry.from_status ? `${humanize(entry.from_status)} → ` : ""}
+                        {humanize(entry.to_status)}
                       </span>
                       {entry.reason && (
                         <span className="text-xs text-muted-foreground">{entry.reason}</span>
                       )}
                       {entry.created_at && (
                         <span className="text-[11px] text-muted-foreground mt-0.5">
-                          {new Date(entry.created_at).toLocaleString()}
+                          {formatDateTime(entry.created_at)}
                         </span>
                       )}
                     </div>

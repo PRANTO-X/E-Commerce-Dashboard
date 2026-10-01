@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 import { EmptyState } from "@/components/common/EmptyState"
 import { BarChart3 } from "lucide-react"
 import {
@@ -25,6 +25,8 @@ import {
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAnalyticsSales } from "@/features/analytics/slices/analyticsSlice"
+import { parseDate } from "@/lib/format"
+import { ChartError, ChartLoading } from "./ChartState"
 
 const chartConfig = {
   revenue: {
@@ -45,14 +47,21 @@ const chartConfig = {
 
 export function RevenueOrdersChart() {
   const dispatch = useAppDispatch()
-  const { sales } = useAppSelector((state) => state.analytics)
+  const { sales, requests } = useAppSelector((state) => state.analytics)
+  const request = requests.sales
+
+  const load = useCallback(() => dispatch(fetchAnalyticsSales()), [dispatch])
 
   useEffect(() => {
-    dispatch(fetchAnalyticsSales())
-  }, [dispatch])
+    const pending = load()
+    return () => pending.abort()
+  }, [load])
 
+  // Periods are "YYYY-MM" month buckets; parse them as local dates (new Date("2024-05") is UTC
+  // midnight, which renders as the previous month west of UTC).
   const chartData = sales.map((point) => ({
-    period: new Date(point.period).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    period:
+      parseDate(point.period)?.toLocaleDateString(undefined, { month: "short", year: "2-digit" }) ?? point.period,
     revenue: point.revenue,
     order_count: point.order_count,
   }))
@@ -69,7 +78,11 @@ export function RevenueOrdersChart() {
       </CardHeader>
 
       <CardContent className="h-[300px] sm:h-[400px] px-2 sm:px-6">
-        {chartData.length === 0 ? (
+        {request.status === "failed" ? (
+          <ChartError error={request.error} onRetry={load} className="h-full py-0" />
+        ) : request.status !== "succeeded" && chartData.length === 0 ? (
+          <ChartLoading className="h-full py-0" />
+        ) : chartData.length === 0 ? (
           <EmptyState
             icon={BarChart3}
             title="No sales revenue data"

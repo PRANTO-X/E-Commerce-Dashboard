@@ -1,8 +1,22 @@
 import { type Page, expect } from "@playwright/test"
 
+// Credentials come from the environment (never commit them). Set E2E_EMAIL and
+// E2E_PASSWORD in your shell or a git-ignored .env.local before running Playwright.
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Missing ${name}: set it in the environment before running e2e tests`)
+  }
+  return value
+}
+
 export const USER_CREDENTIALS = {
-  email: "nestmartit.intern@gmail.com",
-  password: "O7onopui2ABEa8YyjqpV",
+  get email() {
+    return requireEnv("E2E_EMAIL")
+  },
+  get password() {
+    return requireEnv("E2E_PASSWORD")
+  },
 }
 
 export async function loginAsAdmin(page: Page) {

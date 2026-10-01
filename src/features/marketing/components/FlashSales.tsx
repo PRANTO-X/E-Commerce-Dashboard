@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { z } from "zod"
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Field, FieldLabel, FieldContent } from "@/components/ui/field"
+import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -22,6 +23,31 @@ import { fetchAll as fetchAllFlashSales, postData as postFlashSale } from "@/fea
 import { fetchAll as fetchAllFlashSaleItems, postData as postFlashSaleItem } from "@/features/marketing/slices/flashSaleItemSlice"
 import { fetchAll as fetchAllVariants } from "@/features/catalog/slices/variantSlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatCurrency, fromDatetimeLocal } from "@/lib/format"
+
+const saleSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    starts_at: z.string().min(1, "Start date is required"),
+    ends_at: z.string().min(1, "End date is required"),
+  })
+  .refine((v) => new Date(v.ends_at).getTime() > new Date(v.starts_at).getTime(), {
+    message: "End must be after the start",
+    path: ["ends_at"],
+  })
+
+const itemSchema = z.object({
+  variant: z.string().min(1, "Select a variant"),
+  sale_price: z.number({ error: "Enter a sale price" }).gt(0, "Price must be greater than 0"),
+  stock_limit: z
+    .number({ error: "Enter a stock limit" })
+    .int("Must be a whole number")
+    .min(1, "Stock limit must be at least 1"),
+})
+
+type FieldErrors = Partial<Record<string, string[]>>
+const asErrors = (messages?: string[]) => messages?.map((message) => ({ message }))
+const toNumber = (value: string) => (value.trim() === "" ? Number.NaN : Number(value))
 
 const FlashSales = () => {
   useDocumentTitle("Flash Sales")
@@ -38,6 +64,8 @@ const FlashSales = () => {
   const [endsAt, setEndsAt] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [saleErrors, setSaleErrors] = useState<FieldErrors>({})
+  const [itemErrors, setItemErrors] = useState<FieldErrors>({})
 
   const [itemVariant, setItemVariant] = useState("")
   const [itemPrice, setItemPrice] = useState("")
@@ -53,15 +81,20 @@ const FlashSales = () => {
   const itemsForSale = items.filter((i) => i.flash_sale === selectedSaleId)
 
   const handleCreateSale = async () => {
-    if (!name.trim() || !startsAt || !endsAt) return
+    const parsed = saleSchema.safeParse({ name, starts_at: startsAt, ends_at: endsAt })
+    if (!parsed.success) {
+      setSaleErrors(z.flattenError(parsed.error).fieldErrors)
+      return
+    }
+    setSaleErrors({})
     setSubmitting(true)
     try {
       const created = await dispatch(
         postFlashSale({
           payload: {
             name: name.trim(),
-            starts_at: new Date(startsAt).toISOString(),
-            ends_at: new Date(endsAt).toISOString(),
+            starts_at: fromDatetimeLocal(startsAt) ?? "",
+            ends_at: fromDatetimeLocal(endsAt) ?? "",
             is_active: isActive,
             campaign: null,
           },
@@ -81,7 +114,17 @@ const FlashSales = () => {
   }
 
   const handleAddItem = async () => {
-    if (!selectedSaleId || !itemVariant || !itemPrice.trim()) return
+    if (!selectedSaleId) return
+    const parsed = itemSchema.safeParse({
+      variant: itemVariant,
+      sale_price: toNumber(itemPrice),
+      stock_limit: toNumber(itemStock),
+    })
+    if (!parsed.success) {
+      setItemErrors(z.flattenError(parsed.error).fieldErrors)
+      return
+    }
+    setItemErrors({})
     setSubmitting(true)
     try {
       await dispatch(
@@ -89,8 +132,8 @@ const FlashSales = () => {
           payload: {
             flash_sale: selectedSaleId,
             variant: itemVariant,
-            sale_price: itemPrice.trim(),
-            stock_limit: Number(itemStock) || 0,
+            sale_price: String(parsed.data.sale_price),
+            stock_limit: parsed.data.stock_limit,
           },
         })
       ).unwrap()
@@ -123,14 +166,32 @@ const FlashSales = () => {
             <CardTitle>Flash Sales</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
-            <Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+            <Field>
+              <FieldLabel htmlFor="fs-name">Name</FieldLabel>
+              <FieldContent>
+                <Input id="fs-name" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+                <FieldError errors={asErrors(saleErrors.name)} />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="fs-start">Starts At</FieldLabel>
+              <FieldContent>
+                <Input id="fs-start" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+                <FieldError errors={asErrors(saleErrors.starts_at)} />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="fs-end">Ends At</FieldLabel>
+              <FieldContent>
+                <Input id="fs-end" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+                <FieldError errors={asErrors(saleErrors.ends_at)} />
+              </FieldContent>
+            </Field>
             <div className="flex items-center justify-between">
               <span className="text-sm">Active</span>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
-            <Button onClick={handleCreateSale} disabled={submitting || !name.trim() || !startsAt || !endsAt}>
+            <Button onClick={handleCreateSale} disabled={submitting}>
               <PlusIcon className="h-4 w-4" />
               Create Flash Sale
             </Button>
@@ -182,22 +243,25 @@ const FlashSales = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FieldError errors={asErrors(itemErrors.variant)} />
                     </FieldContent>
                   </Field>
                   <Field>
-                    <FieldLabel>Sale Price</FieldLabel>
+                    <FieldLabel htmlFor="fs-item-price">Sale Price</FieldLabel>
                     <FieldContent>
-                      <Input type="number" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
+                      <Input id="fs-item-price" type="number" step="0.01" min="0" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
+                      <FieldError errors={asErrors(itemErrors.sale_price)} />
                     </FieldContent>
                   </Field>
                   <Field>
-                    <FieldLabel>Stock Limit</FieldLabel>
+                    <FieldLabel htmlFor="fs-item-stock">Stock Limit</FieldLabel>
                     <FieldContent>
-                      <Input type="number" value={itemStock} onChange={(e) => setItemStock(e.target.value)} />
+                      <Input id="fs-item-stock" type="number" min="1" step="1" value={itemStock} onChange={(e) => setItemStock(e.target.value)} />
+                      <FieldError errors={asErrors(itemErrors.stock_limit)} />
                     </FieldContent>
                   </Field>
                 </div>
-                <Button onClick={handleAddItem} disabled={submitting || !itemVariant || !itemPrice.trim()} className="self-start">
+                <Button onClick={handleAddItem} disabled={submitting} className="self-start">
                   Add Item
                 </Button>
 
@@ -209,7 +273,7 @@ const FlashSales = () => {
                     <div key={item.id} className="flex items-center justify-between p-3 text-sm">
                       <span>{variantLabel(item.variant)}</span>
                       <span className="text-muted-foreground">
-                        ${Number(item.sale_price).toFixed(2)} · limit {item.stock_limit} · sold {item.sold_quantity}
+                        {formatCurrency(item.sale_price)} · limit {item.stock_limit} · sold {item.sold_quantity}
                       </span>
                     </div>
                   ))}

@@ -24,6 +24,8 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/cms/slices/pageSlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const pageSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
@@ -43,7 +45,7 @@ const PageForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: existing, isLoading } = useAppSelector((state) => state.pages)
+  const { singleData: existing, singleStatus, singleError } = useAppSelector((state) => state.pages)
 
   useDocumentTitle(existing?.title ? `${existing.title} — Page` : "Page Form")
 
@@ -88,19 +90,17 @@ const PageForm = () => {
     }
   }, [existing, id, isEditing, reset])
 
-  if (isEditing && isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading page...</div>
-  }
-
-  if (isEditing && existing?.id !== id) {
+  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, existing?.id === id) : null
+  if (pageState) {
     return (
-      <div className="section-container py-12 text-center">
-        <h2 className="text-2xl font-bold">Page not found</h2>
-        <Button className="mt-6" onClick={() => navigate("/pages")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Pages
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState}
+        entity="Page"
+        backTo="/pages"
+        backLabel="Back to Pages"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 

@@ -1,19 +1,33 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { defaultAuthSettings, type AuthSettings } from "@/features/system/settingsDefaults"
+import {
+  AUTH_SETTINGS_KEY,
+  loadStoredSettings,
+  writeStoredSettings,
+} from "@/features/system/settingsStorage"
 
-// Not sliceFactory-backed: a single settings document mutated through a local reducer, with
-// no list, no detail fetch, and no backend endpoint.
+// Not sliceFactory-backed: a single settings document. There is no backend endpoint, so it
+// is persisted to this browser's localStorage only — nothing here is enforced server-side.
+
+export const saveAuthSettings = createAsyncThunk(
+  "authSettings/save",
+  async (settings: AuthSettings, { rejectWithValue }) => {
+    try {
+      writeStoredSettings(AUTH_SETTINGS_KEY, settings)
+      return settings
+    } catch (err) {
+      return rejectWithValue({ error: err instanceof Error ? err.message : "Could not save settings" })
+    }
+  }
+)
 
 const authSettingsSlice = createSlice({
   name: "authSettings",
-  initialState: defaultAuthSettings,
-  reducers: {
-    updateAuthSettings: (state, action: PayloadAction<Partial<AuthSettings>>) => {
-      Object.assign(state, action.payload)
-    },
+  initialState: loadStoredSettings(AUTH_SETTINGS_KEY, defaultAuthSettings),
+  reducers: {},
+  extraReducers: (builder) => {
+    builder.addCase(saveAuthSettings.fulfilled, (_state, action) => action.payload)
   },
 })
-
-export const { updateAuthSettings } = authSettingsSlice.actions
 
 export default authSettingsSlice.reducer

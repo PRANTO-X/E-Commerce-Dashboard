@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
@@ -24,7 +24,6 @@ import {
   Lock,
   Ban,
   CheckCircle2,
-  AlertCircle,
   Trash2,
 } from "lucide-react"
 import {
@@ -36,6 +35,22 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import type { OrderListItem } from "@/features/sales/types"
+import { formatCurrency, formatDate } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
+
+// Orders shown / summed for the customer. Total orders comes from the server's count; total
+// spent is summed from the loaded rows (there's no per-customer revenue aggregate endpoint),
+// so it's labelled as partial when the customer has more orders than this.
+const CUSTOMER_ORDERS_PAGE_SIZE = 100
+
+interface CustomerOrdersState {
+  forId: string | null
+  rows: OrderListItem[]
+  total: number
+  status: "loading" | "succeeded" | "failed"
+}
 
 const CustomerDetail = () => {
   useDocumentTitle("Customer Details")
@@ -43,16 +58,54 @@ const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: customer, isLoading } = useAppSelector((state) => state.customers)
-  const { data: orders } = useAppSelector((state) => state.orders)
+  const { singleData, singleStatus, singleError } = useAppSelector((state) => state.customers)
+  const customer = singleData && singleData.id === id ? singleData : null
   const [submitting, setSubmitting] = useState(false)
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrdersState>({
+    forId: null,
+    rows: [],
+    total: 0,
+    status: "loading",
+  })
 
-  useEffect(() => {
-    if (id) dispatch(fetchSingle(id))
-    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
+  const loadCustomer = useCallback(() => {
+    if (!id) return undefined
+    return dispatch(fetchSingle(id))
   }, [dispatch, id])
 
-  const refresh = () => id && dispatch(fetchSingle(id))
+  // Server-side filter by customer, read from the thunk result into local state so this page
+  // never reads state.orders.data, whose page size/filters belong to whichever screen fetched last.
+  const loadOrders = useCallback(() => {
+    if (!id) return undefined
+    const request = dispatch(fetchAllOrders({ customer: id, page: 1, page_size: CUSTOMER_ORDERS_PAGE_SIZE }))
+    request
+      .unwrap()
+      .then((result) => {
+        const rows = result.data as OrderListItem[]
+        // Defensive: if a backend ignores the `customer` filter, don't attribute other
+        // customers' orders (and their server-wide count) to this one.
+        const mine = rows.filter((o) => o.customer?.id === id)
+        const total = mine.length === rows.length ? result.total : mine.length
+        setCustomerOrders({ forId: id, rows: mine, total, status: "succeeded" })
+      })
+      .catch((err: unknown) => {
+        if ((err as { name?: string })?.name === "AbortError") return
+        setCustomerOrders({ forId: id, rows: [], total: 0, status: "failed" })
+      })
+    return request
+  }, [dispatch, id])
+
+  useEffect(() => {
+    const request = loadCustomer()
+    return () => request?.abort()
+  }, [loadCustomer])
+
+  useEffect(() => {
+    const request = loadOrders()
+    return () => request?.abort()
+  }, [loadOrders])
+
+  const refresh = () => loadCustomer()
 
   const handleToggleActive = async () => {
     if (!customer) return
@@ -106,27 +159,28 @@ const CustomerDetail = () => {
     }
   }
 
-  if (isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading customer...</div>
-  }
-
-  if (!customer || customer.id !== id) {
+  const pageState = resolveDetailState(singleStatus, singleError, !!customer)
+  if (pageState || !customer) {
     return (
-      <div className="section-container py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-        <h2 className="text-2xl font-bold">Customer not found</h2>
-        <p className="text-muted-foreground mt-2">The customer you're looking for doesn't exist.</p>
-        <Button onClick={() => navigate("/customers")} className="mt-6">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Customers
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState ?? "loading"}
+        entity="Customer"
+        backTo="/customers"
+        backLabel="Back to Customers"
+        error={singleError}
+        onRetry={() => {
+          loadCustomer()
+        }}
+      />
     )
   }
 
   const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ")
-  const customerOrders = orders.filter((o) => o.customer.id === customer.id)
-  const totalSpent = customerOrders.reduce((sum, o) => sum + Number(o.total_amount), 0)
+  const ordersReady = customerOrders.forId === id && customerOrders.status === "succeeded"
+  const ordersFailed = customerOrders.forId === id && customerOrders.status === "failed"
+  const orderRows = ordersReady ? customerOrders.rows : []
+  const totalSpent = orderRows.reduce((sum, o) => sum + Number(o.total_amount || 0), 0)
+  const spentIsPartial = ordersReady && customerOrders.total > orderRows.length
 
   return (
     <div className="section-container animate-in fade-in duration-500 space-y-6">
@@ -162,7 +216,7 @@ const CustomerDetail = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                <h2 className="text-2xl font-bold mt-1">{customerOrders.length}</h2>
+                <h2 className="text-2xl font-bold mt-1">{ordersReady ? customerOrders.total : "—"}</h2>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                 <ShoppingBag className="h-6 w-6" />
@@ -176,7 +230,12 @@ const CustomerDetail = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                <h2 className="text-2xl font-bold mt-1">${totalSpent.toFixed(2)}</h2>
+                <h2 className="text-2xl font-bold mt-1">{ordersReady ? formatCurrency(totalSpent) : "—"}</h2>
+                {spentIsPartial && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Across the latest {orderRows.length} of {customerOrders.total} orders
+                  </p>
+                )}
               </div>
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
                 <DollarSign className="h-6 w-6" />
@@ -237,7 +296,7 @@ const CustomerDetail = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
-                <TableHead>Product</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
@@ -245,13 +304,30 @@ const CustomerDetail = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customerOrders.length > 0 ? (
-                customerOrders.map((order) => (
+              {!ordersReady ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    {ordersFailed ? (
+                      <span className="inline-flex items-center gap-3">
+                        Couldn't load this customer's orders.
+                        <Button variant="outline" size="sm" onClick={() => loadOrders()}>
+                          Retry
+                        </Button>
+                      </span>
+                    ) : (
+                      "Loading orders..."
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : orderRows.length > 0 ? (
+                orderRows.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.order_number}</TableCell>
-                    <TableCell>{order.items[0]?.product_name ?? "—"}</TableCell>
-                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>${Number(order.total_amount).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={order.payment_status} />
+                    </TableCell>
+                    <TableCell>{formatDate(order.created_at)}</TableCell>
+                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                     <TableCell>
                       <StatusBadge status={order.status} />
                     </TableCell>

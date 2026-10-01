@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/couponSlice"
 import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatCurrency, formatDate, humanize } from "@/lib/format"
 
 const Coupons = () => {
   useDocumentTitle("Coupons")
@@ -60,7 +61,7 @@ const Coupons = () => {
       header: "TYPE",
       cell: ({ row }) => (
         <span className="text-sm text-foreground capitalize">
-          {(row.getValue("discount_type") as string).replace("_", " ")}
+          {humanize(row.getValue("discount_type") as string)}
         </span>
       ),
     },
@@ -71,7 +72,7 @@ const Coupons = () => {
         const coupon = row.original
         return (
           <span className="text-sm font-medium text-foreground">
-            {coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
+            {coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)}
           </span>
         )
       },
@@ -95,7 +96,7 @@ const Coupons = () => {
         const value = row.getValue("valid_until") as string | null
         return (
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {value ? new Date(value).toLocaleDateString() : "Never"}
+            {formatDate(value, "Never")}
           </span>
         )
       },

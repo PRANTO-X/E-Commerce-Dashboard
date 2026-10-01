@@ -22,6 +22,9 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle, postData, updateData } from "@/features/marketing/slices/campaignSlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const campaignSchema = z.object({
   name: z.string().min(2, "Campaign name must be at least 2 characters"),
@@ -35,17 +38,21 @@ const campaignSchema = z.object({
   banner_image: z.string(),
   starts_at: z.string().min(1, "Start date is required"),
   ends_at: z.string().min(1, "End date is required"),
-})
+}).refine(
+  (values) =>
+    !values.starts_at ||
+    !values.ends_at ||
+    new Date(values.ends_at).getTime() > new Date(values.starts_at).getTime(),
+  { message: "End date must be after the start date", path: ["ends_at"] }
+)
 
 type CampaignFormValues = z.infer<typeof campaignSchema>
-
-const toDatetimeLocal = (iso: string) => (iso ? iso.slice(0, 16) : "")
 
 const CampaignForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: existing, isLoading } = useAppSelector((state) => state.campaigns)
+  const { singleData: existing, singleStatus, singleError } = useAppSelector((state) => state.campaigns)
 
   useDocumentTitle(existing?.name ? `${existing.name} — Campaign` : "Campaign Form")
 
@@ -94,27 +101,25 @@ const CampaignForm = () => {
     }
   }, [existing, id, isEditing, reset])
 
-  if (isEditing && isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading campaign...</div>
-  }
-
-  if (isEditing && existing?.id !== id) {
+  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, existing?.id === id) : null
+  if (pageState) {
     return (
-      <div className="section-container py-12 text-center">
-        <h2 className="text-2xl font-bold">Campaign not found</h2>
-        <Button className="mt-6" onClick={() => navigate("/campaigns")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Campaigns
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState}
+        entity="Campaign"
+        backTo="/campaigns"
+        backLabel="Back to Campaigns"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 
   const onSubmit = async (values: CampaignFormValues) => {
     const payload = {
       ...values,
-      starts_at: new Date(values.starts_at).toISOString(),
-      ends_at: new Date(values.ends_at).toISOString(),
+      starts_at: fromDatetimeLocal(values.starts_at) ?? "",
+      ends_at: fromDatetimeLocal(values.ends_at) ?? "",
     }
 
     try {

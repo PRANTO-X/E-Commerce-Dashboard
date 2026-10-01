@@ -14,7 +14,7 @@ const Shipments = () => {
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { shipments, isLoading, error } = useAppSelector((state) => state.shipping)
+  const { shipments, shipmentsLoading, shipmentsError } = useAppSelector((state) => state.shipping)
 
   const loadShipments = useCallback(() => {
     dispatch(fetchShipments())
@@ -59,8 +59,8 @@ const Shipments = () => {
       <DataTable
         columns={columns}
         data={shipments}
-        isLoading={isLoading}
-        error={error}
+        isLoading={shipmentsLoading}
+        error={shipmentsError}
         onRetry={loadShipments}
         onRowClick={(s) => navigate(`/order_detail/${s.order}`)}
         showPagination={false}

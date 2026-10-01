@@ -218,7 +218,7 @@ test.describe("E-Commerce Dashboard Requirements", () => {
     await saveBtn.click()
 
     // Verify success toast
-    await expect(page.getByText("Settings saved successfully!")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText("Settings saved on this device")).toBeVisible({ timeout: 10000 })
   })
 
   test("Feature 9: Expenses tracking page with metrics, receipt uploader, filtering, and detail modal", async ({ page }) => {

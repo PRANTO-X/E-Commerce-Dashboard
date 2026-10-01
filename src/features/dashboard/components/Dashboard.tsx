@@ -17,6 +17,11 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
 import { Card } from "@/components/ui/card"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { useLocalFetch } from "@/features/analytics/useLocalFetch"
+import type { OrderListItem } from "@/features/sales/types"
+import { formatCurrency, formatDate } from "@/lib/format"
+
+const RECENT_LIMIT = 5
 
 type OrderRow = {
   id: string
@@ -33,60 +38,73 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const { data: orders, isLoading: ordersLoading, error: ordersError } = useAppSelector((state) => state.orders)
-  const { data: products } = useAppSelector((state) => state.products)
-  const { data: customers } = useAppSelector((state) => state.customers)
   const { summary: analyticsSummary } = useAppSelector((state) => state.analytics)
 
-  const loadRecentOrders = useCallback(() => {
-    dispatch(fetchAllOrders({ page: 1, page_size: 20 }))
-  }, [dispatch])
+  // Each widget keeps its own fetch result instead of reading the shared slices, whose
+  // contents (page size, filters) belong to whichever screen fetched last. Totals come from
+  // the server's count, not from the length of the (small) page we load here.
+  const startOrders = useCallback(
+    () => dispatch(fetchAllOrders({ page: 1, page_size: RECENT_LIMIT })),
+    [dispatch]
+  )
+  const startProducts = useCallback(
+    () => dispatch(fetchAllProducts({ page: 1, page_size: RECENT_LIMIT })),
+    [dispatch]
+  )
+  // /admin/users/ is unpaginated and returns every account, so customers are counted from it.
+  const startCustomers = useCallback(() => dispatch(fetchAllCustomers()), [dispatch])
+
+  const ordersFetch = useLocalFetch(startOrders)
+  const productsFetch = useLocalFetch(startProducts)
+  const customersFetch = useLocalFetch(startCustomers)
+
+  const orders = useMemo(() => (ordersFetch.data?.data ?? []) as OrderListItem[], [ordersFetch.data])
+  const products = useMemo(() => productsFetch.data?.data ?? [], [productsFetch.data])
 
   useEffect(() => {
-    loadRecentOrders()
-    dispatch(fetchAllProducts({ page: 1, page_size: 20 }))
-    dispatch(fetchAllCustomers())
-    dispatch(fetchAnalyticsSummary())
-  }, [loadRecentOrders, dispatch])
+    const request = dispatch(fetchAnalyticsSummary())
+    return () => request.abort()
+  }, [dispatch])
 
-  // Compute live revenue from paid orders or analytics
-  const computedRevenue = useMemo(() => {
-    if (analyticsSummary?.total_revenue !== undefined) {
-      return Number(analyticsSummary.total_revenue)
-    }
-    return orders.reduce((sum, ord) => sum + Number(ord.total_amount || 0), 0)
-  }, [analyticsSummary, orders])
+  const activeCustomerCount = useMemo(() => {
+    if (!customersFetch.data) return null
+    return customersFetch.data.data.filter((u) => u.role === "customer" && u.is_active).length
+  }, [customersFetch.data])
 
   const metrics = useMemo(() => [
     {
       id: "revenue",
       title: "Total Revenue",
-      value: `$${computedRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: analyticsSummary ? formatCurrency(analyticsSummary.total_revenue) : "—",
       change: 0,
       icon: DollarSign,
     },
     {
       id: "orders",
       title: "Total Orders",
-      value: String(analyticsSummary?.total_orders ?? orders.length),
+      value: analyticsSummary
+        ? analyticsSummary.total_orders.toLocaleString()
+        : ordersFetch.data
+          ? ordersFetch.data.total.toLocaleString()
+          : "—",
       change: 0,
       icon: ShoppingCart,
     },
     {
       id: "customers",
       title: "Active Customers",
-      value: String(customers.length),
+      value: activeCustomerCount === null ? "—" : activeCustomerCount.toLocaleString(),
       change: 0,
       icon: Users,
     },
     {
       id: "inventory",
       title: "Catalog Products",
-      value: String(products.length),
+      value: productsFetch.data ? productsFetch.data.total.toLocaleString() : "—",
       change: 0,
       icon: Package,
     },
-  ], [computedRevenue, analyticsSummary, orders.length, customers.length, products.length])
+  ], [analyticsSummary, ordersFetch.data, activeCustomerCount, productsFetch.data])
 
   const columns: ColumnDef<OrderRow>[] = useMemo(() => [
     {
@@ -135,7 +153,7 @@ const Dashboard = () => {
   ], [])
 
   const recentOrders: OrderRow[] = useMemo(() => {
-    return orders.slice(0, 5).map((ord) => {
+    return orders.slice(0, RECENT_LIMIT).map((ord) => {
       const custName = ord.customer
         ? [ord.customer.first_name, ord.customer.last_name].filter(Boolean).join(" ") || ord.customer.email
         : "Guest Customer"
@@ -151,17 +169,15 @@ const Dashboard = () => {
         id: ord.id,
         order_number: ord.order_number || `#${ord.id.slice(0, 8)}`,
         customer: custName,
-        amount: `$${Number(ord.total_amount || 0).toFixed(2)}`,
+        amount: formatCurrency(ord.total_amount),
         status,
-        date: ord.created_at
-          ? new Date(ord.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-          : "N/A",
+        date: formatDate(ord.created_at, "N/A"),
       }
     })
   }, [orders])
 
   const topProducts = useMemo(() => {
-    return products.slice(0, 5).map((prod, index) => {
+    return products.slice(0, RECENT_LIMIT).map((prod, index) => {
       const percentage = Math.max(15, Math.round(92 - index * 16))
       return {
         id: prod.id,
@@ -211,9 +227,9 @@ const Dashboard = () => {
             <DataTable
               columns={columns}
               data={recentOrders}
-              isLoading={ordersLoading}
-              error={ordersError}
-              onRetry={loadRecentOrders}
+              isLoading={ordersFetch.status === "loading"}
+              error={ordersFetch.status === "failed" ? ordersFetch.error : null}
+              onRetry={ordersFetch.retry}
               onRowClick={(order) => navigate(`/order_detail/${order.id}`)}
               showPagination={false}
               minWidth="600px"

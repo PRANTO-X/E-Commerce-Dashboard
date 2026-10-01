@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ChangeEvent, type FormEvent } from "react"
+import { useState, useMemo, type ChangeEvent, type FormEvent } from "react"
 import {
   User,
   Mail,
@@ -16,7 +16,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { patchUser, updateProfile } from "@/features/authentication/slices/authSlice"
+import { updateProfile } from "@/features/authentication/slices/authSlice"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,15 +53,17 @@ const Profile = () => {
   const [twoFactorAuth, setTwoFactorAuth] = useState(true)
   const [loginAlerts, setLoginAlerts] = useState(true)
 
-  useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || "")
-      setLastName(user.last_name || "")
-      setEmail(user.email || "")
-      setPhone(user.phone || "")
-      setProfilePicture(user.profile_picture || "")
-    }
-  }, [user])
+  // Re-sync the form when the stored user changes (e.g. after a successful save), adjusting
+  // state during render rather than in an effect.
+  const [syncedUser, setSyncedUser] = useState(user)
+  if (user && user !== syncedUser) {
+    setSyncedUser(user)
+    setFirstName(user.first_name || "")
+    setLastName(user.last_name || "")
+    setEmail(user.email || "")
+    setPhone(user.phone || "")
+    setProfilePicture(user.profile_picture || "")
+  }
 
   const displayName = useMemo(() => {
     const fullName = [firstName, lastName].filter(Boolean).join(" ")
@@ -91,9 +94,10 @@ const Profile = () => {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
+      // Only stage the photo locally; it's persisted (and the global user updated) when the
+      // profile form is saved, so we don't claim success before the server accepts it.
       setProfilePicture(result)
-      dispatch(patchUser({ profile_picture: result }))
-      toast.success("Profile photo updated")
+      toast.info("Photo selected — save your profile to apply it")
     }
     reader.readAsDataURL(file)
   }
@@ -112,18 +116,10 @@ const Profile = () => {
           profile_picture: profilePicture,
         })
       ).unwrap()
-      dispatch(
-        patchUser({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          profile_picture: profilePicture,
-        })
-      )
+      // updateProfile.fulfilled already stores the server's copy of the user.
       toast.success("Profile details saved successfully!")
-    } catch {
-      toast.error("Could not update profile on server, saved locally.")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not update profile. Please try again."))
     } finally {
       setIsSaving(false)
     }
@@ -206,7 +202,7 @@ const Profile = () => {
                 </div>
                 <p className="text-sm text-muted-foreground flex items-center justify-center sm:justify-start gap-1.5">
                   <Mail className="size-3.5" />
-                  {email || "nestmartit.intern@gmail.com"}
+                  {email || "—"}
                   <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium ml-1">
                     <CheckCircle2 className="size-3.5" /> Verified
                   </span>

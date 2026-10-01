@@ -8,6 +8,8 @@ import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAllReturns } from "@/features/returns/slices/returnSlice"
 import { fetchAll as fetchAllOrders } from "@/features/sales/slices/orderSlice"
+import { useLocalFetch } from "@/features/analytics/useLocalFetch"
+import { formatDate, humanize } from "@/lib/format"
 import type { ReturnRequest, ReturnStatus } from "@/features/returns/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
@@ -17,7 +19,6 @@ const Returns = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { data: returns, isLoading, error } = useAppSelector((state) => state.returns)
-  const { data: orders } = useAppSelector((state) => state.orders)
 
   const loadReturns = useCallback(() => {
     dispatch(fetchAllReturns())
@@ -25,10 +26,14 @@ const Returns = () => {
 
   useEffect(() => {
     loadReturns()
-    dispatch(fetchAllOrders({ page: 1, page_size: 100 }))
-  }, [loadReturns, dispatch])
+  }, [loadReturns])
 
-  const orderNumber = (orderId: string) => orders.find((o) => o.id === orderId)?.order_number ?? orderId
+  // Order numbers for display, from a local fetch so we don't depend on (or rely on) whatever
+  // page of orders the orders slice currently holds. Orders outside this page fall back to the id.
+  const startOrders = useCallback(() => dispatch(fetchAllOrders({ page: 1, page_size: 100 })), [dispatch])
+  const { data: orderPage } = useLocalFetch(startOrders)
+  const orderNumber = (orderId: string) =>
+    orderPage?.data.find((o) => o.id === orderId)?.order_number ?? orderId
 
   const columns: ColumnDef<ReturnRequest>[] = [
     {
@@ -50,7 +55,7 @@ const Returns = () => {
       header: "REASON",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground capitalize">
-          {(row.getValue("reason") as string).replace("_", " ")}
+          {humanize(row.getValue("reason") as string)}
         </span>
       ),
     },
@@ -66,7 +71,7 @@ const Returns = () => {
       header: "REQUESTED",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {new Date(row.getValue("created_at")).toLocaleDateString()}
+          {formatDate(row.getValue("created_at") as string)}
         </span>
       ),
     },

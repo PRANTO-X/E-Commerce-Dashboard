@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Shield, Key, Mail, Fingerprint, Save } from "lucide-react"
+import { Shield, Key, Mail, Fingerprint, Save, Info, Loader2 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,8 @@ import {
 
 import { SettingToggle } from "@/components/common/SettingToggle"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { updateAuthSettings } from "@/features/system/slices/authSettingsSlice"
+import { saveAuthSettings } from "@/features/system/slices/authSettingsSlice"
+import type { AuthSettings } from "@/features/system/settingsDefaults"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 interface LoginMethodMeta {
@@ -40,15 +41,24 @@ const Authentication = () => {
   useDocumentTitle("Authentication")
 
   const dispatch = useAppDispatch()
-  const authSettings = useAppSelector((state) => state.authSettings)
+  const savedSettings = useAppSelector((state) => state.authSettings)
+  // Edits stay local until Save, so leaving the page discards unsaved changes.
+  const [authSettings, setAuthSettings] = useState<AuthSettings>(savedSettings)
   const [isSaving, setIsSaving] = useState(false)
 
-  const handleSave = () => {
+  const updateAuthSettings = (patch: Partial<AuthSettings>) =>
+    setAuthSettings((prev) => ({ ...prev, ...patch }))
+
+  const handleSave = async () => {
     setIsSaving(true)
-    setTimeout(() => {
+    try {
+      await dispatch(saveAuthSettings(authSettings)).unwrap()
+      toast.success("Authentication settings saved on this device")
+    } catch {
+      toast.error("Couldn't save settings — browser storage is unavailable")
+    } finally {
       setIsSaving(false)
-      toast.success("Authentication settings saved!")
-    }, 400)
+    }
   }
 
   const loginMethods: LoginMethodMeta[] = [
@@ -69,6 +79,18 @@ const Authentication = () => {
         title="Authentication Settings"
         description="Configure how users and staff members authenticate to the system."
       />
+
+      <div
+        role="note"
+        className="mb-6 flex gap-3 rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground"
+      >
+        <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+        <p>
+          These settings are saved in this browser only and are <strong className="text-foreground">not enforced yet</strong>.
+          Login methods, password rules, session timeouts and 2FA requirements must be enforced by the
+          backend authentication service, which does not expose a settings endpoint at the moment.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LOGIN METHODS */}
@@ -97,9 +119,9 @@ const Authentication = () => {
                     checked={authSettings.loginMethods[method.id]}
                     disabled={method.disabled}
                     onCheckedChange={(checked) =>
-                      dispatch(updateAuthSettings({
+                      updateAuthSettings({
                         loginMethods: { ...authSettings.loginMethods, [method.id]: checked },
-                      }))
+                      })
                     }
                   />
                 </div>
@@ -122,7 +144,7 @@ const Authentication = () => {
               <Label htmlFor="min-length">Minimum Password Length</Label>
               <Select
                 value={authSettings.minPasswordLength}
-                onValueChange={(value) => dispatch(updateAuthSettings({ minPasswordLength: value }))}
+                onValueChange={(value) => updateAuthSettings({ minPasswordLength: value })}
               >
                 <SelectTrigger id="min-length">
                   <SelectValue />
@@ -141,9 +163,9 @@ const Authentication = () => {
                 description={policy.description}
                 checked={authSettings.passwordPolicies[policy.id]}
                 onCheckedChange={(checked) =>
-                  dispatch(updateAuthSettings({
+                  updateAuthSettings({
                     passwordPolicies: { ...authSettings.passwordPolicies, [policy.id]: checked },
-                  }))
+                  })
                 }
               />
             ))}
@@ -163,7 +185,7 @@ const Authentication = () => {
               <Label htmlFor="session-timeout">Idle Session Timeout</Label>
               <Select
                 value={authSettings.sessionTimeout}
-                onValueChange={(value) => dispatch(updateAuthSettings({ sessionTimeout: value }))}
+                onValueChange={(value) => updateAuthSettings({ sessionTimeout: value })}
               >
                 <SelectTrigger id="session-timeout">
                   <SelectValue />
@@ -185,7 +207,7 @@ const Authentication = () => {
               label="Multi-device Login"
               description="Allow login from multiple devices simultaneously"
               checked={authSettings.multiDeviceLogin}
-              onCheckedChange={(checked) => dispatch(updateAuthSettings({ multiDeviceLogin: checked }))}
+              onCheckedChange={(checked) => updateAuthSettings({ multiDeviceLogin: checked })}
             />
           </CardContent>
         </Card>
@@ -203,13 +225,13 @@ const Authentication = () => {
               label="Force 2FA for Admins"
               description="Mandatory for all staff with admin roles"
               checked={authSettings.force2FA}
-              onCheckedChange={(checked) => dispatch(updateAuthSettings({ force2FA: checked }))}
+              onCheckedChange={(checked) => updateAuthSettings({ force2FA: checked })}
             />
             <div className="space-y-2">
               <Label>Primary 2FA Method</Label>
               <Select
                 value={authSettings.primary2FAMethod}
-                onValueChange={(value) => dispatch(updateAuthSettings({ primary2FAMethod: value }))}
+                onValueChange={(value) => updateAuthSettings({ primary2FAMethod: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -228,7 +250,7 @@ const Authentication = () => {
           </CardContent>
           <CardFooter className="justify-end border-t p-4">
             <Button onClick={handleSave} disabled={isSaving}>
-              {!isSaving && <Save className="h-4 w-4" />}
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {isSaving ? "Saving..." : "Save All Changes"}
             </Button>
           </CardFooter>

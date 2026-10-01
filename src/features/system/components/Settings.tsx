@@ -30,7 +30,7 @@ import { Separator } from "@/components/ui/separator"
 import { SettingToggle } from "@/components/common/SettingToggle"
 import { ImageUploader, type UploadedImageItem } from "@/components/common/ImageUploader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { updateSettings, resetSettings } from "@/features/system/slices/settingsSlice"
+import { saveSettings, resetSettings } from "@/features/system/slices/settingsSlice"
 import { defaultStoreSettings, type StoreSettings } from "@/features/system/settingsDefaults"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
@@ -41,6 +41,22 @@ interface SettingTab {
   component: React.ReactNode
 }
 
+// Drops session-scoped data and any Cache Storage entries, then reloads so every page
+// refetches fresh. localStorage (refresh token, theme, saved settings) is left intact.
+async function clearBrowserCache() {
+  try {
+    sessionStorage.clear()
+    if ("caches" in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((key) => caches.delete(key)))
+    }
+    toast.success("Cache cleared, reloading…")
+    setTimeout(() => window.location.reload(), 600)
+  } catch {
+    toast.error("Couldn't clear the cache in this browser")
+  }
+}
+
 const Settings = () => {
   useDocumentTitle("Settings")
 
@@ -49,13 +65,17 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [form, setForm] = useState<StoreSettings>(settings)
 
-  const handleSave = () => {
+  // No backend settings endpoint exists yet, so this persists to this browser only.
+  const handleSave = async () => {
     setIsSaving(true)
-    setTimeout(() => {
-      dispatch(updateSettings(form))
+    try {
+      await dispatch(saveSettings(form)).unwrap()
+      toast.success("Settings saved on this device")
+    } catch {
+      toast.error("Couldn't save settings — browser storage is unavailable")
+    } finally {
       setIsSaving(false)
-      toast.success("Settings saved successfully!")
-    }, 400)
+    }
   }
 
   const logoImages: UploadedImageItem[] = useMemo(() => {
@@ -353,7 +373,7 @@ const Settings = () => {
       </CardContent>
       <CardFooter className="justify-end border-t p-4">
         <Button onClick={handleSave} disabled={isSaving}>
-          {!isSaving && <Save className="h-4 w-4 mr-2" />}
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </CardFooter>
@@ -396,10 +416,11 @@ const Settings = () => {
           </Button>
         </div>
       </CardContent>
-      <CardFooter className="justify-end border-t p-4">
-        <Button onClick={() => toast.success("Password updated")} disabled={isSaving}>
-          Update Security
-        </Button>
+      <CardFooter className="flex-col items-stretch gap-3 border-t p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Password changes aren't available yet — the backend has no change-password endpoint.
+        </p>
+        <Button disabled>Update Security</Button>
       </CardFooter>
     </Card>
   )
@@ -427,10 +448,10 @@ const Settings = () => {
               <div>
                 <p className="font-medium">Clear System Cache</p>
                 <p className="text-sm text-muted-foreground">
-                  Delete all temporary files and cached data.
+                  Clear this browser's cached app data and reload. Your login and saved settings are kept.
                 </p>
               </div>
-              <Button variant="outline" onClick={() => toast.success("Cache cleared")}>Clear Cache</Button>
+              <Button variant="outline" onClick={clearBrowserCache}>Clear Cache</Button>
             </div>
             <Separator className="bg-destructive/10" />
             <div className="flex items-center justify-between">
@@ -445,9 +466,10 @@ const Settings = () => {
                 variant="destructive"
                 onClick={() => {
                   if (!window.confirm("Reset all settings to their defaults?")) return
-                  dispatch(resetSettings())
-                  setForm(defaultStoreSettings)
-                  toast.success("Settings reset to defaults")
+                  void dispatch(resetSettings()).then(() => {
+                    setForm(defaultStoreSettings)
+                    toast.success("Settings reset to defaults")
+                  })
                 }}
               >
                 Reset All

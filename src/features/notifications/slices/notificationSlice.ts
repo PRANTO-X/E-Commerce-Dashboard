@@ -13,8 +13,12 @@ import type { AdminNotification, AdminNotificationPreference } from "../types"
 interface NotificationState {
   notifications: AdminNotification[]
   preferences: AdminNotificationPreference[]
+  /** Notifications list request state. */
   isLoading: boolean
   error: unknown
+  /** Preferences request state (separate endpoint, tracked independently). */
+  preferencesLoading: boolean
+  preferencesError: unknown
 }
 
 const initialState: NotificationState = {
@@ -22,6 +26,8 @@ const initialState: NotificationState = {
   preferences: [],
   isLoading: false,
   error: null,
+  preferencesLoading: false,
+  preferencesError: null,
 }
 
 export const fetchNotifications = createAsyncThunk(
@@ -56,9 +62,11 @@ const notificationSlice = createSlice({
     builder
       .addCase(fetchNotifications.pending, (state) => {
         state.isLoading = true
+        state.error = null
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.isLoading = false
+        state.error = null
         state.notifications = action.payload
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
@@ -66,8 +74,18 @@ const notificationSlice = createSlice({
         state.error = action.payload ?? action.error
       })
 
+      .addCase(fetchNotificationPreferences.pending, (state) => {
+        state.preferencesLoading = true
+        state.preferencesError = null
+      })
       .addCase(fetchNotificationPreferences.fulfilled, (state, action) => {
+        state.preferencesLoading = false
+        state.preferencesError = null
         state.preferences = action.payload
+      })
+      .addCase(fetchNotificationPreferences.rejected, (state, action) => {
+        state.preferencesLoading = false
+        state.preferencesError = action.payload ?? action.error
       })
   },
 })

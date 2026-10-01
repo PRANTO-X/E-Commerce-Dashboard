@@ -19,4 +19,18 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // shadcn-generated primitives co-export variants/hooks (buttonVariants, useSidebar)
+    // by design; keep them byte-compatible with the generator instead of splitting.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['tests/**/*.ts', 'playwright.config.ts', 'vite.config.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

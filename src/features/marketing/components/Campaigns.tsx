@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, deleteData } from "@/features/marketing/slices/campaignSlice"
 import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDate } from "@/lib/format"
 
 const Campaigns = () => {
   useDocumentTitle("Campaigns")
@@ -69,7 +70,7 @@ const Campaigns = () => {
         const c = row.original
         return (
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {new Date(c.starts_at).toLocaleDateString()} → {new Date(c.ends_at).toLocaleDateString()}
+            {formatDate(c.starts_at)} → {formatDate(c.ends_at)}
           </span>
         )
       },

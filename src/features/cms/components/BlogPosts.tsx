@@ -17,6 +17,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/cms/slices/blogPostSlice"
 import type { BlogPost } from "@/features/cms/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDate } from "@/lib/format"
 
 const BlogPosts = () => {
   useDocumentTitle("Blog Posts")
@@ -141,7 +142,7 @@ const BlogPosts = () => {
       header: "CREATED",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.created_at ? new Date(row.original.created_at).toLocaleDateString() : "—"}
+          {formatDate(row.original.created_at)}
         </span>
       ),
     },

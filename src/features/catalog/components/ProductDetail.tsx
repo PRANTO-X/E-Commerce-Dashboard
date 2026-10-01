@@ -18,20 +18,21 @@ import {
   Calendar,
   Tag,
   Hash,
-  PackageSearch,
   Boxes,
   Layers,
   Sparkles,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const { singleData: product, isLoading } = useAppSelector((state) => state.products)
+  const { singleData: product, singleStatus, singleError } = useAppSelector((state) => state.products)
   const { data: categories } = useAppSelector((state) => state.categories)
   const { data: allImages } = useAppSelector((state) => state.productImages)
   const { data: allVariants } = useAppSelector((state) => state.variants)
@@ -42,41 +43,26 @@ const ProductDetail = () => {
   useEffect(() => {
     if (id) {
       dispatch(fetchSingle(id))
-      dispatch(fetchAllProductImages({ page: 1, page_size: 100 }))
+      // Filter server-side so a product's images/bundle items aren't cut off by a global page.
+      dispatch(fetchAllProductImages({ page: 1, page_size: 100, product: id }))
+      // Unfiltered: bundle components reference variants of other products.
       dispatch(fetchAllVariants({ page: 1, page_size: 1000 }))
-      dispatch(fetchAllBundleItems({ page: 1, page_size: 1000 }))
+      dispatch(fetchAllBundleItems({ page: 1, page_size: 100, bundle: id }))
     }
     dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
   }, [dispatch, id])
 
-  if (isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading product...</div>
-  }
-
-  if (!product || product.id !== id) {
+  const pageState = resolveDetailState(singleStatus, singleError, product?.id === id)
+  if (pageState || !product || product.id !== id) {
     return (
-      <div className="section-container space-y-0 flex flex-col items-center justify-center h-[80vh] text-center">
-        <div className="mb-6 rounded-full bg-muted p-6">
-          <PackageSearch className="h-12 w-12 text-muted-foreground" />
-        </div>
-
-        <h2 className="text-2xl font-bold text-foreground font-heading">
-          Product Not Found
-        </h2>
-
-        <p className="mt-2 max-w-md text-sm text-muted-foreground font-text">
-          The product you're looking for doesn't exist or may have been removed.
-        </p>
-
-        <Button
-          variant="outline"
-          onClick={() => navigate("/products")}
-          className="mt-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Return to Products
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState ?? "loading"}
+        entity="Product"
+        backTo="/products"
+        backLabel="Return to Products"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 

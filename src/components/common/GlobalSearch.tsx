@@ -795,10 +795,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
     return [...matchedStatic, ...dynamicResults.slice(0, 6)]
   }, [query, products, orders, customers, expenses])
 
-  // Reset selection index when results change
-  useEffect(() => {
+  // Reset selection index when results change (adjusted during render, not in an effect,
+  // so the list never paints once with a stale highlight).
+  const [prevResultsLength, setPrevResultsLength] = useState(results.length)
+  if (prevResultsLength !== results.length) {
+    setPrevResultsLength(results.length)
     setSelectedIndex(0)
-  }, [results.length])
+  }
 
   // Keep the highlighted option inside the scroll viewport
   useEffect(() => {

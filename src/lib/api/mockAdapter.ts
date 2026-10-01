@@ -556,12 +556,10 @@ const analyticsSummary = () => {
   const total = salesSeries().reduce((s, p) => s + p.order_count, 0)
   const revenue = salesSeries().reduce((s, p) => s + p.revenue, 0)
   return {
-    data: {
-      total_orders: total,
-      total_revenue: revenue.toFixed(2),
-      average_order_value: (revenue / total).toFixed(2),
-      return_rate: "3.4",
-    },
+    total_orders: total,
+    total_revenue: revenue.toFixed(2),
+    average_order_value: (revenue / total).toFixed(2),
+    return_rate: "3.4",
   }
 }
 

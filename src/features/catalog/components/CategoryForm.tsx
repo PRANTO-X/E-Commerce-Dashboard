@@ -24,6 +24,8 @@ import { ImageUploader } from "@/components/common/ImageUploader"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, fetchSingle, postData, updateData } from "@/features/catalog/slices/categorySlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const categorySchema = z.object({
   name: z.string().min(2, "Category name must be at least 2 characters"),
@@ -46,7 +48,12 @@ const CategoryForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: categories, singleData: existing, isLoading } = useAppSelector((state) => state.categories)
+  const {
+    data: categories,
+    singleData: existing,
+    singleStatus,
+    singleError,
+  } = useAppSelector((state) => state.categories)
 
   useDocumentTitle(existing?.name ? `${existing.name} — Category` : "Category Form")
 
@@ -96,19 +103,17 @@ const CategoryForm = () => {
     }
   }, [existing, id, isEditing, reset])
 
-  if (isEditing && isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading category...</div>
-  }
-
-  if (isEditing && existing?.id !== id) {
+  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, existing?.id === id) : null
+  if (pageState) {
     return (
-      <div className="section-container py-12 text-center">
-        <h2 className="text-2xl font-bold">Category not found</h2>
-        <Button className="mt-6" onClick={() => navigate("/categories")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Categories
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState}
+        entity="Category"
+        backTo="/categories"
+        backLabel="Back to Categories"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 

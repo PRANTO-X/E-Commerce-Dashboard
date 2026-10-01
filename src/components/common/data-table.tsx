@@ -197,6 +197,8 @@ export function DataTable<TData, TValue>({
       }
     }
     return map
+    // `table` is a stable reference, so columns/data are what actually signal a change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, columns, data])
 
   const headerlessIds = React.useMemo(() => new Set(unlabelledColumns ?? []), [unlabelledColumns])

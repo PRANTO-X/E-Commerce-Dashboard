@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, createAction } from "@reduxjs/toolkit"
-import { api, extractApiError } from "@/lib/api/client"
+import { api, extractApiError, refreshAccessToken } from "@/lib/api/client"
 import { getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from "@/lib/api/tokenStore"
 import { DEV_AUTH_BYPASS, DEV_USER } from "../devAuth"
 import type { AuthUser, LoginPayload } from "../types"
@@ -76,9 +76,7 @@ export const bootstrapAuth = createAsyncThunk(
       return rejectWithValue(null)
     }
     try {
-      const res = await api.post("/customer/auth/refresh/", { refresh: refreshToken })
-      const access = res.data.data.access as string
-      setAccessToken(access)
+      await refreshAccessToken()
       return await dispatch(fetchMe()).unwrap()
     } catch (err) {
       clearTokens()
@@ -93,18 +91,13 @@ export const sessionExpired = createAction("auth/sessionExpired")
 
 export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
-  async (patch: Partial<AuthUser>, { getState, rejectWithValue }) => {
+  async (patch: Partial<AuthUser>, { rejectWithValue }) => {
     try {
       const res = await api.patch("/customer/auth/me/", patch)
       return res.data.data as AuthUser
-    } catch {
-      // Best-effort local merge if backend endpoint is unavailable
-      const state = getState() as { auth: AuthState }
-      const current = state.auth.user
-      if (current) {
-        return { ...current, ...patch }
-      }
-      return rejectWithValue("Failed to update profile")
+    } catch (err) {
+      // Surface the failure; merging locally would tell the user it saved when it didn't.
+      return rejectWithValue(extractApiError(err))
     }
   }
 )
@@ -121,6 +114,8 @@ const authSlice = createSlice({
     // Marks the session authenticated without a backend round-trip. Only ever
     // dispatched when DEV_AUTH_BYPASS is on.
     devBypassLogin(state) {
+      // Guard here too, so a hand-dispatched action (e.g. via DevTools) is a no-op in prod.
+      if (!DEV_AUTH_BYPASS) return
       state.user = DEV_USER
       state.isAuthenticated = true
       state.bootstrapped = true

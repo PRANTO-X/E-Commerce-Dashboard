@@ -12,6 +12,7 @@ import { fetchAll as fetchAllProducts } from "@/features/catalog/slices/productS
 import type { Review, ReviewStatus } from "@/features/marketing/types"
 import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDate } from "@/lib/format"
 
 const Reviews = () => {
   useDocumentTitle("Reviews")
@@ -110,7 +111,7 @@ const Reviews = () => {
       header: "DATE",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {new Date(row.getValue("created_at")).toLocaleDateString()}
+          {formatDate(row.getValue("created_at") as string)}
         </span>
       ),
     },

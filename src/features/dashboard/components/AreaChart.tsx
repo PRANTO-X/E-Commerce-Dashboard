@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import {
   Card,
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/chart"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAnalyticsSales } from "@/features/analytics/slices/analyticsSlice"
+import { ChartError, ChartLoading } from "@/features/analytics/components/ChartState"
+import { parseDate } from "@/lib/format"
 import { EmptyState } from "@/components/common/EmptyState"
 import { TrendingUp } from "lucide-react"
 
@@ -27,25 +29,23 @@ const chartConfig = {
 
 export function ChartAreaDefault() {
   const dispatch = useAppDispatch()
-  const { sales } = useAppSelector((state) => state.analytics)
-  const orders = useAppSelector((state) => state.orders.data)
+  const { sales, requests } = useAppSelector((state) => state.analytics)
+  const request = requests.sales
+
+  const load = useCallback(() => dispatch(fetchAnalyticsSales()), [dispatch])
 
   useEffect(() => {
-    dispatch(fetchAnalyticsSales())
-  }, [dispatch])
+    const pending = load()
+    return () => pending.abort()
+  }, [load])
 
-  // Derive dynamic chart data from API analytics sales, or fallback to real orders grouped by period
-  const chartData = sales && sales.length > 0
-    ? sales.map((point) => ({
-        month: new Date(point.period).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-        desktop: Number(point.revenue),
-      }))
-    : orders.length > 0
-      ? orders.slice(-6).map((ord) => ({
-          month: new Date(ord.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-          desktop: Number(ord.total_amount || 0),
-        }))
-      : []
+  // Only the analytics series is used. The old fallback plotted individual orders from
+  // state.orders.data, whose contents depend on whichever screen fetched orders last.
+  // Periods are "YYYY-MM" buckets, parsed as local dates so they don't slip a month west of UTC.
+  const chartData = sales.map((point) => ({
+    month: parseDate(point.period)?.toLocaleDateString(undefined, { month: "short", year: "2-digit" }) ?? point.period,
+    desktop: Number(point.revenue),
+  }))
 
   return (
     <Card className="p-5 shadow-none">
@@ -61,7 +61,11 @@ export function ChartAreaDefault() {
       </CardHeader>
 
       <CardContent className="px-0">
-        {chartData.length === 0 ? (
+        {request.status === "failed" ? (
+          <ChartError error={request.error} onRetry={load} />
+        ) : request.status !== "succeeded" && chartData.length === 0 ? (
+          <ChartLoading />
+        ) : chartData.length === 0 ? (
           <EmptyState
             icon={TrendingUp}
             title="No sales revenue data yet"

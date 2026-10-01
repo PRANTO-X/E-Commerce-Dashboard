@@ -28,6 +28,16 @@ import { PageHeading } from "@/components/common/PageHeading"
 import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
+const VARIANT_LIST_PARAMS = { page: 1, page_size: 1000 } as const
+
+/** Adjustments are signed deltas: a non-zero whole number (e.g. 10 to add, -5 to remove). */
+function parseQuantityDelta(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!/^-?\d+$/.test(trimmed)) return null
+  const n = Number(trimmed)
+  return Number.isSafeInteger(n) && n !== 0 ? n : null
+}
+
 const Inventory = () => {
   useDocumentTitle("Inventory")
 
@@ -41,9 +51,8 @@ const Inventory = () => {
   const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState("")
 
-  const loadVariants = useCallback(() => {
-    dispatch(fetchAllVariants({ page: 1, page_size: 1000 }))
-  }, [dispatch])
+  // Single source of truth for the list query so the post-adjustment refetch matches the page load.
+  const loadVariants = useCallback(() => dispatch(fetchAllVariants(VARIANT_LIST_PARAMS)), [dispatch])
 
   useEffect(() => {
     loadVariants()
@@ -59,18 +68,29 @@ const Inventory = () => {
     return v.name.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q)
   })
 
+  const quantityDelta = parseQuantityDelta(quantityChanged)
+  const resultingStock = adjustingVariant && quantityDelta !== null
+    ? adjustingVariant.stock_quantity + quantityDelta
+    : null
+  const quantityError = !quantityChanged.trim()
+    ? null
+    : quantityDelta === null
+      ? "Enter a whole number other than 0 (e.g. 10 or -5)"
+      : null
+  const canSubmit = quantityDelta !== null && !quantityError
+
   const handleAdjust = async () => {
-    if (!adjustingVariant || !quantityChanged.trim()) return
+    if (!adjustingVariant || quantityDelta === null || quantityError) return
     setSubmitting(true)
     try {
       await dispatch(
         adjustStock({
           variant_id: adjustingVariant.id,
-          quantity_changed: Number(quantityChanged),
+          quantity_changed: quantityDelta,
           notes: notes.trim(),
         })
       ).unwrap()
-      await dispatch(fetchAllVariants({ page: 1, page_size: 100 }))
+      await loadVariants()
       toast.success(`Stock adjusted for ${adjustingVariant.name}`)
       setAdjustingVariant(null)
       setQuantityChanged("")
@@ -201,10 +221,23 @@ const Inventory = () => {
                 <Input
                   id="quantity_changed"
                   type="number"
+                  step={1}
+                  inputMode="numeric"
                   placeholder="e.g. 10 or -5"
                   value={quantityChanged}
+                  aria-invalid={!!quantityError}
+                  aria-describedby="quantity_changed_hint"
                   onChange={(e) => setQuantityChanged(e.target.value)}
                 />
+                <p
+                  id="quantity_changed_hint"
+                  className={quantityError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}
+                >
+                  {quantityError ??
+                    (resultingStock !== null
+                      ? `New stock will be ${resultingStock}`
+                      : "Positive to add stock, negative to remove")}
+                </p>
               </FieldContent>
             </Field>
             <Field>
@@ -224,7 +257,7 @@ const Inventory = () => {
             <Button variant="outline" onClick={() => setAdjustingVariant(null)}>
               Cancel
             </Button>
-            <Button onClick={handleAdjust} disabled={submitting || !quantityChanged.trim()}>
+            <Button onClick={handleAdjust} disabled={submitting || !canSubmit}>
               Apply Adjustment
             </Button>
           </DialogFooter>

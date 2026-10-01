@@ -1,18 +1,21 @@
 import { useEffect } from "react"
-import { useParams, useNavigate, Link } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { AlertCircle, ArrowLeft, Calendar, Edit } from "lucide-react"
+import { ArrowLeft, Calendar, Edit } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchSingle } from "@/features/marketing/slices/campaignSlice"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDateTime } from "@/lib/format"
+import { DetailPageState } from "@/components/common/DetailPageState"
+import { resolveDetailState } from "@/lib/detailState"
 
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { singleData: campaign, isLoading } = useAppSelector((state) => state.campaigns)
+  const { singleData: campaign, singleStatus, singleError } = useAppSelector((state) => state.campaigns)
 
   useDocumentTitle(campaign?.name ? `${campaign.name} — Campaign` : "Campaign Details")
 
@@ -20,22 +23,17 @@ const CampaignDetail = () => {
     if (id) dispatch(fetchSingle(id))
   }, [dispatch, id])
 
-  if (isLoading) {
-    return <div className="section-container py-12 text-center text-muted-foreground">Loading campaign...</div>
-  }
-
-  if (!campaign || campaign.id !== id) {
+  const pageState = resolveDetailState(singleStatus, singleError, campaign?.id === id)
+  if (pageState || !campaign || campaign.id !== id) {
     return (
-      <div className="section-container py-12 text-center">
-        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-        <h2 className="text-2xl font-bold">Campaign not found</h2>
-        <Button asChild className="mt-6">
-          <Link to="/campaigns">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Campaigns
-          </Link>
-        </Button>
-      </div>
+      <DetailPageState
+        state={pageState ?? "loading"}
+        entity="Campaign"
+        backTo="/campaigns"
+        backLabel="Back to Campaigns"
+        error={singleError}
+        onRetry={() => id && dispatch(fetchSingle(id))}
+      />
     )
   }
 
@@ -79,11 +77,11 @@ const CampaignDetail = () => {
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Starts</span>
-              <span className="font-medium">{new Date(campaign.starts_at).toLocaleString()}</span>
+              <span className="font-medium">{formatDateTime(campaign.starts_at)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Ends</span>
-              <span className="font-medium">{new Date(campaign.ends_at).toLocaleString()}</span>
+              <span className="font-medium">{formatDateTime(campaign.ends_at)}</span>
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-muted-foreground">Status</span>

@@ -21,6 +21,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { fetchAll, postData } from "@/features/marketing/slices/automationSlice"
 import type { AutomationEvent, AutomationEventType } from "@/features/marketing/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDateTime, fromDatetimeLocal, humanize } from "@/lib/format"
 
 const eventTypeOptions: { label: string; value: AutomationEventType }[] = [
   { label: "Abandoned Cart", value: "abandoned_cart" },
@@ -57,7 +58,7 @@ const Automations = () => {
           payload: {
             event_type: eventType,
             customer: customerId.trim(),
-            scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+            scheduled_at: fromDatetimeLocal(scheduledAt),
           },
         })
       ).unwrap()
@@ -77,7 +78,7 @@ const Automations = () => {
       accessorKey: "event_type",
       header: "EVENT",
       cell: ({ row }) => (
-        <span className="text-sm font-medium capitalize">{(row.getValue("event_type") as string).replace("_", " ")}</span>
+        <span className="text-sm font-medium capitalize">{humanize(row.getValue("event_type") as string)}</span>
       ),
     },
     { accessorKey: "customer", header: "CUSTOMER" },
@@ -86,7 +87,7 @@ const Automations = () => {
       header: "SCHEDULED",
       cell: ({ row }) => {
         const value = row.getValue("scheduled_at") as string | null
-        return <span className="text-sm text-muted-foreground">{value ? new Date(value).toLocaleString() : "—"}</span>
+        return <span className="text-sm text-muted-foreground">{formatDateTime(value)}</span>
       },
     },
     {
@@ -94,7 +95,7 @@ const Automations = () => {
       header: "SENT",
       cell: ({ row }) => {
         const value = row.getValue("sent_at") as string | null
-        return <span className="text-sm text-muted-foreground">{value ? new Date(value).toLocaleString() : "Not sent"}</span>
+        return <span className="text-sm text-muted-foreground">{formatDateTime(value, "Not sent")}</span>
       },
     },
   ]

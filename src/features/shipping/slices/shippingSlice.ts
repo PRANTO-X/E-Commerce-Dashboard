@@ -17,8 +17,12 @@ import type {
 interface ShippingState {
   couriers: CourierIntegration[]
   shipments: CourierShipment[]
+  /** Couriers list request state. */
   isLoading: boolean
   error: unknown
+  /** Shipments list request state (separate so one list's failure doesn't mask the other). */
+  shipmentsLoading: boolean
+  shipmentsError: unknown
 }
 
 const initialState: ShippingState = {
@@ -26,6 +30,8 @@ const initialState: ShippingState = {
   shipments: [],
   isLoading: false,
   error: null,
+  shipmentsLoading: false,
+  shipmentsError: null,
 }
 
 export const fetchCouriers = createAsyncThunk(
@@ -108,9 +114,11 @@ const shippingSlice = createSlice({
     builder
       .addCase(fetchCouriers.pending, (state) => {
         state.isLoading = true
+        state.error = null
       })
       .addCase(fetchCouriers.fulfilled, (state, action) => {
         state.isLoading = false
+        state.error = null
         state.couriers = action.payload
       })
       .addCase(fetchCouriers.rejected, (state, action) => {
@@ -122,8 +130,18 @@ const shippingSlice = createSlice({
         state.couriers = [action.payload, ...state.couriers]
       })
 
+      .addCase(fetchShipments.pending, (state) => {
+        state.shipmentsLoading = true
+        state.shipmentsError = null
+      })
       .addCase(fetchShipments.fulfilled, (state, action) => {
+        state.shipmentsLoading = false
+        state.shipmentsError = null
         state.shipments = action.payload
+      })
+      .addCase(fetchShipments.rejected, (state, action) => {
+        state.shipmentsLoading = false
+        state.shipmentsError = action.payload ?? action.error
       })
 
       .addCase(bookCourierShipment.fulfilled, (state, action) => {

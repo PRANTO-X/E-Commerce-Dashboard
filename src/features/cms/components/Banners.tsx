@@ -25,6 +25,7 @@ import { fetchAll as fetchAllBanners, postData } from "@/features/cms/slices/ban
 import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
 import type { HomepageBanner } from "@/features/cms/types"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { formatDate } from "@/lib/format"
 
 const Banners = () => {
   useDocumentTitle("Banners")
@@ -180,7 +181,7 @@ const Banners = () => {
       header: "CREATED AT",
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {row.original.created_at ? new Date(row.original.created_at).toLocaleDateString() : "—"}
+          {formatDate(row.original.created_at)}
         </span>
       ),
     },

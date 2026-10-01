@@ -82,6 +82,7 @@ export const store = configureStore({
     shipping: shippingReducer,
     expenses: expenseReducer,
   },
+  devTools: import.meta.env.DEV,
 })
 
 export type RootState = ReturnType<typeof store.getState>

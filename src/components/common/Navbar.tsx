@@ -39,7 +39,10 @@ const quickCreateItems = [
 ]
 
 const Navbar = () => {
-  const [theme, setTheme] = useState<"light" | "dark">("light")
+  // index.html applies the saved theme class before first paint; mirror it here.
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    document.documentElement.classList.contains("dark") ? "dark" : "light"
+  )
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const mobileSearchTriggerRef = useRef<HTMLButtonElement>(null)
   const wasMobileSearchOpen = useRef(false)
@@ -73,20 +76,6 @@ const Navbar = () => {
       .join("")
       .toUpperCase() || "AD"
   }, [displayName])
-
-  // load saved theme
-  useEffect(() => {
-    const savedTheme =
-      (localStorage.getItem("theme") as "light" | "dark") || "light"
-
-    setTheme(savedTheme)
-
-    if (savedTheme === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [])
 
   // toggle theme
   const toggleTheme = () => {

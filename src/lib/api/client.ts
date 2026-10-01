@@ -1,5 +1,11 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios"
-import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "./tokenStore"
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+  clearTokens,
+} from "./tokenStore"
 import { MOCK_API_ENABLED, mockAdapter } from "./mockAdapter"
 
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
@@ -24,25 +30,48 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Interceptor-free instance for the refresh call itself, so a 401 from /refresh can't
+// recurse into another refresh. Shares the mock adapter in dev.
+const refreshClient = axios.create({ baseURL: API_BASE_URL })
+if (MOCK_API_ENABLED) {
+  refreshClient.defaults.adapter = mockAdapter
+}
+
 // Dedup concurrent 401s so only one refresh call is ever in flight at a time.
 let refreshPromise: Promise<string> | null = null
 
-async function performRefresh(): Promise<string> {
+/** Exchanges the stored refresh token for a new access token (and stores a rotated refresh token if issued). */
+export async function performRefresh(): Promise<string> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) {
     throw new Error("No refresh token available")
   }
-  const res = await axios.post(
-    `${API_BASE_URL}/customer/auth/refresh/`,
-    { refresh: refreshToken }
-  )
+  const res = await refreshClient.post("/customer/auth/refresh/", { refresh: refreshToken })
   const newAccessToken = res.data?.data?.access as string | undefined
   if (!newAccessToken) {
     throw new Error("Refresh response missing access token")
   }
   setAccessToken(newAccessToken)
+  // Backends with refresh-token rotation return a new refresh token; the old one is
+  // blacklisted, so keeping it would log the user out on the next refresh.
+  const rotated = res.data?.data?.refresh as string | undefined
+  if (rotated) {
+    setRefreshToken(rotated)
+  }
   return newAccessToken
 }
+
+/** Shared, de-duplicated refresh: concurrent callers await the same in-flight request. */
+export function refreshAccessToken(): Promise<string> {
+  refreshPromise ??= performRefresh().finally(() => {
+    refreshPromise = null
+  })
+  return refreshPromise
+}
+
+// Auth endpoints answer 401 for bad credentials / bad tokens; refreshing on those is
+// pointless and would wrongly broadcast "session expired" on a failed login.
+const isAuthEndpoint = (url?: string) => !!url && /\/auth\/(login|refresh|logout)\//.test(url)
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retried?: boolean
@@ -53,17 +82,19 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryableConfig | undefined
 
-    if (error.response?.status !== 401 || !originalRequest || originalRequest._retried) {
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retried ||
+      isAuthEndpoint(originalRequest.url)
+    ) {
       return Promise.reject(error)
     }
 
     originalRequest._retried = true
 
     try {
-      refreshPromise ??= performRefresh().finally(() => {
-        refreshPromise = null
-      })
-      const newAccessToken = await refreshPromise
+      const newAccessToken = await refreshAccessToken()
       originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`)
       return api(originalRequest)
     } catch {
