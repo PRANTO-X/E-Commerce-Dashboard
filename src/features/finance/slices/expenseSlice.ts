@@ -1,68 +1,21 @@
-import type { Reducer, UnknownAction } from "@reduxjs/toolkit"
-import { createSliceFactory } from "@/lib/sliceFactory"
+import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
 import type { Expense } from "../types"
-import { initialExpenses } from "../data/initialExpenses"
+import { createRestoreThunk } from "./restore"
 
-// The backend has no expenses endpoint yet, so this slice runs in the factory's in-memory
-// mode. To survive reloads, records are persisted to this browser's localStorage: loaded as
-// the seed on startup and written back after every successful create/update/delete.
-export const EXPENSES_STORAGE_KEY = "dashboard.expenses.v1"
+const ENDPOINT = "/admin/accounting/expenses/"
 
-function loadStoredExpenses(): Expense[] {
-  try {
-    const raw = window.localStorage.getItem(EXPENSES_STORAGE_KEY)
-    if (!raw) return initialExpenses
-    const parsed: unknown = JSON.parse(raw)
-    if (
-      Array.isArray(parsed) &&
-      parsed.every((e) => e && typeof e === "object" && typeof (e as Expense).id === "string")
-    ) {
-      return parsed as Expense[]
-    }
-  } catch {
-    // Storage blocked or corrupt — fall back to the bundled seed.
-  }
-  return initialExpenses
-}
-
-function saveExpenses(data: Expense[]) {
-  try {
-    window.localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(data))
-  } catch {
-    // Quota exceeded / storage blocked: keep working in memory for this session.
-  }
-}
-
-const {
-  reducer: baseReducer,
-  fetchAll,
-  fetchSingle,
-  postData,
-  updateData,
-  patchData,
-  deleteData,
-} = createSliceFactory<Expense>({
+const { reducer, fetchAll, fetchSingle, postData, patchData, deleteData } = createSliceFactory<Expense>({
   name: "expenses",
-  seed: loadStoredExpenses(),
+  endpoint: ENDPOINT,
+  initialSingleData: null,
 })
 
-const PERSISTED_ACTIONS = new Set<string>([
-  postData.fulfilled.type,
-  updateData.fulfilled.type,
-  patchData.fulfilled.type,
-  deleteData.fulfilled.type,
-])
+export const restoreExpense = createRestoreThunk<Expense>("expenses", ENDPOINT)
 
-type ExpenseState = ReturnType<typeof baseReducer>
+export { fetchAll, fetchSingle, postData, patchData, deleteData }
 
-// Only mutations are persisted — never fetchAll results, which may be a search-filtered subset.
-const reducer: Reducer<ExpenseState> = (state, action: UnknownAction) => {
-  const next = baseReducer(state, action)
-  if (PERSISTED_ACTIONS.has(action.type) && next.data !== state?.data) {
-    saveExpenses(next.data)
-  }
-  return next
-}
-
-export { fetchAll, fetchSingle, postData, updateData, patchData, deleteData }
-export default reducer
+export default withExtraCases(reducer, (builder) => {
+  builder.addCase(restoreExpense.fulfilled, (state, action) => {
+    state.data = state.data.map((item) => (item.id === action.payload.id ? action.payload : item))
+  })
+})

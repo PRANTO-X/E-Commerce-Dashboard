@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite"
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
-  const backendOrigin = env.VITE_BACKEND_ORIGIN || "https://yoyo-ecom-production-88e8.up.railway.app"
+  const backendOrigin = env.VITE_BACKEND_ORIGIN || "http://127.0.0.1:8000"
 
   return {
     plugins: [react(), tailwindcss()],
@@ -16,13 +16,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // Proxies API calls server-side so the browser sees same-origin requests,
-      // sidestepping the backend's CORS config (which doesn't allowlist localhost).
+      // Proxies API calls to the kull-mart backend so the browser sees same-origin requests:
+      // the HttpOnly refresh cookie (path /api/v1/customer/auth/) then just works.
       proxy: {
         "/api": {
           target: backendOrigin,
           changeOrigin: true,
-          secure: true,
+          secure: backendOrigin.startsWith("https"),
         },
       },
     },

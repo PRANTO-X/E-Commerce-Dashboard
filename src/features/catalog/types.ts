@@ -1,189 +1,227 @@
-// Hand-transcribed from the backend's OpenAPI schema (AdminCategory component),
-// not reused from src/assets/Data.ts — the mock shape doesn't match the real API
-// (no `products` count, no draft/inactive status enum, parent is a category UUID).
+// Mirrors kull-mart api/v1/admin/catalog/serializers.py + bundle_serializers.py.
+// Money/decimal fields are strings (DRF DecimalField); ids are UUID strings.
 
+export type ProductType = "simple" | "variant" | "bundle"
+export type CategoryType = "stock" | "preorder"
+
+export const productTypeOptions: { label: string; value: ProductType }[] = [
+  { label: "Simple", value: "simple" },
+  { label: "Variant", value: "variant" },
+  { label: "Bundle", value: "bundle" },
+]
+
+export const categoryTypeOptions: { label: string; value: CategoryType }[] = [
+  { label: "Stock", value: "stock" },
+  { label: "Pre-order", value: "preorder" },
+]
+
+/** ProductImageSerializer */
+export interface ProductImage {
+  id: string
+  product_id: string | null
+  variant_id: string | null
+  url: string
+  alt_text: string
+  sort_order: number
+}
+
+/** ProductVariantSerializer */
+export interface ProductVariant {
+  id: string
+  product_id: string
+  product_name: string
+  sku: string
+  barcode: string
+  price: string
+  cost_price: string
+  discount_price: string | null
+  weight: string | null
+  is_active: boolean
+  color: string
+  size: string
+  wholesale_price: string | null
+  show_wholesale_price: boolean
+  is_preorder_enabled: boolean
+  preorder_price: string | null
+  preorder_start_date: string | null
+  preorder_end_date: string | null
+  release_date: string | null
+  preorder_stock_limit: number | null
+  is_preorder_active: boolean
+  can_preorder: boolean
+  effective_price: string
+  is_preorder_price_applied: boolean
+  stock: number
+  is_low_stock: boolean
+  primary_image: string | null
+  images: ProductImage[]
+}
+
+/** ProductVariantCreateSerializer / ProductVariantUpdateSerializer (all optional on update). */
+export interface ProductVariantPayload {
+  sku?: string
+  barcode?: string
+  price?: string | null
+  cost_price?: string | null
+  discount_price?: string | null
+  weight?: string | null
+  color?: string
+  size?: string
+  is_active?: boolean
+  wholesale_price?: string | null
+  show_wholesale_price?: boolean
+  is_preorder_enabled?: boolean
+  preorder_price?: string | null
+  preorder_start_date?: string | null
+  preorder_end_date?: string | null
+  release_date?: string | null
+  preorder_stock_limit?: number | null
+}
+
+/** VariantGenerateSerializer */
+export interface VariantGeneratePayload {
+  colors: string[]
+  sizes: string[]
+  price: string
+  cost_price?: string
+}
+
+export interface VariantGenerateResult {
+  created: ProductVariant[]
+  skipped_existing: ProductVariant[]
+  stale: ProductVariant[]
+}
+
+export interface VariantImportResult {
+  created: number
+  updated: number
+  errors: { row: number; sku: string; message: string }[]
+}
+
+/** CategorySerializer */
 export interface Category {
   id: string
   name: string
   slug: string
+  parent_id: string | null
   description: string
-  parent: string | null
-  image: string
+  category_type: CategoryType
   is_active: boolean
-  sort_order: number
-  created_at: string
-  updated_at: string
+  image: string | null
+  deleted_at: string | null
 }
 
-export type ProductStatus = "draft" | "active" | "inactive" | "archived"
-export type ProductType = "physical" | "digital" | "subscription" | "bundle"
+/** CategoryCreateSerializer / CategoryUpdateSerializer (image is multipart-only on PATCH). */
+export interface CategoryPayload {
+  name?: string
+  parent_id?: string | null
+  description?: string
+  category_type?: CategoryType
+  is_active?: boolean
+}
 
-export const productStatusOptions: { label: string; value: ProductStatus }[] = [
-  { label: "Draft", value: "draft" },
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
-  { label: "Archived", value: "archived" },
-]
-
-export const productTypeOptions: { label: string; value: ProductType }[] = [
-  { label: "Physical", value: "physical" },
-  { label: "Digital", value: "digital" },
-  { label: "Subscription", value: "subscription" },
-  { label: "Bundle", value: "bundle" },
-]
-
-// Product status colors are resolved by the shared <StatusBadge> (src/components/common/StatusBadge.tsx)
-// via its canonical status->tone map — see that file rather than duplicating a color map here.
-
-// Hand-transcribed from AdminProduct — note there is no flat price/stock/image/rating/sales
-// here like the old mock ProductItem had. base_price is a decimal string per the API.
-// Stock lives in Inventory (batch 4), images are a separate sub-resource (ProductImage below).
-export type BundlePricingMode = "fixed" | "dynamic"
-
+/** ProductSerializer */
 export interface Product {
   id: string
-  category: string
+  category_id: string
   name: string
   slug: string
   description: string
-  base_price: string
-  status: ProductStatus
   product_type: ProductType
-  requires_shipping: boolean
-  is_downloadable: boolean
-  is_recurring: boolean
-  is_featured: boolean
-  bundle_pricing_mode?: BundlePricingMode
-  bundle_discount_percent?: string
-  created_by?: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface BundleItem {
-  id: string
-  bundle: string
-  variant: string
-  variant_sku?: string
-  variant_name?: string
-  quantity: number
-  created_at?: string
-  updated_at?: string
-}
-
-export interface ProductImage {
-  id: string
-  product: string
-  image: string
-  alt_text: string
-  sort_order: number
-  is_primary: boolean
-}
-
-export interface Attribute {
-  id: string
-  name: string
-  slug: string
-}
-
-export interface AttributeValue {
-  id: string
-  attribute: string
-  value: string
-  slug: string
-}
-
-export type VariantStatus = "active" | "inactive"
-
-export interface Variant {
-  id: string
-  product: string
-  sku: string
-  name: string
-  price: string
-  cost_price?: string | null
-  stock_quantity: number
-  status: VariantStatus
-  image: string
-  options?: { attribute: string; attribute_name?: string; value: string; value_name?: string }[]
-  created_at: string
-  updated_at: string
-}
-
-// Inventory domain: NOT a generic CRUD list like the rest of catalog — the backend only
-// exposes list+create for warehouses, action-only endpoints for adjustments, and read-only
-// per-variant summaries. Modeled with bespoke thunks in inventorySlice.ts, not sliceFactory.
-
-export interface Warehouse {
-  id: string
-  name: string
-  code: string
-  address: string
-  city: string
-  is_branch: boolean
+  highlights: string[]
+  meta_keywords: string
   is_active: boolean
-  created_at: string
+  deleted_at: string | null
+  variants: ProductVariant[]
+  images: ProductImage[]
+  image: string | null
+  primary_image: string | null
+  total_stock: number
+  price: string | null
+  cost_price: string | null
+  discount_price: string | null
 }
 
-export interface WarehouseStock {
+/** ProductCreateSerializer (+ is_active on ProductUpdateSerializer; sku only on create). */
+export interface ProductPayload {
+  category_id?: string
+  name?: string
+  description?: string
+  product_type?: ProductType
+  highlights?: string[]
+  meta_keywords?: string
+  price?: string | null
+  cost_price?: string
+  discount_price?: string | null
+  sku?: string
+  is_active?: boolean
+}
+
+/** BrandSerializer */
+export interface Brand {
   id: string
-  warehouse: string
-  variant: string
+  name: string
+  slug: string
+  description: string
+  is_active: boolean
+  image: string | null
+  category_ids: string[]
+  deleted_at: string | null
+}
+
+export interface BrandPayload {
+  name?: string
+  description?: string
+  is_active?: boolean
+  category_ids?: string[]
+}
+
+/** BundleComponentSerializer */
+export interface BundleComponent {
+  component_variant_id: string
+  component_sku: string
+  component_name: string
   quantity: number
-  safety_stock: number
-  available_quantity: number
-  created_at: string
+  component_price: string
+  component_available: number
+  component_image: string | null
 }
 
-export interface SetWarehouseStockPayload {
-  warehouse_id: string
-  variant_id: string
-  quantity: number
-  safety_stock?: number
-}
-
-export interface StockAdjustmentPayload {
-  variant_id: string
-  quantity_changed: number
-  notes?: string
-}
-
-export type StockReservationStatus = "active" | "consumed" | "released" | "expired"
-
-export interface StockReservation {
+/** BundleSerializer — `id` is the bundle's variant id. */
+export interface Bundle {
   id: string
-  variant: string
-  user: string
-  order: string | null
-  quantity: number
-  status: StockReservationStatus
-  expires_at: string
-  created_at: string
-  updated_at: string
-}
-
-export type TransactionType =
-  | "order_placed"
-  | "cancellation"
-  | "return_received"
-  | "refund"
-  | "manual_adjustment"
-  | "correction"
-
-export interface InventoryTransaction {
-  id: string
-  variant: string
-  transaction_type: TransactionType
-  quantity_changed: number
-  stock_before: number
-  stock_after: number
-  reference_type: string
-}
-
-export interface VariantStockSummary {
-  variant_id: string
+  product_id: string
+  name: string
+  category_id: string | null
   sku: string
-  physical_stock: number
-  active_reservations: number
-  net_available: number
+  barcode: string
+  description: string
+  price: string
+  cost_price: string
+  is_active: boolean
+  deleted_at: string | null
+  discount_price: string | null
+  effective_price: string
+  available_stock: number
+  images: ProductImage[]
+  components: BundleComponent[]
+}
+
+/** BundleCreateSerializer / BundleUpdateSerializer */
+export interface BundlePayload {
+  category_id?: string
+  name?: string
+  sku?: string
+  price?: string | null
+  cost_price?: string | null
+  discount_price?: string | null
+  description?: string
+  barcode?: string
+  is_active?: boolean
+  components?: { component_variant_id: string; quantity: number }[]
+}
+
+/** BulkActionMixin response */
+export interface BulkActionResult {
+  affected: number
 }

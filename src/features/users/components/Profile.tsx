@@ -1,32 +1,19 @@
-import { useState, useMemo, type ChangeEvent, type FormEvent } from "react"
-import {
-  User,
-  Mail,
-  Phone,
-  Shield,
-  KeyRound,
-  CheckCircle2,
-  Camera,
-  Save,
-  Lock,
-  Smartphone,
-  BellRing,
-  RotateCcw,
-  Sparkles,
-} from "lucide-react"
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
+import { Camera, KeyRound, Loader2, Lock, Mail, Save, Shield, Trash2, User } from "lucide-react"
 import { toast } from "sonner"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { updateProfile } from "@/features/authentication/slices/authSlice"
+import { changePassword, updateProfile } from "@/features/authentication/slices/authSlice"
+import { uploadImage } from "@/features/system/files"
 import { getApiErrorMessage } from "@/lib/api/client"
+import { humanize } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
+import { PageHeading } from "@/components/common/PageHeading"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 
 const Profile = () => {
@@ -34,466 +21,279 @@ const Profile = () => {
 
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [firstName, setFirstName] = useState(user?.first_name || "")
-  const [lastName, setLastName] = useState(user?.last_name || "")
-  const [email, setEmail] = useState(user?.email || "")
-  const [phone, setPhone] = useState(user?.phone || "")
-  const [bio, setBio] = useState("Lead Platform Administrator at NestmartIT Dashboard.")
-  const [profilePicture, setProfilePicture] = useState(user?.profile_picture || "")
+  const [firstName, setFirstName] = useState(user?.first_name ?? "")
+  const [lastName, setLastName] = useState(user?.last_name ?? "")
+  const [phone, setPhone] = useState(user?.phone ?? "")
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
-  // Password fields
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
-  // Preferences / Security toggles
-  const [twoFactorAuth, setTwoFactorAuth] = useState(true)
-  const [loginAlerts, setLoginAlerts] = useState(true)
-
-  // Re-sync the form when the stored user changes (e.g. after a successful save), adjusting
-  // state during render rather than in an effect.
+  // Re-sync the form when the stored user changes (e.g. after a save), during render.
   const [syncedUser, setSyncedUser] = useState(user)
   if (user && user !== syncedUser) {
     setSyncedUser(user)
-    setFirstName(user.first_name || "")
-    setLastName(user.last_name || "")
-    setEmail(user.email || "")
-    setPhone(user.phone || "")
-    setProfilePicture(user.profile_picture || "")
+    setFirstName(user.first_name ?? "")
+    setLastName(user.last_name ?? "")
+    setPhone(user.phone ?? "")
   }
 
-  const displayName = useMemo(() => {
-    const fullName = [firstName, lastName].filter(Boolean).join(" ")
-    if (fullName) return fullName
-    if (email) {
-      const namePart = email.split("@")[0].replace(/[._-]/g, " ")
-      return namePart
-        .split(" ")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ")
-    }
-    return "Administrator"
-  }, [firstName, lastName, email])
+  if (!user) return null
 
-  const initials = useMemo(() => {
-    return displayName
-      .split(" ")
-      .map((n) => n[0])
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
+  const initials =
+    displayName
+      .split(/[\s@.]+/)
+      .filter(Boolean)
+      .map((part) => part[0])
       .slice(0, 2)
       .join("")
-      .toUpperCase() || "AD"
-  }, [displayName])
+      .toUpperCase() || "U"
+  const isDirty =
+    firstName !== (user.first_name ?? "") || lastName !== (user.last_name ?? "") || phone !== (user.phone ?? "")
+  const fullAccess = user.permissions.includes("*")
 
-  // Handle Photo Upload
-  const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      // Only stage the photo locally; it's persisted (and the global user updated) when the
-      // profile form is saved, so we don't claim success before the server accepts it.
-      setProfilePicture(result)
-      toast.info("Photo selected — save your profile to apply it")
-    }
-    reader.readAsDataURL(file)
+  const savePicture = async (url: string, success: string) => {
+    await dispatch(updateProfile({ profile_picture: url })).unwrap()
+    toast.success(success)
   }
 
-  // Handle Save Profile
-  const handleSaveProfile = async (e?: FormEvent) => {
-    if (e) e.preventDefault()
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const url = await uploadImage(file)
+      await savePicture(url, "Profile photo updated")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't upload the photo."))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    setIsUploading(true)
+    try {
+      await savePicture("", "Profile photo removed")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't remove the photo."))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleSaveProfile = async (e: FormEvent) => {
+    e.preventDefault()
     setIsSaving(true)
     try {
-      await dispatch(
-        updateProfile({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          profile_picture: profilePicture,
-        })
-      ).unwrap()
-      // updateProfile.fulfilled already stores the server's copy of the user.
-      toast.success("Profile details saved successfully!")
+      await dispatch(updateProfile({ first_name: firstName.trim(), last_name: lastName.trim(), phone: phone.trim() })).unwrap()
+      toast.success("Profile saved")
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Could not update profile. Please try again."))
+      toast.error(getApiErrorMessage(err, "Couldn't update your profile."))
     } finally {
       setIsSaving(false)
     }
   }
 
-  // Handle Password Update
-  const handleUpdatePassword = (e: FormEvent) => {
+  const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault()
-    if (!currentPassword) {
-      toast.error("Please enter your current password")
-      return
-    }
-    if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters long")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("New password and confirmation do not match")
-      return
-    }
-
+    setPasswordError(null)
+    if (!currentPassword) return setPasswordError("Enter your current password.")
+    if (newPassword.length < 8) return setPasswordError("New password must be at least 8 characters.")
+    if (newPassword !== confirmPassword) return setPasswordError("New password and confirmation don't match.")
     setIsChangingPassword(true)
-    setTimeout(() => {
-      setIsChangingPassword(false)
+    try {
+      await dispatch(changePassword({ old_password: currentPassword, new_password: newPassword })).unwrap()
+      toast.success("Password changed")
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
-      toast.success("Password changed successfully!")
-    }, 600)
+    } catch (err) {
+      setPasswordError(getApiErrorMessage(err, "Couldn't change your password."))
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
-  const permissionsList = user?.permissions?.length
-    ? user.permissions
-    : ["*", "catalog.*", "sales.*", "finance.*", "marketing.*", "customers.*", "settings.*"]
-
   return (
-    <div className="section-container space-y-6 max-w-5xl mx-auto">
-      {/* Page Title Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-800 dark:text-white/90">
-          Administrator Profile
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage your personal credentials, system permissions, and dashboard security.
-        </p>
-      </div>
+    <div className="section-container space-y-6">
+      <PageHeading title="My Profile" description="Manage your personal details and password." />
 
-      {/* Top Banner Card */}
-      <Card className="overflow-hidden border-border bg-card">
-        <div className="h-28 bg-gradient-to-r from-primary-600 via-primary-500 to-teal-600 relative" />
-        <CardContent className="relative px-6 pb-6 pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 text-center sm:text-left">
-              <div className="relative group">
-                <Avatar className="size-24 ring-4 ring-background shadow-lg border border-border">
-                  {profilePicture ? (
-                    <AvatarImage src={profilePicture} alt={displayName} className="object-cover" />
-                  ) : null}
-                  <AvatarFallback className="bg-primary text-primary-foreground font-bold text-2xl">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <label className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-white shadow-md cursor-pointer hover:bg-primary-600 transition-colors">
-                  <Camera className="size-4" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold uppercase">
-                    {user?.role || "ADMIN"}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground flex items-center justify-center sm:justify-start gap-1.5">
-                  <Mail className="size-3.5" />
-                  {email || "—"}
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-medium ml-1">
-                    <CheckCircle2 className="size-3.5" /> Verified
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="primary"
-                onClick={() => handleSaveProfile()}
-                disabled={isSaving}
-                className="gap-1.5 shadow-sm"
-              >
-                <Save className="size-4" />
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
+      <Card>
+        <CardContent className="flex flex-col items-center gap-5 p-6 sm:flex-row">
+          <div className="relative">
+            <Avatar className="h-24 w-24 border">
+              <AvatarImage src={user.profile_picture || undefined} alt="" className="object-cover" />
+              <AvatarFallback className="text-2xl font-semibold">{initials}</AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              aria-label="Upload a new profile photo"
+              className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border bg-background shadow-sm hover:bg-accent disabled:opacity-60"
+            >
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/avif,image/heic"
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="text-xl font-semibold">{displayName}</h2>
+            <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:justify-start">
+              <Mail className="h-4 w-4" /> {user.email}
+            </p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
+              <Badge variant="secondary">{humanize(user.role)}</Badge>
+              {user.is_email_verified && <Badge variant="outline">Email verified</Badge>}
             </div>
           </div>
+          {user.profile_picture && (
+            <Button variant="outline" size="action" onClick={handleRemovePhoto} disabled={isUploading}>
+              <Trash2 className="size-4" /> Remove photo
+            </Button>
+          )}
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="flex w-full max-w-md overflow-x-auto bg-muted/60 p-1">
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="w-full md:w-fit bg-muted p-1">
           <TabsTrigger value="general" className="min-w-max gap-2">
-            <User className="size-4" />
-            General
+            <User className="h-4 w-4" /> General
           </TabsTrigger>
           <TabsTrigger value="security" className="min-w-max gap-2">
-            <KeyRound className="size-4" />
-            Security
+            <Lock className="h-4 w-4" /> Password
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="min-w-max gap-2">
-            <Shield className="size-4" />
-            Permissions
+          <TabsTrigger value="access" className="min-w-max gap-2">
+            <Shield className="h-4 w-4" /> Access
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: General Info */}
-        <TabsContent value="general" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>
-                Update your account profile details, contact information, and public name.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="e.g. Nestmartit"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="e.g. Intern"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-9"
-                        placeholder="your.email@nestmartit.com"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="pl-9"
-                        placeholder="+1 (555) 000-0000"
-                      />
-                    </div>
-                  </div>
-                </div>
-
+        <TabsContent value="general">
+          <form onSubmit={handleSaveProfile}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Your email address is your sign-in and can't be changed here.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio & Role Description</Label>
-                  <Textarea
-                    id="bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={3}
-                    placeholder="Short description of your role or responsibilities..."
+                  <Label htmlFor="profile-first-name">First name</Label>
+                  <Input id="profile-first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-last-name">Last name</Label>
+                  <Input id="profile-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-email">Email</Label>
+                  <Input id="profile-email" value={user.email} readOnly disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-phone">Phone</Label>
+                  <Input id="profile-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+              </CardContent>
+              <CardFooter className="justify-end border-t p-4">
+                <Button type="submit" disabled={isSaving || !isDirty}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save changes
+                </Button>
+              </CardFooter>
+            </Card>
+          </form>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <form onSubmit={handleChangePassword}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>Use at least 8 characters.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid max-w-xl grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Current password</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                   />
                 </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if (user) {
-                        setFirstName(user.first_name || "")
-                        setLastName(user.last_name || "")
-                        setEmail(user.email || "")
-                        setPhone(user.phone || "")
-                      }
-                    }}
-                  >
-                    <RotateCcw className="size-4 mr-1.5" />
-                    Reset
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={isSaving}>
-                    <Save className="size-4 mr-1.5" />
-                    {isSaving ? "Saving..." : "Save Profile"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 2: Security & Password */}
-        <TabsContent value="security" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>
-                Ensure your account is using a long and random password to stay secure.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-lg">
                 <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      id="currentPassword"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="pl-9"
-                      placeholder="••••••••"
-                    />
-                  </div>
+                  <Label htmlFor="new-password">New password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="pl-9"
-                      placeholder="••••••••"
-                    />
-                  </div>
+                  <Label htmlFor="confirm-password">Confirm new password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-9"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" variant="primary" disabled={isChangingPassword}>
-                  {isChangingPassword ? "Updating..." : "Update Password"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* 2FA & Session Security */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Two-Factor Authentication & Sessions</CardTitle>
-              <CardDescription>
-                Add additional security layers to your administrator account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    <Smartphone className="size-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm text-foreground">Two-Factor Authentication (2FA)</p>
-                    <p className="text-xs text-muted-foreground">Receive security verification codes when logging in.</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={twoFactorAuth}
-                  onCheckedChange={(val) => {
-                    setTwoFactorAuth(val)
-                    toast.success(`2FA ${val ? "enabled" : "disabled"}`)
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    <BellRing className="size-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm text-foreground">Login Notification Alerts</p>
-                    <p className="text-xs text-muted-foreground">Get notified when a new session is started on your account.</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={loginAlerts}
-                  onCheckedChange={(val) => {
-                    setLoginAlerts(val)
-                    toast.success(`Login alerts ${val ? "enabled" : "disabled"}`)
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 3: Permissions */}
-        <TabsContent value="permissions" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="size-5 text-primary" />
-                Assigned Role & System Capabilities
-              </CardTitle>
-              <CardDescription>
-                List of access grants and permissions associated with your administrator account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-start gap-3">
-                <Sparkles className="size-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-sm text-foreground">Super Administrator Access</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Your account has full management privileges across products, orders, financial reports, marketing automations, and store configurations.
+                {passwordError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {passwordError}
                   </p>
-                </div>
-              </div>
+                )}
+              </CardContent>
+              <CardFooter className="justify-end border-t p-4">
+                <Button type="submit" disabled={isChangingPassword}>
+                  {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                  Update password
+                </Button>
+              </CardFooter>
+            </Card>
+          </form>
+        </TabsContent>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Active Permission Tokens
-                </Label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {permissionsList.map((perm) => (
-                    <Badge
-                      key={perm}
-                      variant="secondary"
-                      className="px-3 py-1 font-mono text-xs bg-muted/70 hover:bg-muted border border-border"
-                    >
-                      {perm}
+        <TabsContent value="access">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Access</CardTitle>
+              <CardDescription>
+                {fullAccess
+                  ? "You're an administrator with access to every part of the dashboard."
+                  : "Permissions are granted by an administrator."}
+              </CardDescription>
+            </CardHeader>
+            {!fullAccess && (
+              <CardContent className="flex flex-wrap gap-2">
+                {user.permissions.length ? (
+                  user.permissions.map((code) => (
+                    <Badge key={code} variant="outline" className="font-mono">
+                      {code}
                     </Badge>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No permissions granted.</p>
+                )}
+              </CardContent>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

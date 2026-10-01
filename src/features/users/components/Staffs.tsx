@@ -1,151 +1,215 @@
+import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import type { ColumnDef } from "@tanstack/react-table"
+import { toast } from "sonner"
+import { PlusIcon, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { DownloadIcon, PlusIcon } from "lucide-react"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect, useState, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/lib/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll } from "@/features/users/slices/staffSlice"
-import type { AdminUser } from "@/features/users/types"
+import { deleteData, fetchAll, restoreStaff } from "@/features/users/slices/staffSlice"
+import { displayNameOf, type AdminUser } from "@/features/users/types"
+import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { formatDateTime } from "@/lib/format"
+import { UserAvatar } from "./UserAvatar"
+
+const PAGE_SIZE = 20
 
 const Staffs = () => {
   useDocumentTitle("Staff")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: allStaffs, isLoading, error } = useAppSelector((state) => state.staffs)
-  const [search, setSearch] = useState("")
+  const { data: staffs, isFetchingList, isMutating, error, totalItems, meta } = useAppSelector(
+    (state) => state.staffs
+  )
 
-  const loadStaffs = useCallback(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState("")
+  const debouncedSearch = useDebounced(search.trim())
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+
+  const loadStaffs = useCallback(
+    () =>
+      dispatch(
+        fetchAll({
+          page,
+          page_size: PAGE_SIZE,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(includeDeleted ? { include_deleted: "true" } : {}),
+        })
+      ),
+    [dispatch, page, debouncedSearch, includeDeleted]
+  )
 
   useEffect(() => {
-    loadStaffs()
+    const request = loadStaffs()
+    return () => request.abort()
   }, [loadStaffs])
 
-  const staffs = allStaffs.filter((staff) => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    const name = [staff.first_name, staff.last_name].filter(Boolean).join(" ").toLowerCase()
-    return name.includes(q) || staff.email.toLowerCase().includes(q)
-  })
+  const handleDelete = async (staff: AdminUser) => {
+    try {
+      await dispatch(deleteData(staff.id)).unwrap()
+      toast.success(`${displayNameOf(staff)} removed`)
+      if (includeDeleted) loadStaffs()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't remove this staff member"))
+    }
+  }
+
+  const handleRestore = async (staff: AdminUser) => {
+    try {
+      await dispatch(restoreStaff(staff.id)).unwrap()
+      toast.success(`${displayNameOf(staff)} restored`)
+      loadStaffs()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't restore this staff member"))
+    }
+  }
 
   const columns: ColumnDef<AdminUser>[] = [
     {
       id: "staff",
       header: "STAFF",
-      cell: ({ row }) => {
-        const staff = row.original
-        const name = [staff.first_name, staff.last_name].filter(Boolean).join(" ")
-        return (
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {staff.profile_picture ? (
-                <img
-                  src={staff.profile_picture}
-                  alt={name}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                (name || staff.email).charAt(0).toUpperCase()
-              )}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">{name || "—"}</span>
-              <span className="text-xs text-muted-foreground">{staff.email}</span>
-            </div>
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <UserAvatar user={row.original} />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-foreground">{displayNameOf(row.original)}</span>
+            <span className="text-xs text-muted-foreground">{row.original.email}</span>
           </div>
-        )
-      },
+        </div>
+      ),
     },
     {
       accessorKey: "phone",
       header: "PHONE",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.getValue("phone") || "N/A"}</span>
-      ),
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.phone || "—"}</span>,
     },
     {
       id: "permissions",
       header: "PERMISSIONS",
+      cell: ({ row }) => {
+        const perms = row.original.permissions
+        return (
+          <span className="text-sm text-muted-foreground">
+            {perms.includes("*") ? "All" : perms.length ? `${perms.length} granted` : "None"}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "last_login",
+      header: "LAST SIGN-IN",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.permissions.includes("*") ? "All" : row.original.permissions.length}
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          {formatDateTime(row.original.last_login, "Never")}
         </span>
       ),
     },
     {
       accessorKey: "is_active",
       header: "STATUS",
-      cell: ({ row }) => (
-        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
-      ),
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          <StatusBadge status="deleted" tone="destructive" label="Deleted" />
+        ) : (
+          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
+        ),
     },
     {
       id: "actions",
       header: "ACTION",
-      cell: ({ row }) => (
-        <TableActions
-          itemName={[row.original.first_name, row.original.last_name].filter(Boolean).join(" ") || row.original.email}
-          editUrl={`/staff_form/${row.original.id}`}
-        />
-      ),
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          <Button
+            variant="outline"
+            size="sm"
+            data-no-row-click="true"
+            disabled={isMutating}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRestore(row.original)
+            }}
+          >
+            <RotateCcwIcon className="size-3.5" /> Restore
+          </Button>
+        ) : (
+          <TableActions
+            itemName={displayNameOf(row.original)}
+            editUrl={`/staff_form/${row.original.id}`}
+            onDelete={() => handleDelete(row.original)}
+          />
+        ),
     },
   ]
-
-  const csvData = staffs.map((staff) => ({
-    id: staff.id,
-    name: [staff.first_name, staff.last_name].filter(Boolean).join(" "),
-    email: staff.email,
-    phone: staff.phone,
-    active: staff.is_active,
-    permissions: staff.permissions.join("; "),
-  }))
 
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Staff Members"
-          description="Manage your team members and their permissions."
-        />
-
-        <div className="flex items-center gap-3">
-          <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Staffs")}>
-            <DownloadIcon className="size-5" /> Export CSV
-          </Button>
-          <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
-            <PlusIcon className="size-5" /> Add Staff
-          </Button>
-        </div>
+        <PageHeading title="Staff Members" description="Manage your team members and what they can access." />
+        <Button variant="apply" size="action" onClick={() => navigate("/staff_form/new")}>
+          <PlusIcon className="size-5" /> Add Staff
+        </Button>
       </div>
 
       <FilterToolbar
-        searchPlaceholder="Search staff..."
+        searchPlaceholder="Search by name, email or phone..."
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        filters={[
+          {
+            component: (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="staff-include-deleted"
+                  checked={includeDeleted}
+                  onCheckedChange={(checked) => {
+                    setIncludeDeleted(checked)
+                    setPage(1)
+                  }}
+                />
+                <Label htmlFor="staff-include-deleted" className="text-sm">
+                  Show deleted
+                </Label>
+              </div>
+            ),
+          },
+        ]}
       />
 
-      <div>
-        <DataTable
-          columns={columns}
-          data={staffs}
-          isLoading={isLoading}
-          error={error}
-          onRetry={loadStaffs}
-          onRowClick={(staff) => navigate(`/staff_form/${staff.id}`)}
-          minWidth="900px"
-          columnWidths={["280px", "160px", "140px", "130px", "100px"]}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={staffs}
+        pageSize={PAGE_SIZE}
+        isLoading={isFetchingList}
+        error={error}
+        onRetry={loadStaffs}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
+        onRowClick={(staff) => {
+          if (!staff.deleted_at) navigate(`/staff_form/${staff.id}`)
+        }}
+        emptyTitle="No staff members"
+        emptyDescription="Add a team member to give them access to the dashboard."
+        emptyActionLabel="Add Staff"
+        onEmptyAction={() => navigate("/staff_form/new")}
+        minWidth="960px"
+        columnWidths={["300px", "150px", "130px", "180px", "110px", "110px"]}
+      />
     </div>
   )
 }

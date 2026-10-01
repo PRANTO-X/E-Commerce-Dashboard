@@ -1,15 +1,22 @@
-// Hand-transcribed from the OpenAPI schema (AuditLog) — read-only, standard paginated list.
+// Mirrors api/v1/admin/audit/serializers.py (kull-mart).
 
+/** AuditLogSerializer — `actor` is the acting user's email (null for system actions). */
 export interface AuditLog {
   id: string
   actor: string | null
-  actor_email: string
   action: string
   target_type: string
   target_id: string
-  changes: Record<string, unknown>
-  metadata: Record<string, unknown>
   ip_address: string | null
-  user_agent: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+/** LoginHistorySerializer */
+export interface LoginHistoryEntry {
+  id: string
+  email: string
+  ip_address: string | null
+  was_successful: boolean
   created_at: string
 }

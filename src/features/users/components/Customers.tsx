@@ -1,23 +1,32 @@
+import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import type { ColumnDef } from "@tanstack/react-table"
+import { toast } from "sonner"
+import { BanIcon, RotateCcwIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { TableActions } from "@/components/common/TableActions"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { DownloadIcon } from "lucide-react"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useEffect, useState, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/lib/ExportToCsv"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll } from "@/features/users/slices/customerSlice"
-import type { AdminUser } from "@/features/users/types"
+import { bulkDeactivateUsers, fetchAll, restoreUser } from "@/features/users/slices/customerSlice"
+import { displayNameOf, type AdminUser } from "@/features/users/types"
+import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { formatDate } from "@/lib/format"
+import { UserAvatar } from "./UserAvatar"
 
-const status = [
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
+const PAGE_SIZE = 20
+
+const statusOptions = [
+  { label: "Active", value: "true" },
+  { label: "Inactive", value: "false" },
 ]
 
 const Customers = () => {
@@ -25,53 +34,104 @@ const Customers = () => {
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: users, isLoading, error } = useAppSelector((state) => state.customers)
-  const allCustomers = users.filter((u) => u.role === "customer")
+  const { data: customers, isFetchingList, isMutating, error, totalItems, meta } = useAppSelector(
+    (state) => state.customers
+  )
 
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebounced(search.trim())
   const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const loadCustomers = useCallback(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+  const loadCustomers = useCallback(
+    () =>
+      dispatch(
+        fetchAll({
+          page,
+          page_size: PAGE_SIZE,
+          role: "customer",
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(statusFilter ? { is_active: statusFilter.value } : {}),
+          ...(includeDeleted ? { include_deleted: "true" } : {}),
+        })
+      ),
+    [dispatch, page, debouncedSearch, statusFilter, includeDeleted]
+  )
 
   useEffect(() => {
-    loadCustomers()
+    const request = loadCustomers()
+    return () => request.abort()
   }, [loadCustomers])
 
-  const customers = allCustomers.filter((customer) => {
-    if (search) {
-      const q = search.toLowerCase()
-      const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ").toLowerCase()
-      if (!name.includes(q) && !customer.email.toLowerCase().includes(q)) return false
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const selectable = customers.filter((c) => c.is_active && !c.deleted_at)
+  const allSelected = selectable.length > 0 && selectable.every((c) => selected.has(c.id))
+
+  const handleBulkDeactivate = async () => {
+    const ids = Array.from(selected)
+    if (!ids.length) return
+    try {
+      const result = await dispatch(bulkDeactivateUsers(ids)).unwrap()
+      toast.success(`${result.affected} customer${result.affected === 1 ? "" : "s"} deactivated`)
+      setSelected(new Set())
+      loadCustomers()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't deactivate the selected customers"))
     }
-    if (statusFilter && customer.is_active !== (statusFilter.value === "active")) return false
-    return true
-  })
+  }
+
+  const handleRestore = async (user: AdminUser) => {
+    try {
+      await dispatch(restoreUser(user.id)).unwrap()
+      toast.success(`${displayNameOf(user)} restored`)
+      loadCustomers()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't restore this customer"))
+    }
+  }
 
   const columns: ColumnDef<AdminUser>[] = [
+    {
+      id: "select",
+      header: () => (
+        <Checkbox
+          aria-label="Select all active customers on this page"
+          checked={allSelected}
+          onCheckedChange={(checked) =>
+            setSelected(checked ? new Set(selectable.map((c) => c.id)) : new Set())
+          }
+        />
+      ),
+      cell: ({ row }) => (
+        <div onClick={(e) => e.stopPropagation()} data-no-row-click="true">
+          <Checkbox
+            aria-label={`Select ${row.original.email}`}
+            disabled={!row.original.is_active || !!row.original.deleted_at}
+            checked={selected.has(row.original.id)}
+            onCheckedChange={() => toggleRow(row.original.id)}
+          />
+        </div>
+      ),
+    },
     {
       id: "customer",
       header: "CUSTOMER",
       cell: ({ row }) => {
         const customer = row.original
-        const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ")
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {customer.profile_picture ? (
-                <img
-                  src={customer.profile_picture}
-                  alt={name}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                (name || customer.email).charAt(0).toUpperCase()
-              )}
-            </div>
+            <UserAvatar user={customer} />
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">{name || "—"}</span>
+              <span className="text-sm font-medium text-foreground">{displayNameOf(customer)}</span>
               <span className="text-xs text-muted-foreground">{customer.email}</span>
             </div>
           </div>
@@ -79,87 +139,126 @@ const Customers = () => {
       },
     },
     {
-      accessorKey: "phone",
+      accessorKey: "contact_phone",
       header: "PHONE",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.getValue("phone") || "N/A"}</span>
+        <span className="text-sm text-muted-foreground">{row.original.contact_phone || row.original.phone || "—"}</span>
       ),
     },
     {
-      accessorKey: "is_email_verified",
-      header: "EMAIL VERIFIED",
-      cell: ({ row }) => (row.getValue("is_email_verified") ? "Yes" : "No"),
+      accessorKey: "date_joined",
+      header: "JOINED",
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.date_joined)}</span>,
     },
     {
       accessorKey: "is_active",
       header: "STATUS",
-      cell: ({ row }) => (
-        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
-      ),
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          <StatusBadge status="deleted" tone="destructive" label="Deleted" />
+        ) : (
+          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
+        ),
     },
     {
       id: "actions",
       header: "ACTION",
-      cell: ({ row }) => (
-        <TableActions
-          itemName={[row.original.first_name, row.original.last_name].filter(Boolean).join(" ") || row.original.email}
-          viewUrl={`/customer_detail/${row.original.id}`}
-        />
-      ),
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          <Button
+            variant="outline"
+            size="sm"
+            data-no-row-click="true"
+            disabled={isMutating}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRestore(row.original)
+            }}
+          >
+            <RotateCcwIcon className="size-3.5" /> Restore
+          </Button>
+        ) : (
+          <TableActions itemName={displayNameOf(row.original)} viewUrl={`/customer_detail/${row.original.id}`} />
+        ),
     },
   ]
-
-  const csvData = customers.map((c) => ({
-    id: c.id,
-    name: [c.first_name, c.last_name].filter(Boolean).join(" "),
-    email: c.email,
-    phone: c.phone,
-    active: c.is_active,
-  }))
 
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Customers"
-          description="Manage your registered customer accounts."
-        />
-
-        <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Customers")}>
-          <DownloadIcon className="size-5" /> Export CSV
-        </Button>
+        <PageHeading title="Customers" description="Manage your registered customer accounts." />
+        {selected.size > 0 && (
+          <Button variant="destructive" size="action" onClick={handleBulkDeactivate} disabled={isMutating}>
+            <BanIcon className="size-4" /> Deactivate {selected.size} selected
+          </Button>
+        )}
       </div>
 
       <FilterToolbar
-        searchPlaceholder="Search customer..."
+        searchPlaceholder="Search by name, email or phone..."
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
         filters={[
           {
             component: (
               <ExampleComboboxCustomItems
-                frameworks={status}
+                frameworks={statusOptions}
                 placeholder="Status"
                 value={statusFilter}
-                onValueChange={setStatusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setPage(1)
+                }}
               />
+            ),
+          },
+          {
+            component: (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="customers-include-deleted"
+                  checked={includeDeleted}
+                  onCheckedChange={(checked) => {
+                    setIncludeDeleted(checked)
+                    setPage(1)
+                  }}
+                />
+                <Label htmlFor="customers-include-deleted" className="text-sm">
+                  Show deleted
+                </Label>
+              </div>
             ),
           },
         ]}
       />
 
-      <div>
-        <DataTable
-          columns={columns}
-          data={customers}
-          isLoading={isLoading}
-          error={error}
-          onRetry={loadCustomers}
-          onRowClick={(customer) => navigate(`/customer_detail/${customer.id}`)}
-          minWidth="900px"
-          columnWidths={["280px", "160px", "140px", "120px", "100px"]}
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={customers}
+        pageSize={PAGE_SIZE}
+        isLoading={isFetchingList}
+        error={error}
+        onRetry={loadCustomers}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => {
+          setPage(index + 1)
+          setSelected(new Set())
+        }}
+        onRowClick={(customer) => {
+          if (!customer.deleted_at) navigate(`/customer_detail/${customer.id}`)
+        }}
+        unlabelledColumns={["select"]}
+        emptyTitle="No customers found"
+        emptyDescription="No customer accounts match these filters."
+        minWidth="900px"
+        columnWidths={["48px", "300px", "160px", "130px", "120px", "90px"]}
+      />
     </div>
   )
 }

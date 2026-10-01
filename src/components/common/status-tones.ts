@@ -25,7 +25,11 @@ const STATUS_TONES: Record<string, StatusTone> = {
   draft: "secondary",
   archived: "secondary",
 
-  // order fulfillment
+  // order fulfillment (kull-mart: pending, awaiting_payment, confirmed, shipped,
+  // delivered, cancelled, closed)
+  awaiting_payment: "warning",
+  confirmed: "info",
+  closed: "secondary",
   pending_payment: "secondary",
   placed: "info",
   processing: "info",
@@ -34,6 +38,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   cancelled: "destructive",
 
   // payment / order payment_status / expense status
+  captured: "success",
   paid: "success",
   succeeded: "success",
   pending: "warning",
@@ -41,7 +46,11 @@ const STATUS_TONES: Record<string, StatusTone> = {
   partially_refunded: "warning",
   refunded: "info",
 
-  // returns
+  // returns (RMA status + line condition grading)
+  requested: "warning",
+  received: "info",
+  sellable: "success",
+  damaged: "destructive",
   pending_review: "warning",
   approved: "success",
   rejected: "destructive",
@@ -51,6 +60,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   // reviews / notifications / shipments
   sent: "success",
   booked: "success",
+  in_transit: "info",
+  out_for_delivery: "info",
+  returned: "secondary",
 
   // campaigns
   scheduled: "info",

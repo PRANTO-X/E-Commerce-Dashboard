@@ -1,81 +1,112 @@
-// Hand-transcribed from the backend's OpenAPI schema (AdminOrderList/AdminOrderDetail),
-// not reused from src/assets/Data.ts — the real order model has no flat customer/product
-// name, discount, or activity-log fields; those either don't exist server-side or live in
-// nested sub-resources (items, status_history).
+// Mirrors kull-mart api/v1/admin/orders/serializers.py → AdminSalesOrderSerializer and friends.
+// apps/orders/models/sales_order.py (SalesOrder.Status). List and detail share one serializer.
+
+import type { Payment, PaymentMethod } from "@/features/payments/types"
+import type { Rma } from "@/features/returns/types"
+import type { Shipment } from "@/features/shipping/types"
 
 export type OrderStatus =
-  | "pending_payment"
-  | "placed"
-  | "processing"
+  | "pending"
+  | "awaiting_payment"
+  | "confirmed"
   | "shipped"
   | "delivered"
   | "cancelled"
+  | "closed"
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "partially_refunded" | "refunded"
-export type OrderPaymentMethod = "stripe" | "cash_on_delivery"
-export type CodStatus = "not_applicable" | "pending_collection" | "collected" | "failed" | "returned"
+export const ORDER_STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
+  { label: "Pending", value: "pending" },
+  { label: "Awaiting payment", value: "awaiting_payment" },
+  { label: "Confirmed", value: "confirmed" },
+  { label: "Shipped", value: "shipped" },
+  { label: "Delivered", value: "delivered" },
+  { label: "Cancelled", value: "cancelled" },
+  { label: "Closed", value: "closed" },
+]
 
-// The /status/ action endpoint only accepts these four — cancellation is a separate endpoint.
-export type UpdatableOrderStatus = "placed" | "processing" | "shipped" | "delivered"
+/** services/orders.py — cancel_order and line edits only work before anything ships. */
+export const PRE_SHIPMENT_STATUSES: OrderStatus[] = ["pending", "awaiting_payment", "confirmed"]
+/** services/returns.py NON_RETURNABLE_ORDER_STATUSES. */
+export const NON_RETURNABLE_STATUSES: OrderStatus[] = ["pending", "awaiting_payment", "cancelled"]
 
-export interface CustomerBrief {
+export interface OrderLine {
   id: string
-  email: string
-  first_name: string
-  last_name: string
+  variant_id: string
+  variant_sku: string
+  product_name: string
+  product_image: string | null
+  quantity: number
+  shipped_quantity: number
+  returned_quantity: number
+  shippable_quantity: number
+  returnable_quantity: number
+  unit_price: string
+  discount_amount: string
+  tax_amount: string
 }
 
-export interface OrderListItem {
+/** The order's ship-to snapshot (`line2` is exposed as `delivery_note`). */
+export interface OrderShippingAddress {
+  id: string | null
+  full_name: string
+  phone: string
+  line1: string
+  delivery_note: string
+  postal_code: string
+  country: string
+}
+
+export interface Order {
   id: string
   order_number: string
-  customer: CustomerBrief
+  customer_id: string
+  customer_email: string
+  customer_name: string
+  customer_phone: string
   status: OrderStatus
-  payment_status: PaymentStatus
-  payment_method: OrderPaymentMethod
-  cod_status: CodStatus
+  shipping_address_id: string | null
+  shipping_address: OrderShippingAddress | null
+  notes: string
+  contact_email: string
+  contact_phone: string
   subtotal: string
-  total_amount: string
+  tax_total: string
+  shipping_total: string
+  discount_total: string
+  grand_total: string
+  coupon_code: string | null
   created_at: string
-  updated_at: string
+  lines: OrderLine[]
+  payments: Payment[]
+  shipments: Shipment[]
+  rmas: Rma[]
 }
 
-export interface OrderItem {
-  id: string
-  product: string
-  variant: string
-  product_name: string
-  variant_name: string
-  sku: string
-  quantity: number
-  unit_price: string
-  line_total: string
-  created_at: string
+/** @deprecated List rows are full orders now; kept for importers outside this domain. */
+export type OrderListItem = Order
+/** @deprecated Same shape as Order. */
+export type OrderDetail = Order
+
+/** PATCH /admin/orders/{id}/ (AdminOrderUpdateSerializer) — correctable fields only. */
+export interface OrderUpdatePayload {
+  shipping_address_id?: string | null
+  notes?: string
+  contact_email?: string
+  contact_phone?: string
+  full_name?: string
+  phone?: string
+  line1?: string
+  delivery_note?: string
+  postal_code?: string
+  country?: string
 }
 
-export interface OrderStatusHistoryEntry {
-  id: string
-  from_status: string
-  to_status: string
-  changed_by: string | null
-  reason?: string
-  created_at?: string
-}
-
-export interface OrderDetail extends OrderListItem {
-  cod_collected_amount: string
-  cod_collected_at: string | null
-  discount_amount: string
-  shipping_cost: string
-  tax_amount: string
-  customer_notes: string
-  admin_notes: string
-  placed_at: string | null
-  paid_at: string | null
-  shipped_at: string | null
-  delivered_at: string | null
-  cancelled_at: string | null
-  cancelled_by: string | null
-  cancellation_reason: string
-  items: OrderItem[]
-  status_history: OrderStatusHistoryEntry[]
+/** POST /admin/orders/ (AdminOrderCreateSerializer). */
+export interface OrderCreatePayload {
+  customer_id: string
+  shipping_address_id?: string | null
+  carrier_id?: string | null
+  lines: { variant_id: string; quantity: number }[]
+  capture_payment?: boolean
+  payment_method?: PaymentMethod
 }

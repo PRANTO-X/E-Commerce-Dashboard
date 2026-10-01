@@ -1,192 +1,270 @@
-import { useEffect, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { DownloadIcon, PlusIcon } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
+import { toast } from "sonner"
+import { PlusIcon, RotateCcwIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TableActions } from "@/components/common/TableActions"
 import FilterToolbar from "@/components/common/FilterToolBar"
-import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
 import { DataTable } from "@/components/common/data-table"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/lib/ExportToCsv"
 import type { Coupon } from "@/features/marketing/types"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, deleteData } from "@/features/marketing/slices/couponSlice"
-import { toast } from "sonner"
+import { deleteData, fetchAll, restoreCoupon } from "@/features/marketing/slices/couponSlice"
+import { useCan } from "@/features/system/permissions"
+import { useDebounced } from "@/features/system/useDebounced"
 import { useDocumentTitle } from "@/hooks/use-document-title"
-import { formatCurrency, formatDate, humanize } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { formatCurrency, formatDate } from "@/lib/format"
+
+const PAGE_SIZE = 20
+
+const ORDERING_OPTIONS = [
+  { value: "-created_at", label: "Newest first" },
+  { value: "created_at", label: "Oldest first" },
+  { value: "code", label: "Code A–Z" },
+  { value: "expires_at", label: "Expiring soonest" },
+]
+
+const formatCouponValue = (coupon: Pick<Coupon, "discount_type" | "value">) =>
+  coupon.discount_type === "percentage" ? `${Number(coupon.value)}%` : formatCurrency(coupon.value)
+
+function couponState(coupon: Coupon): { status: string; tone: "success" | "destructive" | "secondary" | "warning"; label: string } {
+  if (coupon.deleted_at) return { status: "deleted", tone: "destructive", label: "Deleted" }
+  if (!coupon.is_active) return { status: "inactive", tone: "secondary", label: "Inactive" }
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now())
+    return { status: "expired", tone: "destructive", label: "Expired" }
+  if (coupon.usage_limit != null && coupon.times_used >= coupon.usage_limit)
+    return { status: "used_up", tone: "warning", label: "Used up" }
+  return { status: "active", tone: "success", label: "Active" }
+}
 
 const Coupons = () => {
   useDocumentTitle("Coupons")
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: allCoupons, isLoading, error } = useAppSelector((state) => state.coupons)
+  const can = useCan()
+  const canManage = can("orders.manage")
+  const { data: coupons, isFetchingList, isMutating, error, totalItems, meta } = useAppSelector(
+    (state) => state.coupons
+  )
 
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const debouncedSearch = useDebounced(search.trim())
+  const [ordering, setOrdering] = useState("-created_at")
+  const [includeDeleted, setIncludeDeleted] = useState(false)
 
-  const loadCoupons = useCallback(() => {
-    dispatch(fetchAll())
-  }, [dispatch])
+  const loadCoupons = useCallback(
+    () =>
+      dispatch(
+        fetchAll({
+          page,
+          page_size: PAGE_SIZE,
+          ordering,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(includeDeleted ? { include_deleted: "true" } : {}),
+        })
+      ),
+    [dispatch, page, ordering, debouncedSearch, includeDeleted]
+  )
 
   useEffect(() => {
-    loadCoupons()
+    const request = loadCoupons()
+    return () => request.abort()
   }, [loadCoupons])
 
-  const statusOptions = [
-    { label: "Active", value: "active" },
-    { label: "Inactive", value: "inactive" },
-  ]
+  const handleDelete = async (coupon: Coupon) => {
+    try {
+      await dispatch(deleteData(coupon.id)).unwrap()
+      toast.success(`Coupon ${coupon.code} deleted`)
+      if (includeDeleted) loadCoupons()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't delete this coupon"))
+    }
+  }
 
-  const coupons = allCoupons.filter((coupon) => {
-    if (search && !coupon.code.toLowerCase().includes(search.toLowerCase())) return false
-    if (statusFilter && coupon.is_active !== (statusFilter.value === "active")) return false
-    return true
-  })
+  const handleRestore = async (coupon: Coupon) => {
+    try {
+      await dispatch(restoreCoupon(coupon.id)).unwrap()
+      toast.success(`Coupon ${coupon.code} restored`)
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Couldn't restore this coupon"))
+    }
+  }
 
   const columns: ColumnDef<Coupon>[] = [
     {
       accessorKey: "code",
       header: "CODE",
-      cell: ({ row }) => (
-        <span className="font-mono text-sm font-semibold text-primary">
-          {row.getValue("code")}
-        </span>
-      ),
+      cell: ({ row }) => <span className="font-mono text-sm font-semibold text-primary">{row.original.code}</span>,
     },
     {
-      accessorKey: "discount_type",
-      header: "TYPE",
+      id: "discount",
+      header: "DISCOUNT",
       cell: ({ row }) => (
-        <span className="text-sm text-foreground capitalize">
-          {humanize(row.getValue("discount_type") as string)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "discount_value",
-      header: "VALUE",
-      cell: ({ row }) => {
-        const coupon = row.original
-        return (
-          <span className="text-sm font-medium text-foreground">
-            {coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)}
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold">{formatCouponValue(row.original)}</span>
+          <span className="text-xs text-muted-foreground">
+            {row.original.discount_type === "percentage" ? "Percentage" : "Fixed amount"}
           </span>
-        )
-      },
+        </div>
+      ),
+    },
+    {
+      accessorKey: "min_order_amount",
+      header: "MIN. ORDER",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {Number(row.original.min_order_amount) > 0 ? formatCurrency(row.original.min_order_amount) : "—"}
+        </span>
+      ),
     },
     {
       id: "usage",
-      header: "USAGE",
-      cell: ({ row }) => {
-        const coupon = row.original
-        return (
-          <span className="text-sm text-muted-foreground">
-            {coupon.usage_count} / {coupon.max_usage_count ?? "∞"}
-          </span>
-        )
-      },
-    },
-    {
-      accessorKey: "valid_until",
-      header: "EXPIRES",
-      cell: ({ row }) => {
-        const value = row.getValue("valid_until") as string | null
-        return (
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {formatDate(value, "Never")}
-          </span>
-        )
-      },
-    },
-    {
-      accessorKey: "is_active",
-      header: "STATUS",
+      header: "USED",
       cell: ({ row }) => (
-        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
+        <span className="text-sm">
+          {row.original.times_used}
+          <span className="text-muted-foreground"> / {row.original.usage_limit ?? "∞"}</span>
+        </span>
       ),
+    },
+    {
+      accessorKey: "expires_at",
+      header: "EXPIRES",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.original.expires_at, "Never")}</span>
+      ),
+    },
+    {
+      id: "status",
+      header: "STATUS",
+      cell: ({ row }) => {
+        const state = couponState(row.original)
+        return <StatusBadge status={state.status} tone={state.tone} label={state.label} />
+      },
     },
     {
       id: "actions",
       header: "ACTION",
-      cell: ({ row }) => {
-        const coupon = row.original
-        const handleDelete = async () => {
-          try {
-            await dispatch(deleteData(coupon.id)).unwrap()
-            toast.success(`Coupon ${coupon.code} deleted`)
-          } catch {
-            toast.error("Failed to delete coupon")
-          }
-        }
-        return (
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          canManage ? (
+            <Button
+              variant="outline"
+              size="sm"
+              data-no-row-click="true"
+              disabled={isMutating}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleRestore(row.original)
+              }}
+            >
+              <RotateCcwIcon className="size-3.5" /> Restore
+            </Button>
+          ) : null
+        ) : (
           <TableActions
-            itemName={coupon.code}
-            onDelete={handleDelete}
-            editUrl={`/coupon_form/${coupon.id}`}
+            itemName={row.original.code}
+            {...(canManage
+              ? { editUrl: `/coupon_form/${row.original.id}`, onDelete: () => handleDelete(row.original) }
+              : { viewUrl: `/coupon_form/${row.original.id}` })}
           />
-        )
-      },
+        ),
     },
   ]
-
-  const csvData = coupons.map((c) => ({
-    code: c.code,
-    type: c.discount_type,
-    value: c.discount_value,
-    used: c.usage_count,
-    limit: c.max_usage_count,
-    expires: c.valid_until,
-    active: c.is_active,
-  }))
 
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Coupons & Vouchers"
-          description="Create and manage discount codes and usage limits."
-        />
-
-        <div className="flex gap-2">
-          <Button variant="default" size="action" onClick={() => navigate("/coupon_form/new")}>
+        <PageHeading title="Coupons" description="Discount codes customers can apply at checkout." />
+        {canManage && (
+          <Button variant="apply" size="action" onClick={() => navigate("/coupon_form/new")}>
             <PlusIcon className="size-5" /> Add Coupon
           </Button>
-          <Button variant="primary" size="action" onClick={() => exportToCSV(csvData, "Coupons")}>
-            <DownloadIcon className="size-5" /> Export CSV
-          </Button>
-        </div>
+        )}
       </div>
 
       <FilterToolbar
-        searchPlaceholder="search coupon code..."
+        searchPlaceholder="Search by code..."
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
         filters={[
           {
             component: (
-              <ExampleComboboxCustomItems
-                placeholder="status"
-                frameworks={statusOptions}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              />
+              <Select
+                value={ordering}
+                onValueChange={(value) => {
+                  setOrdering(value)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger className="w-[180px]" aria-label="Sort coupons">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORDERING_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ),
           },
+          ...(canManage
+            ? [
+                {
+                  component: (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="coupons-include-deleted"
+                        checked={includeDeleted}
+                        onCheckedChange={(checked) => {
+                          setIncludeDeleted(checked)
+                          setPage(1)
+                        }}
+                      />
+                      <Label htmlFor="coupons-include-deleted" className="text-sm">
+                        Show deleted
+                      </Label>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
         data={coupons}
-        isLoading={isLoading}
+        pageSize={PAGE_SIZE}
+        isLoading={isFetchingList}
         error={error}
         onRetry={loadCoupons}
-        onRowClick={(coupon) => navigate(`/coupon_form/${coupon.id}`)}
-        minWidth="900px"
-        columnWidths={["140px", "140px", "100px", "120px", "140px", "120px", "100px"]}
+        manualPagination
+        pageIndex={page - 1}
+        pageCount={meta?.totalPages ?? 1}
+        totalCount={totalItems}
+        onPageChange={(index) => setPage(index + 1)}
+        onRowClick={(coupon) => {
+          if (!coupon.deleted_at) navigate(`/coupon_form/${coupon.id}`)
+        }}
+        emptyTitle="No coupons yet"
+        emptyDescription="Create a discount code to reward customers or run a promotion."
+        {...(canManage ? { emptyActionLabel: "Add Coupon", onEmptyAction: () => navigate("/coupon_form/new") } : {})}
+        minWidth="960px"
+        columnWidths={["160px", "140px", "130px", "100px", "140px", "110px", "110px"]}
       />
     </div>
   )

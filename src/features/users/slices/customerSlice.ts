@@ -1,43 +1,40 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
-import { createSliceFactory } from "@/lib/sliceFactory"
+import { createSliceFactory, withExtraCases } from "@/lib/sliceFactory"
 import { api, extractApiError } from "@/lib/api/client"
-import { unwrapItem } from "@/lib/api/envelope"
-import type { AdminUser } from "../types"
+import { unwrapEnvelope, unwrapItem } from "@/lib/api/envelope"
+import type { AdminAddress, AdminUser } from "../types"
 
-// /admin/users/ lists every account regardless of role — the Customers page filters to
-// role === "customer" client-side since the backend doesn't expose a role query param.
-// No pagination is documented, and there's no generic delete — only soft-delete.
-
-const { reducer, fetchAll, fetchSingle, patchData: updateCustomer } = createSliceFactory<AdminUser>({
+// /admin/users/ (admin-only). List filters: role, is_active, search, include_deleted.
+// Callers pass role: "customer" — the endpoint lists every account otherwise.
+const { reducer, fetchAll, fetchSingle, patchData } = createSliceFactory<AdminUser>({
   name: "customers",
   endpoint: "/admin/users/",
   initialSingleData: null,
 })
 
-export { fetchAll, fetchSingle, updateCustomer }
+export { fetchAll, fetchSingle, patchData }
 
-// Action-only endpoints — not generic CRUD, so they live outside the factory. Callers
-// should re-dispatch fetchSingle(id) afterward to refresh the detail page's state.singleData
-// (these thunks intentionally don't touch Redux state themselves).
-
-export const activateUser = createAsyncThunk(
-  "customers/activate",
-  async (id: string, { rejectWithValue }) => {
+const userAction = (name: string, path: string) =>
+  createAsyncThunk(`customers/${name}`, async (id: string, { rejectWithValue }) => {
     try {
-      const res = await api.post(`/admin/users/${id}/activate/`)
+      const res = await api.post(`/admin/users/${id}/${path}/`)
       return unwrapItem<AdminUser>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
-  }
-)
+  })
 
-export const deactivateUser = createAsyncThunk(
-  "customers/deactivate",
-  async (id: string, { rejectWithValue }) => {
+export const activateUser = userAction("activate", "activate")
+export const deactivateUser = userAction("deactivate", "deactivate")
+export const softDeleteUser = userAction("softDelete", "soft-delete")
+export const restoreUser = userAction("restore", "restore")
+
+export const bulkDeactivateUsers = createAsyncThunk(
+  "customers/bulkDeactivate",
+  async (ids: string[], { rejectWithValue }) => {
     try {
-      const res = await api.post(`/admin/users/${id}/deactivate/`)
-      return unwrapItem<AdminUser>(res.data)
+      const res = await api.post("/admin/users/bulk-deactivate/", { ids })
+      return unwrapItem<{ affected: number }>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
@@ -56,28 +53,30 @@ export const resetUserPassword = createAsyncThunk(
   }
 )
 
-export const setUserRole = createAsyncThunk(
-  "customers/setRole",
-  async ({ id, role }: { id: string; role: string }, { rejectWithValue }) => {
-    try {
-      const res = await api.post(`/admin/users/${id}/set-role/`, { role })
-      return unwrapItem<AdminUser>(res.data)
-    } catch (err) {
-      return rejectWithValue(extractApiError(err))
-    }
-  }
-)
-
-export const softDeleteUser = createAsyncThunk(
-  "customers/softDelete",
+/** Not kept in Redux — the detail page holds the result in local state. */
+export const fetchUserAddresses = createAsyncThunk(
+  "customers/fetchAddresses",
   async (id: string, { rejectWithValue }) => {
     try {
-      const res = await api.post(`/admin/users/${id}/soft-delete/`)
-      return unwrapItem<AdminUser>(res.data)
+      const res = await api.get(`/admin/users/${id}/addresses/`)
+      return unwrapEnvelope<AdminAddress[]>(res.data)
     } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
   }
 )
 
-export default reducer
+const actionThunks = [activateUser, deactivateUser, softDeleteUser, restoreUser]
+
+export default withExtraCases(reducer, (builder) => {
+  for (const thunk of actionThunks) {
+    builder.addCase(thunk.fulfilled, (state, action) => {
+      const user = action.payload
+      state.data = state.data.map((u) => (u.id === user.id ? user : u))
+      if (state.singleData && (state.singleData as AdminUser).id === user.id) {
+        // Keep the detail-only order_summary, which action responses don't carry.
+        state.singleData = { ...(state.singleData as AdminUser), ...user }
+      }
+    })
+  }
+})

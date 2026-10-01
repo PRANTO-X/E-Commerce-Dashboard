@@ -1,191 +1,126 @@
-import { useEffect, useState, useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useEffect } from "react"
+import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { z } from "zod"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2, Save, Boxes } from "lucide-react"
+import { ArrowLeft, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import type { UploadedImageItem } from "@/components/common/ImageUploader"
-
-import type { BundlePricingMode } from "@/features/catalog/types"
-import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchSingle, fetchAll as fetchAllProducts, postData, updateData } from "@/features/catalog/slices/productSlice"
-import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
-import {
-  fetchAll as fetchAllProductImages,
-  postData as postProductImage,
-} from "@/features/catalog/slices/productImageSlice"
-import {
-  fetchAll as fetchAllVariants,
-  postData as postVariant,
-} from "@/features/catalog/slices/variantSlice"
-import { fetchAll as fetchAllAttributes } from "@/features/catalog/slices/attributeSlice"
-import { fetchAll as fetchAllAttributeValues } from "@/features/catalog/slices/attributeValueSlice"
-import {
-  fetchAll as fetchAllBundleItems,
-  postData as postBundleItem,
-} from "@/features/catalog/slices/bundleItemSlice"
-import { useDocumentTitle } from "@/hooks/use-document-title"
-import {
-  productSchema,
-  defaultFormValues,
-  type DisplayBundleItem,
-  type DraftBundleItem,
-  type DraftVariant,
-  type ProductFormValues,
-} from "@/features/catalog/productFormSchema"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { DetailPageState } from "@/components/common/DetailPageState"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { useDocumentTitle } from "@/hooks/use-document-title"
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { resolveDetailState } from "@/lib/detailState"
-import { ProductBasicInfoSection } from "./ProductBasicInfoSection"
-import { ProductImagesSection } from "./ProductImagesSection"
-import { ProductBundleSection } from "./ProductBundleSection"
-import { ProductVariantsSection } from "./ProductVariantsSection"
 
-/** Counts rejected results and describes them, e.g. "2 of 3 images". */
-function describeFailures(results: PromiseSettledResult<unknown>[], noun: string): string | null {
-  const failed = results.filter((r) => r.status === "rejected").length
-  if (failed === 0) return null
-  const plural = results.length === 1 ? noun : `${noun}s`
-  return `${failed} of ${results.length} ${plural}`
-}
+import { fetchSingle } from "../slices/productSlice"
+import { createProduct, updateProduct } from "../api"
+import type { Product, ProductPayload } from "../types"
+import { useCategoryOptions } from "../lib/useCategoryOptions"
+import { usePermission } from "../lib/usePermission"
+
+const money = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || (/^\d+(\.\d{1,2})?$/.test(v) && Number(v) >= 0), "Enter a valid amount (max 2 decimals)")
+
+const schema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    category_id: z.string().min(1, "Choose a category"),
+    product_type: z.enum(["simple", "variant"]),
+    description: z.string(),
+    highlights: z.string(),
+    meta_keywords: z.string(),
+    price: money,
+    cost_price: money,
+    discount_price: money,
+    sku: z.string().trim(),
+    is_active: z.boolean(),
+  })
+  .refine((v) => !v.discount_price || (v.price !== "" && Number(v.discount_price) < Number(v.price)), {
+    path: ["discount_price"],
+    message: "Discount price must be lower than the price",
+  })
+
+type FormValues = z.infer<typeof schema>
 
 const ProductForm = () => {
   const { id } = useParams<{ id: string }>()
-  const [searchParams] = useSearchParams()
-  const initialType = searchParams.get("type") === "bundle" ? "bundle" : "physical"
-
+  const isEditing = Boolean(id && id !== "new")
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const canManage = usePermission("catalog.manage")
+  const { singleData, singleStatus, singleError } = useAppSelector((s) => s.products)
+  const product = singleData as Product | null
+  const { options: categoryOptions } = useCategoryOptions()
 
-  const { singleData: existing, singleStatus, singleError } = useAppSelector((state) => state.products)
-  const { data: categories } = useAppSelector((state) => state.categories)
-  const { data: allImages } = useAppSelector((state) => state.productImages)
-  const { data: allVariants } = useAppSelector((state) => state.variants)
-  const { data: allAttributes } = useAppSelector((state) => state.attributes)
-  const { data: allAttributeValues } = useAppSelector((state) => state.attributeValues)
-  const { data: allBundleItems } = useAppSelector((state) => state.bundleItems)
-
-  useDocumentTitle(existing?.name ? `${existing.name} — Product` : "Product Form")
-
-  const isEditing = id !== "new"
-  const images = isEditing ? allImages.filter((img) => img.product === id) : []
-  const variants = isEditing ? allVariants.filter((v) => v.product === id) : []
-  const existingBundleItems = useMemo(
-    () => (isEditing ? allBundleItems.filter((item) => item.bundle === id) : []),
-    [isEditing, allBundleItems, id]
-  )
-
-  // Local draft states for when creating a new product
-  const [draftImages, setDraftImages] = useState<UploadedImageItem[]>([])
-  const [draftVariants, setDraftVariants] = useState<DraftVariant[]>([])
-  const [draftBundleItems, setDraftBundleItems] = useState<DraftBundleItem[]>([])
+  useDocumentTitle(isEditing ? (product?.name ? `Edit ${product.name}` : "Edit Product") : "Add Product")
 
   const {
     control,
     register,
     reset,
-    watch,
-    setValue,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    setError,
+    formState: { errors, isSubmitting, dirtyFields },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      ...defaultFormValues,
-      product_type: initialType,
+      name: "",
+      category_id: "",
+      product_type: "simple",
+      description: "",
+      highlights: "",
+      meta_keywords: "",
+      price: "",
+      cost_price: "",
+      discount_price: "",
+      sku: "",
+      is_active: true,
     },
   })
 
-  const currentProductType = watch("product_type")
-  const currentPricingMode = watch("bundle_pricing_mode") || "fixed"
-  const currentDiscountPercent = Number(watch("bundle_discount_percent") || 0)
-
   useEffect(() => {
-    dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
-    dispatch(fetchAllProducts({ page: 1, page_size: 1000 }))
-    dispatch(fetchAllAttributes({ page: 1, page_size: 100 }))
-    dispatch(fetchAllAttributeValues({ page: 1, page_size: 100 }))
-    // Unfiltered: the bundle builder lists variants of every product.
-    dispatch(fetchAllVariants({ page: 1, page_size: 1000 }))
-
-    if (isEditing && id) {
-      dispatch(fetchSingle(id))
-      // Filtered server-side so this product's rows aren't cut off by a global page.
-      dispatch(fetchAllProductImages({ page: 1, page_size: 100, product: id }))
-      dispatch(fetchAllBundleItems({ page: 1, page_size: 100, bundle: id }))
-    }
+    if (isEditing && id) dispatch(fetchSingle(id))
   }, [dispatch, id, isEditing])
 
   useEffect(() => {
-    if (isEditing && existing?.id === id) {
+    if (isEditing && product && product.id === id) {
       reset({
-        name: existing.name,
-        slug: existing.slug,
-        category: existing.category,
-        base_price: Number(existing.base_price),
-        status: existing.status,
-        product_type: existing.product_type,
-        requires_shipping: existing.requires_shipping,
-        is_downloadable: existing.is_downloadable,
-        is_recurring: existing.is_recurring,
-        is_featured: existing.is_featured,
-        bundle_pricing_mode: (existing.bundle_pricing_mode as BundlePricingMode) || "fixed",
-        bundle_discount_percent: existing.bundle_discount_percent || "0",
-        description: existing.description ?? "",
+        name: product.name,
+        category_id: product.category_id,
+        product_type: product.product_type === "variant" ? "variant" : "simple",
+        description: product.description ?? "",
+        highlights: (product.highlights ?? []).join("\n"),
+        meta_keywords: product.meta_keywords ?? "",
+        price: product.price ?? "",
+        cost_price: product.cost_price ?? "",
+        discount_price: product.discount_price ?? "",
+        sku: "",
+        is_active: product.is_active,
       })
     }
-  }, [existing, id, isEditing, reset])
+  }, [product, id, isEditing, reset])
 
-  // Computed display bundle items
-  const displayBundleItems: DisplayBundleItem[] = useMemo(() => {
-    if (isEditing) {
-      return existingBundleItems.map((item) => {
-        const matchedVariant = allVariants.find((v) => v.id === item.variant)
-        const price = matchedVariant ? Number(matchedVariant.price) : 0
-        return {
-          id: item.id,
-          variantId: item.variant,
-          variantName: item.variant_name || matchedVariant?.name || "Product Variant",
-          variantSku: item.variant_sku || matchedVariant?.sku || "",
-          price,
-          quantity: item.quantity,
-        }
-      })
-    }
-    return draftBundleItems.map((item) => ({
-      id: item.tempId,
-      variantId: item.variantId,
-      variantName: item.variantName,
-      variantSku: item.variantSku,
-      price: item.price,
-      quantity: item.quantity,
-    }))
-  }, [isEditing, existingBundleItems, draftBundleItems, allVariants])
+  if (!canManage) {
+    return (
+      <div className="section-container py-16 text-center text-sm text-muted-foreground">
+        You don't have permission to edit products.{" "}
+        <Link className="text-primary underline" to="/products">
+          Back to products
+        </Link>
+      </div>
+    )
+  }
 
-  // Calculate Bundle Pricing
-  const totalBundleRegularValue = displayBundleItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  )
-  const computedBundleDiscountAmount =
-    currentPricingMode === "dynamic"
-      ? (totalBundleRegularValue * currentDiscountPercent) / 100
-      : 0
-  const computedDynamicBundlePrice = Math.max(
-    0,
-    totalBundleRegularValue - computedBundleDiscountAmount
-  )
-
-  // Sync dynamic bundle price to base_price field if dynamic mode is active
-  useEffect(() => {
-    if (currentProductType === "bundle" && currentPricingMode === "dynamic" && totalBundleRegularValue > 0) {
-      setValue("base_price", Number(computedDynamicBundlePrice.toFixed(2)))
-    }
-  }, [currentProductType, currentPricingMode, computedDynamicBundlePrice, totalBundleRegularValue, setValue])
-
-  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, existing?.id === id) : null
+  const pageState = isEditing ? resolveDetailState(singleStatus, singleError, product?.id === id) : null
   if (pageState) {
     return (
       <DetailPageState
@@ -199,213 +134,234 @@ const ProductForm = () => {
     )
   }
 
-  const onSubmit = async (values: ProductFormValues) => {
-    const payload = {
-      ...values,
-      base_price: String(values.base_price),
-      bundle_pricing_mode: values.product_type === "bundle" ? values.bundle_pricing_mode || "fixed" : undefined,
-      bundle_discount_percent:
-        values.product_type === "bundle" ? String(values.bundle_discount_percent || "0") : undefined,
-    }
-
-    if (isEditing && existing) {
-      try {
-        await dispatch(updateData({ id: existing.id, payload })).unwrap()
-        toast.success(`${values.name} updated successfully`)
-        navigate("/products")
-      } catch {
-        toast.error("Failed to save product. Please check required fields.")
-      }
-      return
-    }
-
-    let created
-    try {
-      created = await dispatch(postData({ payload })).unwrap()
-    } catch {
-      toast.error("Failed to save product. Please check required fields.")
-      return
-    }
-
-    // The product now exists; attach its sub-resources and report each kind that failed
-    // instead of claiming full success.
-    const [imageResults, variantResults, bundleResults] = await Promise.all([
-      Promise.allSettled(
-        draftImages.map((img, idx) =>
-          dispatch(
-            postProductImage({
-              payload: {
-                product: created.id,
-                image: img.url,
-                alt_text: img.alt || created.name,
-                sort_order: idx,
-                is_primary: img.isPrimary ?? idx === 0,
-              },
-            })
-          ).unwrap()
-        )
-      ),
-      Promise.allSettled(
-        draftVariants.map((v) =>
-          dispatch(
-            postVariant({
-              payload: {
-                product: created.id,
-                sku: v.sku,
-                name: v.name,
-                price: v.price.trim() || String(created.base_price),
-                stock_quantity: Number(v.stock_quantity) || 0,
-                status: v.status,
-                image: v.image || "",
-              },
-            })
-          ).unwrap()
-        )
-      ),
-      Promise.allSettled(
-        (values.product_type === "bundle" ? draftBundleItems : []).map((item) =>
-          dispatch(
-            postBundleItem({
-              payload: {
-                bundle: created.id,
-                variant: item.variantId,
-                quantity: item.quantity,
-              },
-            })
-          ).unwrap()
-        )
-      ),
-    ])
-
-    const failures = [
-      describeFailures(imageResults, "image"),
-      describeFailures(variantResults, "variant"),
-      describeFailures(bundleResults, "bundle item"),
-    ].filter((f): f is string => f !== null)
-
-    if (failures.length > 0) {
-      // Continue on the saved product's edit page so the missing pieces can be re-added
-      // without creating a duplicate product.
-      toast.error(`${values.name} was created, but some items failed to save`, {
-        description: `Failed: ${failures.join(", ")}. Re-add them on this page.`,
-        duration: 10000,
-      })
-      navigate(`/product_form/${created.id}`, { replace: true })
-      return
-    }
-
-    toast.success(`${values.name} created successfully!`)
-    navigate("/products")
+  if (isEditing && product?.product_type === "bundle") {
+    const bundleId = product.variants[0]?.id
+    return (
+      <div className="section-container py-16 text-center text-sm text-muted-foreground">
+        Bundles are edited from the Bundles page.{" "}
+        <Link className="text-primary underline" to={bundleId ? `/bundles/${bundleId}` : "/bundles"}>
+          Open bundle editor
+        </Link>
+      </div>
+    )
   }
 
-  const productId = isEditing ? existing?.id : undefined
-  const formBasePrice = watch("base_price")
+  const onSubmit = async (values: FormValues) => {
+    const payload: ProductPayload = {
+      name: values.name,
+      category_id: values.category_id,
+      product_type: values.product_type,
+      description: values.description,
+      highlights: values.highlights
+        .split("\n")
+        .map((h) => h.trim())
+        .filter(Boolean),
+      meta_keywords: values.meta_keywords,
+    }
+    // On edit, pricing fans out to every variant server-side — only send what was changed.
+    const touched = (f: "price" | "cost_price" | "discount_price") => !isEditing || Boolean(dirtyFields[f])
+    if (values.price && touched("price")) payload.price = values.price
+    if (values.cost_price && touched("cost_price")) payload.cost_price = values.cost_price
+    if (touched("discount_price")) payload.discount_price = values.discount_price || null
+
+    try {
+      if (isEditing && id) {
+        payload.is_active = values.is_active
+        await updateProduct(id, payload)
+        toast.success(`${values.name} updated`)
+        navigate(`/product_detail/${id}`)
+      } else {
+        if (values.sku) payload.sku = values.sku
+        if (!values.price) delete payload.discount_price
+        const created = await createProduct(payload)
+        toast.success(`${values.name} created`)
+        navigate(`/product_detail/${created.id}`)
+      }
+    } catch (err) {
+      const fieldErrors = getApiFieldErrors(err)
+      for (const [field, message] of Object.entries(fieldErrors)) {
+        if (field in values) setError(field as keyof FormValues, { message })
+      }
+      toast.error(getApiErrorMessage(err, "Failed to save product"))
+    }
+  }
+
+  const backTo = isEditing ? `/product_detail/${id}` : "/products"
 
   return (
-    <div className="section-container space-y-6">
-      {/* Header */}
+    <div className="section-container">
       <div className="flex items-center gap-4">
-        <Button variant="back" size="icon" onClick={() => navigate("/products")}>
-          <ArrowLeft className="h-4 w-4" />
+        <Button variant="back" size="icon" aria-label="Back" onClick={() => navigate(backTo)}>
+          <ArrowLeft className="size-4" />
         </Button>
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-              {isEditing
-                ? `Edit ${existing?.product_type === "bundle" ? "Combo Bundle" : "Product"}`
-                : currentProductType === "bundle"
-                ? "Create Combo Bundle"
-                : "Add Product"}
-            </h1>
-            {currentProductType === "bundle" && (
-              <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                <Boxes className="h-3 w-3 mr-1" /> Combo Bundle
-              </Badge>
-            )}
-          </div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            {isEditing ? "Edit Product" : "Add Product"}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            {isEditing
-              ? `Editing ${existing?.name}`
-              : currentProductType === "bundle"
-              ? "Package multiple products into a discounted combo bundle"
-              : "Create a new product with custom variations, pricing, and images"}
+            {isEditing ? `Editing ${product?.name ?? ""}` : "Create a product; add images and variants after saving"}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <ProductBasicInfoSection
-          control={control}
-          register={register}
-          errors={errors}
-          categories={categories}
-          currentProductType={currentProductType}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="name">Product name</FieldLabel>
+              <FieldContent>
+                <Input id="name" placeholder="e.g. Oversized Graphic Tee" {...register("name")} />
+                <FieldError errors={[errors.name]} />
+              </FieldContent>
+            </Field>
 
-        <ProductImagesSection
-          isEditing={isEditing}
-          productId={productId}
-          images={images}
-          draftImages={draftImages}
-          setDraftImages={setDraftImages}
-        />
+            <Field>
+              <FieldLabel htmlFor="category_id">Category</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="category_id" className="w-full">
+                        <SelectValue placeholder="Choose a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {"  ".repeat(o.depth)}
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError errors={[errors.category_id]} />
+              </FieldContent>
+            </Field>
 
-        {/* Combo / Bundle Builder Section (Active when product_type === 'bundle') */}
-        {currentProductType === "bundle" && (
-          <ProductBundleSection
-            control={control}
-            register={register}
-            isEditing={isEditing}
-            productId={productId}
-            allVariants={allVariants}
-            displayBundleItems={displayBundleItems}
-            draftBundleItems={draftBundleItems}
-            setDraftBundleItems={setDraftBundleItems}
-            currentPricingMode={currentPricingMode}
-            currentDiscountPercent={currentDiscountPercent}
-            formBasePrice={formBasePrice}
-            totalBundleRegularValue={totalBundleRegularValue}
-            computedBundleDiscountAmount={computedBundleDiscountAmount}
-            computedDynamicBundlePrice={computedDynamicBundlePrice}
-          />
-        )}
+            <Field>
+              <FieldLabel htmlFor="product_type">Product type</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="product_type"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="product_type" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="simple">Simple — one sellable SKU</SelectItem>
+                        <SelectItem value="variant">Variant — colours / sizes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldDescription>
+                  Bundles are created from <Link to="/bundles/new" className="text-primary underline">Bundles</Link>.
+                </FieldDescription>
+                <FieldError errors={[errors.product_type]} />
+              </FieldContent>
+            </Field>
 
-        <ProductVariantsSection
-          isEditing={isEditing}
-          productId={productId}
-          existingBasePrice={existing?.base_price}
-          variants={variants}
-          draftVariants={draftVariants}
-          setDraftVariants={setDraftVariants}
-          allAttributes={allAttributes}
-          allAttributeValues={allAttributeValues}
-          formName={watch("name")}
-          formSlug={watch("slug")}
-          formBasePrice={formBasePrice}
-        />
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="description">Description</FieldLabel>
+              <FieldContent>
+                <Textarea id="description" rows={4} {...register("description")} />
+                <FieldError errors={[errors.description]} />
+              </FieldContent>
+            </Field>
 
-        {/* Submit Card Footer */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={() => navigate("/products")}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-32">
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
+            <Field>
+              <FieldLabel htmlFor="highlights">Highlights</FieldLabel>
+              <FieldContent>
+                <Textarea id="highlights" rows={4} placeholder="One highlight per line" {...register("highlights")} />
+                <FieldError errors={[errors.highlights]} />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="meta_keywords">Meta keywords</FieldLabel>
+              <FieldContent>
+                <Input id="meta_keywords" placeholder="comma, separated, keywords" {...register("meta_keywords")} />
+                <FieldError errors={[errors.meta_keywords]} />
+              </FieldContent>
+            </Field>
+
+            {isEditing && (
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="is_active">Active</FieldLabel>
+                  <FieldDescription>Inactive products are hidden from the storefront.</FieldDescription>
+                </FieldContent>
+                <Controller
+                  control={control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <Switch id="is_active" checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+              </Field>
             )}
-            {isSubmitting
-              ? isEditing
-                ? "Saving..."
-                : "Creating..."
-              : isEditing
-              ? "Save Changes"
-              : currentProductType === "bundle"
-              ? "Create Combo Bundle"
-              : "Create Product"}
-          </Button>
-        </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing</CardTitle>
+            <CardDescription>
+              {isEditing
+                ? "Price changes apply to every live variant of this product."
+                : "Setting a price creates the product's first variant now, so it can be stocked and sold immediately."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Field>
+              <FieldLabel htmlFor="price">Price (BDT)</FieldLabel>
+              <FieldContent>
+                <Input id="price" inputMode="decimal" placeholder="0.00" {...register("price")} />
+                <FieldError errors={[errors.price]} />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="discount_price">Discount price</FieldLabel>
+              <FieldContent>
+                <Input id="discount_price" inputMode="decimal" placeholder="Optional" {...register("discount_price")} />
+                <FieldError errors={[errors.discount_price]} />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="cost_price">Cost price</FieldLabel>
+              <FieldContent>
+                <Input id="cost_price" inputMode="decimal" placeholder="0.00" {...register("cost_price")} />
+                <FieldError errors={[errors.cost_price]} />
+              </FieldContent>
+            </Field>
+            {!isEditing && (
+              <Field>
+                <FieldLabel htmlFor="sku">SKU</FieldLabel>
+                <FieldContent>
+                  <Input id="sku" placeholder="Auto-generated if blank" {...register("sku")} />
+                  <FieldError errors={[errors.sku]} />
+                </FieldContent>
+              </Field>
+            )}
+          </CardContent>
+          <CardFooter className="justify-end gap-3 border-t p-4">
+            <Button type="button" variant="outline" onClick={() => navigate(backTo)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              {isEditing ? "Save changes" : "Create product"}
+            </Button>
+          </CardFooter>
+        </Card>
       </form>
     </div>
   )

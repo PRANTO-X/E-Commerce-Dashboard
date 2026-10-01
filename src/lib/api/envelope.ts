@@ -34,6 +34,18 @@ export function unwrapList<T>(
 ): NormalizedList<T> {
   const body = raw as Record<string, unknown> | null | undefined
 
+  // Kull-mart shape: { data: { results, count, next, previous }, message } — the DRF page
+  // nested inside the standard envelope. Unwrap one level and treat it as shape 2.
+  if (
+    body &&
+    body.data &&
+    typeof body.data === "object" &&
+    !Array.isArray(body.data) &&
+    Array.isArray((body.data as Record<string, unknown>).results)
+  ) {
+    return unwrapList<T>(body.data, requestedPage, requestedPageSize)
+  }
+
   // Shape 2: { count, next, previous, results }
   if (body && Array.isArray(body.results)) {
     const count = typeof body.count === "number" ? body.count : body.results.length

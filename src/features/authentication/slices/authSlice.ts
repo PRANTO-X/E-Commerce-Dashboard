@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, createAction } from "@reduxjs/toolkit"
 import { api, extractApiError, refreshAccessToken } from "@/lib/api/client"
-import { getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from "@/lib/api/tokenStore"
+import { setAccessToken, clearTokens, broadcastLogout } from "@/lib/api/tokenStore"
 import { DEV_AUTH_BYPASS, DEV_USER } from "../devAuth"
 import type { AuthUser, LoginPayload } from "../types"
 
@@ -26,7 +26,6 @@ const initialState: AuthState = {
 
 interface LoginResponseData {
   access: string
-  refresh: string
   user: AuthUser
 }
 
@@ -34,10 +33,10 @@ export const login = createAsyncThunk(
   "auth/login",
   async (payload: LoginPayload, { rejectWithValue }) => {
     try {
+      // The backend sets the refresh token as an HttpOnly cookie on this response.
       const res = await api.post("/customer/auth/login/", payload)
       const data = res.data.data as LoginResponseData
       setAccessToken(data.access)
-      setRefreshToken(data.refresh)
       return data.user
     } catch (err) {
       return rejectWithValue(extractApiError(err))
@@ -46,15 +45,14 @@ export const login = createAsyncThunk(
 )
 
 export const logout = createAsyncThunk("auth/logout", async () => {
-  const refreshToken = getRefreshToken()
   try {
-    if (refreshToken) {
-      await api.post("/customer/auth/logout/", { refresh: refreshToken })
-    }
+    // Blacklists the refresh token and clears the cookie server-side.
+    await api.post("/customer/auth/logout/")
   } catch {
     // best-effort — clear the local session regardless of server response
   } finally {
     clearTokens()
+    broadcastLogout()
   }
 })
 
@@ -67,14 +65,11 @@ export const fetchMe = createAsyncThunk("auth/fetchMe", async (_: void, { reject
   }
 })
 
-// Silently restores a session from a persisted refresh token on app boot.
+// Silently restores a session on app boot: the refresh cookie (if any) is sent
+// automatically, so there's nothing to check client-side before trying.
 export const bootstrapAuth = createAsyncThunk(
   "auth/bootstrap",
   async (_: void, { dispatch, rejectWithValue }) => {
-    const refreshToken = getRefreshToken()
-    if (!refreshToken) {
-      return rejectWithValue(null)
-    }
     try {
       await refreshAccessToken()
       return await dispatch(fetchMe()).unwrap()
@@ -89,14 +84,28 @@ export const bootstrapAuth = createAsyncThunk(
 // refreshing a session, so Redux state stays in sync without client.ts importing the store.
 export const sessionExpired = createAction("auth/sessionExpired")
 
+export type ProfilePatch = Partial<Pick<AuthUser, "first_name" | "last_name" | "phone" | "profile_picture">>
+
 export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
-  async (patch: Partial<AuthUser>, { rejectWithValue }) => {
+  async (patch: ProfilePatch, { rejectWithValue }) => {
     try {
-      const res = await api.patch("/customer/auth/me/", patch)
-      return res.data.data as AuthUser
+      const res = await api.patch("/customer/profile/", patch)
+      return res.data.data as Partial<AuthUser>
     } catch (err) {
       // Surface the failure; merging locally would tell the user it saved when it didn't.
+      return rejectWithValue(extractApiError(err))
+    }
+  }
+)
+
+export const changePassword = createAsyncThunk(
+  "auth/changePassword",
+  async (payload: { old_password: string; new_password: string }, { rejectWithValue }) => {
+    try {
+      await api.post("/customer/profile/change-password/", payload)
+      return true
+    } catch (err) {
       return rejectWithValue(extractApiError(err))
     }
   }
@@ -171,8 +180,8 @@ const authSlice = createSlice({
       })
 
       .addCase(updateProfile.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.user = action.payload
+        if (state.user && action.payload) {
+          state.user = { ...state.user, ...action.payload }
         }
       })
   },

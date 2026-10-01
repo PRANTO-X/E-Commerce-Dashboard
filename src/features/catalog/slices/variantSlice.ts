@@ -1,12 +1,12 @@
 import { createSliceFactory } from "@/lib/sliceFactory"
-import type { Variant } from "../types"
+import type { ProductVariant } from "../types"
 
-const { reducer, fetchAll, fetchSingle, postData, updateData, patchData, deleteData } =
-  createSliceFactory<Variant>({
-    name: "variants",
-    endpoint: "/admin/catalog/variants/",
-  })
+const { reducer, fetchAll, fetchSingle, patchData, deleteData } = createSliceFactory<ProductVariant>({
+  name: "variants",
+  endpoint: "/admin/catalog/variants/",
+  initialSingleData: null,
+})
 
-export { fetchAll, fetchSingle, postData, updateData, patchData, deleteData }
+export { fetchAll, fetchSingle, patchData, deleteData }
 
 export default reducer

@@ -1,315 +1,433 @@
-import { useEffect, useMemo, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { DownloadIcon, PlusIcon, Package, Boxes } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { TableActions } from "@/components/common/TableActions"
+import { toast } from "sonner"
+import { Boxes, Package, PlusIcon, RotateCcw, ToggleLeft, ToggleRight } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import {
-  productStatusOptions,
-  type Product,
-  type ProductStatus,
-} from "@/features/catalog/types"
-import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { PriceRangeFilter } from "./PriceRangeFilter"
-import { DataTable } from "@/components/common/data-table"
-import { useNavigate } from "react-router-dom"
-import { exportToCSV } from "@/lib/ExportToCsv"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { TableActions } from "@/components/common/TableActions"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, deleteData } from "@/features/catalog/slices/productSlice"
-import { fetchAll as fetchAllCategories } from "@/features/catalog/slices/categorySlice"
-import { fetchAll as fetchAllProductImages } from "@/features/catalog/slices/productImageSlice"
-import { toast } from "sonner"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { formatCurrency } from "@/lib/format"
+
+import { fetchAll, deleteData } from "../slices/productSlice"
+import { bulkProductStatus, restoreProduct } from "../api"
+import { categoryTypeOptions, productTypeOptions, type Product } from "../types"
+import { usePermission } from "../lib/usePermission"
+import { useDebounced } from "../lib/useDebounced"
+import { useCategoryOptions } from "../lib/useCategoryOptions"
+
+type Option = { label: string; value: string }
+
+const PAGE_SIZE = 20
+
+const statusOptions: Option[] = [
+  { label: "Active", value: "true" },
+  { label: "Inactive", value: "false" },
+]
+
+const orderingOptions: Option[] = [
+  { label: "Newest first", value: "-created_at" },
+  { label: "Oldest first", value: "created_at" },
+  { label: "Name A–Z", value: "name" },
+  { label: "Name Z–A", value: "-name" },
+]
 
 const Products = () => {
   useDocumentTitle("Products")
-
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { data: products, isLoading, error } = useAppSelector((state) => state.products)
-  const { data: categories } = useAppSelector((state) => state.categories)
-  const { data: allImages } = useAppSelector((state) => state.productImages)
+  const canManage = usePermission("catalog.manage")
+  const { data: products, isFetchingList, error, totalItems } = useAppSelector((s) => s.products)
+  const { options: categoryOptions, nameById } = useCategoryOptions()
 
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<{ label: string; value: string } | null>(null)
-  const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null })
+  const debouncedSearch = useDebounced(search)
+  const [category, setCategory] = useState<Option | null>(null)
+  const [productType, setProductType] = useState<Option | null>(null)
+  const [categoryType, setCategoryType] = useState<Option | null>(null)
+  const [status, setStatus] = useState<Option | null>(null)
+  const [ordering, setOrdering] = useState<Option | null>(null)
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  const [bulkBusy, setBulkBusy] = useState(false)
 
-  const loadProducts = useCallback(() => {
-    dispatch(fetchAll({ page: 1, page_size: 1000 }))
-  }, [dispatch])
-
-  useEffect(() => {
-    // Backend list endpoints don't support filter query params (confirmed live) —
-    // fetch everything once and filter/paginate client-side instead.
-    loadProducts()
-    dispatch(fetchAllProductImages({ page: 1, page_size: 1000 }))
-  }, [loadProducts, dispatch])
-
-  useEffect(() => {
-    dispatch(fetchAllCategories({ page: 1, page_size: 100 }))
-  }, [dispatch])
-
-  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—"
-
-  const categoryOptions = useMemo(
-    () => categories.map((c) => ({ label: c.name, value: c.id })),
-    [categories]
+  const params = useMemo(
+    () => ({
+      page,
+      page_size: PAGE_SIZE,
+      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
+      ...(category ? { category_id: category.value } : {}),
+      ...(productType ? { product_type: productType.value } : {}),
+      ...(categoryType ? { category_type: categoryType.value } : {}),
+      ...(status ? { is_active: status.value } : {}),
+      ...(ordering ? { ordering: ordering.value } : {}),
+      ...(includeDeleted ? { include_deleted: true } : {}),
+    }),
+    [page, debouncedSearch, category, productType, categoryType, status, ordering, includeDeleted]
   )
 
-  const filteredProducts = products.filter((product) => {
-    if (search && !product.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (statusFilter && product.status !== statusFilter.value) return false
-    if (categoryFilter && product.category !== categoryFilter.value) return false
-    const price = Number(product.base_price)
-    if (priceRange.min !== null && price < priceRange.min) return false
-    if (priceRange.max !== null && price > priceRange.max) return false
-    return true
-  })
+  const load = useCallback(() => {
+    dispatch(fetchAll(params))
+  }, [dispatch, params])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Any filter change returns to page 1 and drops a selection that may no longer be visible.
+  const resetPaging = () => {
+    setPage(1)
+    setSelected([])
+  }
+
+  const toggleSelected = (id: string, checked: boolean) =>
+    setSelected((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
+
+  const selectable = products.filter((p) => !p.deleted_at)
+  const allSelected = selectable.length > 0 && selectable.every((p) => selected.includes(p.id))
+
+  const runBulk = async (isActive: boolean) => {
+    setBulkBusy(true)
+    try {
+      const res = await bulkProductStatus(selected, isActive)
+      toast.success(`${res.affected} product(s) ${isActive ? "activated" : "deactivated"}`)
+      setSelected([])
+      load()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Bulk update failed"))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const handleRestore = async (product: Product) => {
+    try {
+      await restoreProduct(product.id)
+      toast.success(`${product.name} restored`)
+      load()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to restore product"))
+    }
+  }
 
   const columns: ColumnDef<Product>[] = [
+    ...(canManage
+      ? [
+          {
+            id: "select",
+            header: () => (
+              <Checkbox
+                aria-label="Select all on this page"
+                checked={allSelected}
+                onCheckedChange={(v) => setSelected(v ? selectable.map((p) => p.id) : [])}
+              />
+            ),
+            cell: ({ row }: { row: { original: Product } }) =>
+              row.original.deleted_at ? null : (
+                <Checkbox
+                  aria-label={`Select ${row.original.name}`}
+                  checked={selected.includes(row.original.id)}
+                  onCheckedChange={(v) => toggleSelected(row.original.id, Boolean(v))}
+                />
+              ),
+          } as ColumnDef<Product>,
+        ]
+      : []),
     {
       id: "image",
       header: "IMAGE",
-      cell: ({ row }) => {
-        const product = row.original
-        const primaryImage =
-          allImages.find((img) => img.product === product.id && img.is_primary) ||
-          allImages.find((img) => img.product === product.id)
-
-        return (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted/40 shadow-2xs">
-            {primaryImage?.image ? (
-              <img
-                src={primaryImage.image}
-                alt={primaryImage.alt_text || product.name}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none"
-                }}
-              />
-            ) : (
-              <Package className="h-5 w-5 text-muted-foreground/60" />
-            )}
-          </div>
-        )
-      },
+      cell: ({ row }) => (
+        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+          {row.original.primary_image ? (
+            <img
+              src={row.original.primary_image}
+              alt={row.original.name}
+              className="size-full object-cover"
+              onError={(e) => ((e.target as HTMLElement).style.display = "none")}
+            />
+          ) : (
+            <Package className="size-5 text-muted-foreground/60" />
+          )}
+        </div>
+      ),
     },
-
     {
       accessorKey: "name",
       header: "PRODUCT",
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground">
-          {row.getValue("name")}
-        </span>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{row.original.name}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            {row.original.variants.length} variant{row.original.variants.length === 1 ? "" : "s"}
+          </div>
+        </div>
       ),
     },
-
     {
-      accessorKey: "slug",
-      header: "SLUG",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.getValue("slug")}</span>
-      ),
-    },
-
-    {
-      accessorKey: "category",
+      id: "category",
       header: "CATEGORY",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {categoryName(row.getValue("category"))}
-        </span>
+        <span className="text-sm text-muted-foreground">{nameById.get(row.original.category_id) ?? "—"}</span>
       ),
     },
-
     {
-      accessorKey: "base_price",
+      id: "price",
       header: "PRICE",
+      cell: ({ row }) =>
+        row.original.price === null ? (
+          <span className="text-sm text-muted-foreground">No price</span>
+        ) : (
+          <div className="text-sm">
+            <span className="font-semibold">
+              {formatCurrency(row.original.discount_price ?? row.original.price)}
+            </span>
+            {row.original.discount_price && (
+              <span className="ml-1.5 text-xs text-muted-foreground line-through">
+                {formatCurrency(row.original.price)}
+              </span>
+            )}
+          </div>
+        ),
+    },
+    {
+      accessorKey: "total_stock",
+      header: "STOCK",
       cell: ({ row }) => (
-        <span className="text-sm font-semibold text-foreground">
-          ${Number(row.getValue("base_price")).toFixed(2)}
+        <span className={row.original.total_stock <= 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+          {row.original.total_stock}
         </span>
       ),
     },
-
     {
       accessorKey: "product_type",
       header: "TYPE",
-      cell: ({ row }) => {
-        const type = row.getValue("product_type") as string
-        if (type === "bundle") {
-          return (
-            <span className="inline-flex items-center rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-semibold text-purple-600 dark:text-purple-300 border border-purple-500/20">
-              Bundle
-            </span>
-          )
-        }
-        return (
-          <span className="text-sm text-muted-foreground capitalize">
-            {type}
-          </span>
-        )
-      },
+      cell: ({ row }) => <span className="text-sm capitalize">{row.original.product_type}</span>,
     },
-
     {
-      accessorKey: "status",
+      id: "status",
       header: "STATUS",
-      cell: ({ row }) => (
-        <StatusBadge status={row.getValue("status") as ProductStatus} />
-      ),
+      cell: ({ row }) =>
+        row.original.deleted_at ? (
+          <StatusBadge status="deleted" tone="destructive" />
+        ) : (
+          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
+        ),
     },
-
-    {
-      accessorKey: "is_featured",
-      header: "FEATURED",
-      cell: ({ row }) => (row.getValue("is_featured") ? "Yes" : "No"),
-    },
-
-    {
-      accessorKey: "created_at",
-      header: "CREATED AT",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">
-          {new Date(row.getValue("created_at")).toLocaleDateString()}
-        </span>
-      ),
-    },
-
     {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => {
         const product = row.original
-
-        const handleDelete = async () => {
-          try {
-            await dispatch(deleteData(product.id)).unwrap()
-            toast.success(`${product.name} deleted`)
-          } catch {
-            toast.error("Failed to delete product")
-          }
+        if (product.deleted_at) {
+          return canManage ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                void handleRestore(product)
+              }}
+            >
+              <RotateCcw /> Restore
+            </Button>
+          ) : null
         }
-
         return (
           <TableActions
             itemName={product.name}
-            onDelete={handleDelete}
-            editUrl={`/product_form/${product.id}`}
             viewUrl={`/product_detail/${product.id}`}
+            editUrl={canManage && product.product_type !== "bundle" ? `/product_form/${product.id}` : undefined}
+            onDelete={
+              canManage
+                ? async () => {
+                    try {
+                      await dispatch(deleteData(product.id)).unwrap()
+                      toast.success(`${product.name} deleted`)
+                    } catch (err) {
+                      toast.error(getApiErrorMessage(err, "Failed to delete product"))
+                    }
+                  }
+                : undefined
+            }
           />
         )
       },
     },
   ]
 
-  const csvData = filteredProducts.map((product) => ({
-    ID: product.id,
-    Name: product.name,
-    Slug: product.slug,
-    Category: categoryName(product.category),
-    Price: product.base_price,
-    Type: product.product_type,
-    Status: product.status,
-    Featured: product.is_featured,
-    CreatedAt: product.created_at,
-  }))
+  const widths = [
+    ...(canManage ? ["48px"] : []),
+    "70px",
+    "240px",
+    "150px",
+    "140px",
+    "80px",
+    "90px",
+    "110px",
+    "130px",
+  ]
 
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Products"
-          description="Manage your product catalog, pricing, variations, and combo bundles"
-        />
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="action"
-            onClick={() => navigate("/product_form/new?type=bundle")}
-            className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
-          >
-            <Boxes className="size-5" /> Create Combo Bundle
-          </Button>
-
-          <Button
-            variant="default"
-            size="action"
-            onClick={() => navigate("/product_form/new")}
-          >
-            <PlusIcon className="size-5" /> Add Product
-          </Button>
-
-          <Button
-            variant="primary"
-            size="action"
-            onClick={() => exportToCSV(csvData, "Products")}
-          >
-            <DownloadIcon className="size-5" /> Export CSV
-          </Button>
-        </div>
+        <PageHeading title="Products" description="Manage your product catalog, pricing and variants" />
+        {canManage && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="action" onClick={() => navigate("/bundles/new")}>
+              <Boxes className="size-5" /> New Bundle
+            </Button>
+            <Button size="action" onClick={() => navigate("/product_form/new")}>
+              <PlusIcon className="size-5" /> Add Product
+            </Button>
+          </div>
+        )}
       </div>
 
       <FilterToolbar
-        searchPlaceholder="search product..."
+        searchPlaceholder="Search products by name…"
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => {
+          setSearch(v)
+          resetPaging()
+        }}
         filters={[
           {
             component: (
-              <PriceRangeFilter
-                onChange={(range) => setPriceRange(range)}
+              <ExampleComboboxCustomItems
+                placeholder="Category"
+                frameworks={categoryOptions.map((o) => ({ label: `${"— ".repeat(o.depth)}${o.label}`, value: o.value }))}
+                value={category}
+                onValueChange={(v) => {
+                  setCategory(v)
+                  resetPaging()
+                }}
               />
             ),
           },
           {
             component: (
               <ExampleComboboxCustomItems
-                placeholder="status"
-                frameworks={productStatusOptions}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
+                placeholder="Type"
+                frameworks={productTypeOptions}
+                value={productType}
+                onValueChange={(v) => {
+                  setProductType(v)
+                  resetPaging()
+                }}
               />
             ),
           },
           {
             component: (
               <ExampleComboboxCustomItems
-                placeholder="categories"
-                frameworks={categoryOptions}
-                value={categoryFilter}
-                onValueChange={setCategoryFilter}
+                placeholder="Category type"
+                frameworks={categoryTypeOptions}
+                value={categoryType}
+                onValueChange={(v) => {
+                  setCategoryType(v)
+                  resetPaging()
+                }}
               />
             ),
           },
+          {
+            component: (
+              <ExampleComboboxCustomItems
+                placeholder="Status"
+                frameworks={statusOptions}
+                value={status}
+                onValueChange={(v) => {
+                  setStatus(v)
+                  resetPaging()
+                }}
+              />
+            ),
+          },
+          {
+            component: (
+              <ExampleComboboxCustomItems
+                placeholder="Sort"
+                frameworks={orderingOptions}
+                value={ordering}
+                onValueChange={(v) => {
+                  setOrdering(v)
+                  resetPaging()
+                }}
+              />
+            ),
+          },
+          ...(canManage
+            ? [
+                {
+                  component: (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="products-include-deleted"
+                        checked={includeDeleted}
+                        onCheckedChange={(v) => {
+                          setIncludeDeleted(v)
+                          resetPaging()
+                        }}
+                      />
+                      <Label htmlFor="products-include-deleted" className="text-sm whitespace-nowrap">
+                        Show deleted
+                      </Label>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 
+      {canManage && selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm">
+          <span className="font-medium">{selected.length} selected</span>
+          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(true)}>
+            <ToggleRight /> Activate
+          </Button>
+          <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulk(false)}>
+            <ToggleLeft /> Deactivate
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+            Clear
+          </Button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
-        data={filteredProducts}
-        isLoading={isLoading}
+        data={products}
+        isLoading={isFetchingList}
         error={error}
-        onRetry={loadProducts}
-        onRowClick={(product) => navigate(`/product_detail/${product.id}`)}
-        minWidth="1220px"
-        columnWidths={[
-          "70px",  // IMAGE
-          "200px", // PRODUCT
-          "150px", // SLUG
-          "140px", // CATEGORY
-          "110px", // PRICE
-          "110px", // TYPE
-          "120px", // STATUS
-          "90px",  // FEATURED
-          "130px", // CREATED AT
-          "100px", // ACTION
-        ]}
+        onRetry={load}
+        manualPagination
+        pageSize={PAGE_SIZE}
+        pageIndex={page - 1}
+        pageCount={Math.max(1, Math.ceil(totalItems / PAGE_SIZE))}
+        totalCount={totalItems}
+        onPageChange={(i) => {
+          setPage(i + 1)
+          setSelected([])
+        }}
+        getRowLink={(p) => `/product_detail/${p.id}`}
+        unlabelledColumns={["select", "image"]}
+        emptyIcon={Package}
+        emptyTitle="No products found"
+        emptyDescription="Try a different search or filter, or add a new product."
+        minWidth="1100px"
+        columnWidths={widths}
       />
     </div>
   )

@@ -11,6 +11,7 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat {
       fmt = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency,
+        currencyDisplay: "narrowSymbol",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })
@@ -28,13 +29,25 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat {
   return fmt
 }
 
+// Store currency; kull-mart prices are BDT. Overridden from the business profile
+// (/admin/settings/business-profile/ currency_code) once settings load.
+let defaultCurrency = "BDT"
+
+export function setDefaultCurrency(code: string | null | undefined): void {
+  if (code) defaultCurrency = code.toUpperCase()
+}
+
+export function getDefaultCurrency(): string {
+  return defaultCurrency
+}
+
 /**
- * Formats a money value (number or decimal string from the API) as e.g. "$1,234.56".
- * null/undefined/non-numeric values render as $0.00.
+ * Formats a money value (number or decimal string from the API) as e.g. "৳1,234.56".
+ * null/undefined/non-numeric values render as 0.00.
  */
-export function formatCurrency(value: number | string | null | undefined, currency = "USD"): string {
+export function formatCurrency(value: number | string | null | undefined, currency?: string): string {
   const n = typeof value === "number" ? value : Number(value ?? 0)
-  return getCurrencyFormatter(currency || "USD").format(Number.isFinite(n) ? n : 0)
+  return getCurrencyFormatter(currency || defaultCurrency).format(Number.isFinite(n) ? n : 0)
 }
 
 // "YYYY-MM-DD" or "YYYY-MM" (month periods from analytics endpoints).

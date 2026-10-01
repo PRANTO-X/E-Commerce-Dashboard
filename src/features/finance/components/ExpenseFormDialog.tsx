@@ -1,121 +1,139 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { toast } from "sonner"
 import { CheckCircle2, Loader2, Receipt } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
-import { ImageUploader } from "@/components/common/ImageUploader"
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { useAppDispatch } from "@/app/hooks"
-import { postData, updateData } from "@/features/finance/slices/expenseSlice"
-import type { Expense } from "@/features/finance/types"
-import {
-  categoryConfig,
-  expenseSchema,
-  paymentMethodLabels,
-  type ExpenseFormValues,
-} from "@/features/finance/expenseConfig"
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/client"
 import { todayLocalISODate } from "@/lib/format"
+import { patchData, postData } from "../slices/expenseSlice"
+import type { Account, Expense, ExpenseCategory, ExpenseCreatePayload, ExpenseUpdatePayload } from "../types"
+import { accountLabel } from "../hooks/useFinanceHelpers"
 
-function valuesFor(expense: Expense | null): ExpenseFormValues {
+const NONE = "none"
+
+const schema = z.object({
+  expense_date: z.string().min(1, "Pick a date"),
+  payee: z.string().trim().min(1, "Payee is required"),
+  description: z.string(),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((v) => Number(v) >= 0.01, "Amount must be at least 0.01"),
+  category_id: z.string(),
+  expense_account_id: z.string(),
+  payment_account_id: z.string().min(1, "Pick the account the money was paid from"),
+  reference_number: z.string(),
+})
+
+type FormValues = z.infer<typeof schema>
+
+function valuesFor(expense: Expense | null): FormValues {
   if (expense) {
     return {
-      title: expense.title,
-      category: expense.category,
-      amount: String(expense.amount),
-      vendor: expense.vendor,
-      payment_method: expense.payment_method,
-      status: expense.status,
-      date: expense.date,
-      reference_no: expense.reference_no || "",
-      receipt_url: expense.receipt_url || "",
-      notes: expense.notes || "",
+      expense_date: expense.expense_date,
+      payee: expense.payee,
+      description: expense.description,
+      amount: expense.amount,
+      category_id: expense.category_id ?? NONE,
+      expense_account_id: expense.expense_account_id,
+      payment_account_id: expense.payment_account_id,
+      reference_number: expense.reference_number,
     }
   }
   return {
-    title: "",
-    category: "inventory",
+    expense_date: todayLocalISODate(),
+    payee: "",
+    description: "",
     amount: "",
-    vendor: "",
-    payment_method: "credit_card",
-    status: "paid",
-    date: todayLocalISODate(),
-    reference_no: `EXP-${Date.now().toString().slice(-6)}`,
-    receipt_url: "",
-    notes: "",
+    category_id: NONE,
+    expense_account_id: NONE,
+    payment_account_id: "",
+    reference_number: "",
   }
 }
 
-interface ExpenseFormDialogProps {
+interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Record being edited, or null to create a new one. */
+  /** Record being edited, or null to record a new one. */
   expense: Expense | null
+  accounts: Account[]
+  categories: ExpenseCategory[]
 }
 
-export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDialogProps) {
+export function ExpenseFormDialog({ open, onOpenChange, expense, accounts, categories }: Props) {
   const dispatch = useAppDispatch()
+  const isEdit = !!expense
 
   const {
     control,
     register,
     reset,
+    setError,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: valuesFor(expense),
-  })
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: valuesFor(expense) })
 
-  // Re-seed the form each time the dialog opens (fresh defaults for create, record for edit).
   useEffect(() => {
     if (open) reset(valuesFor(expense))
   }, [open, expense, reset])
 
-  const onSubmit = async (values: ExpenseFormValues) => {
-    const payload = {
-      title: values.title,
-      category: values.category,
-      amount: Number(values.amount),
-      vendor: values.vendor,
-      payment_method: values.payment_method,
-      status: values.status,
-      date: values.date,
-      reference_no: values.reference_no.trim() || undefined,
-      receipt_url: values.receipt_url.trim() || undefined,
-      notes: values.notes.trim() || undefined,
-      created_at: expense?.created_at || new Date().toISOString(),
-    }
+  const expenseAccounts = useMemo(() => accounts.filter((a) => a.type === "expense" && a.is_active), [accounts])
+  // Money leaves an asset (bank/cash) — or, for accrued spend, lands on a liability.
+  const paymentAccounts = useMemo(
+    () => accounts.filter((a) => (a.type === "asset" || a.type === "liability") && a.is_active),
+    [accounts]
+  )
+  const activeCategories = useMemo(() => categories.filter((c) => c.is_active), [categories])
 
+  const onSubmit = async (values: FormValues) => {
     try {
       if (expense) {
-        await dispatch(updateData({ id: expense.id, payload })).unwrap()
-        toast.success(`Expense "${values.title}" updated`)
+        // Only payee / description / reference can change once the expense is posted.
+        const payload: ExpenseUpdatePayload = {
+          payee: values.payee.trim(),
+          description: values.description,
+          reference_number: values.reference_number.trim(),
+        }
+        await dispatch(patchData({ id: expense.id, payload: payload as Partial<Expense> })).unwrap()
+        toast.success("Expense updated")
       } else {
-        await dispatch(postData({ payload })).unwrap()
-        toast.success(`Expense "${values.title}" recorded successfully`)
+        const payload: ExpenseCreatePayload = {
+          expense_date: values.expense_date,
+          payee: values.payee.trim(),
+          description: values.description,
+          amount: values.amount,
+          payment_account_id: values.payment_account_id,
+          reference_number: values.reference_number.trim(),
+          ...(values.category_id !== NONE ? { category_id: values.category_id } : {}),
+          ...(values.expense_account_id !== NONE ? { expense_account_id: values.expense_account_id } : {}),
+        }
+        await dispatch(postData({ payload: payload as Partial<Expense> })).unwrap()
+        toast.success("Expense recorded and posted to the ledger")
       }
       onOpenChange(false)
-    } catch {
-      toast.error("Failed to save expense")
+    } catch (err) {
+      const fieldErrors = getApiFieldErrors(err)
+      for (const [field, message] of Object.entries(fieldErrors)) {
+        if (field in schema.shape) setError(field as keyof FormValues, { message })
+      }
+      toast.error(getApiErrorMessage(err, "Failed to save expense"))
     }
   }
 
@@ -125,61 +143,51 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5 text-primary" />
-            {expense ? "Edit Expense Record" : "Record New Business Expense"}
+            {isEdit ? "Edit Expense" : "Record Expense"}
           </DialogTitle>
           <DialogDescription>
-            Record vendor payments, inventory costs, SaaS tools, and upload invoice receipts.
+            {isEdit
+              ? "Date, amount and accounts are locked because the expense is already posted. To change them, reverse its journal entry and record a new expense."
+              : "Recording an expense posts a journal entry: debit the expense account, credit the payment account."}
           </DialogDescription>
         </DialogHeader>
 
         <form id="expense-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 py-2">
-          <Field>
-            <FieldLabel htmlFor="exp-title">Expense Title / Description *</FieldLabel>
-            <FieldContent>
-              <Input
-                id="exp-title"
-                placeholder="e.g. Bulk Poly Mailer Bags Restock"
-                aria-invalid={!!errors.title}
-                {...register("title")}
-              />
-              <FieldError errors={[errors.title]} />
-            </FieldContent>
-          </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel htmlFor="exp-payee">Payee *</FieldLabel>
+              <FieldContent>
+                <Input id="exp-payee" placeholder="e.g. Khulna Stationers" aria-invalid={!!errors.payee} {...register("payee")} />
+                <FieldError errors={[errors.payee]} />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="exp-ref">Reference #</FieldLabel>
+              <FieldContent>
+                <Input id="exp-ref" placeholder="Invoice or receipt number" {...register("reference_number")} />
+                <FieldError errors={[errors.reference_number]} />
+              </FieldContent>
+            </Field>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field>
-              <FieldLabel htmlFor="exp-category">Expense Category *</FieldLabel>
+              <FieldLabel htmlFor="exp-date">Expense date *</FieldLabel>
               <FieldContent>
-                <Controller
-                  control={control}
-                  name="category"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="exp-category">
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(categoryConfig).map(([key, val]) => (
-                          <SelectItem key={key} value={key}>
-                            {val.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <Input id="exp-date" type="date" disabled={isEdit} aria-invalid={!!errors.expense_date} {...register("expense_date")} />
+                <FieldError errors={[errors.expense_date]} />
               </FieldContent>
             </Field>
-
             <Field>
-              <FieldLabel htmlFor="exp-amount">Amount ($ USD) *</FieldLabel>
+              <FieldLabel htmlFor="exp-amount">Amount (BDT) *</FieldLabel>
               <FieldContent>
                 <Input
                   id="exp-amount"
                   type="number"
                   step="0.01"
-                  min="0"
+                  min="0.01"
                   placeholder="0.00"
+                  disabled={isEdit}
                   aria-invalid={!!errors.amount}
                   {...register("amount")}
                 />
@@ -190,117 +198,88 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field>
-              <FieldLabel htmlFor="exp-vendor">Vendor / Payee *</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="exp-vendor"
-                  placeholder="e.g. DHL, Google, Supplier Ltd"
-                  aria-invalid={!!errors.vendor}
-                  {...register("vendor")}
-                />
-                <FieldError errors={[errors.vendor]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="exp-date">Expense Date *</FieldLabel>
-              <FieldContent>
-                <Input id="exp-date" type="date" aria-invalid={!!errors.date} {...register("date")} />
-                <FieldError errors={[errors.date]} />
-              </FieldContent>
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field>
-              <FieldLabel htmlFor="exp-method">Payment Method</FieldLabel>
+              <FieldLabel htmlFor="exp-category">Category</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="payment_method"
+                  name="category_id"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="exp-method">
-                        <SelectValue placeholder="Payment Method" />
+                    <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
+                      <SelectTrigger id="exp-category" aria-invalid={!!errors.category_id}>
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(paymentMethodLabels).map(([key, val]) => (
-                          <SelectItem key={key} value={key}>
-                            {val}
+                        <SelectItem value={NONE}>No category</SelectItem>
+                        {activeCategories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
+                <FieldError errors={[errors.category_id]} />
               </FieldContent>
             </Field>
-
             <Field>
-              <FieldLabel htmlFor="exp-status">Payment Status</FieldLabel>
+              <FieldLabel htmlFor="exp-account">Expense account</FieldLabel>
               <FieldContent>
                 <Controller
                   control={control}
-                  name="status"
+                  name="expense_account_id"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="exp-status">
-                        <SelectValue placeholder="Status" />
+                    <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
+                      <SelectTrigger id="exp-account" aria-invalid={!!errors.expense_account_id}>
+                        <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value={NONE}>Use the category's account</SelectItem>
+                        {expenseAccounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {accountLabel(a)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="exp-ref">Invoice / Ref #</FieldLabel>
-              <FieldContent>
-                <Input id="exp-ref" placeholder="e.g. INV-9901" {...register("reference_no")} />
+                <FieldDescription>Pick a category, an account, or both.</FieldDescription>
+                <FieldError errors={[errors.expense_account_id]} />
               </FieldContent>
             </Field>
           </div>
 
-          {/* Receipt Upload with ImageUploader */}
           <Field>
-            <FieldLabel>Invoice / Receipt Attachment</FieldLabel>
+            <FieldLabel htmlFor="exp-payment">Paid from *</FieldLabel>
             <FieldContent>
               <Controller
                 control={control}
-                name="receipt_url"
+                name="payment_account_id"
                 render={({ field }) => (
-                  <ImageUploader
-                    singleMode
-                    images={
-                      field.value
-                        ? [{ id: "expense-receipt", url: field.value, alt: "Expense Receipt", isPrimary: true }]
-                        : []
-                    }
-                    onImagesChange={(imgs) => field.onChange(imgs.length > 0 ? imgs[0].url : "")}
-                    onAddImage={(url) => field.onChange(url)}
-                    label="Upload Invoice or Receipt"
-                    description="Drop receipt photo from device, browse files, or provide invoice URL"
-                  />
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
+                    <SelectTrigger id="exp-payment" aria-invalid={!!errors.payment_account_id}>
+                      <SelectValue placeholder="Select payment account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentAccounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {accountLabel(a)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
+              <FieldError errors={[errors.payment_account_id]} />
             </FieldContent>
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="exp-notes">Internal Notes & Context</FieldLabel>
+            <FieldLabel htmlFor="exp-desc">Description</FieldLabel>
             <FieldContent>
-              <Textarea
-                id="exp-notes"
-                rows={2}
-                placeholder="Additional context, department allocation, or approval notes..."
-                {...register("notes")}
-              />
+              <Textarea id="exp-desc" rows={2} placeholder="What was this for?" {...register("description")} />
+              <FieldError errors={[errors.description]} />
             </FieldContent>
           </Field>
         </form>
@@ -310,12 +289,8 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
             Cancel
           </Button>
           <Button type="submit" form="expense-form" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-1.5" />
-            )}
-            {expense ? "Save Changes" : "Record Expense"}
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+            {isEdit ? "Save Changes" : "Record Expense"}
           </Button>
         </DialogFooter>
       </DialogContent>

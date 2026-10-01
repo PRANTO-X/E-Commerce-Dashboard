@@ -1,521 +1,363 @@
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
+import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Check, Edit2, Layers, Plus, Sparkles, Trash2, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { StatusBadge } from "@/components/common/StatusBadge"
-import { useAppDispatch } from "@/app/hooks"
-import {
-  postData as postVariant,
-  patchData as patchVariant,
-  deleteData as deleteVariant,
-} from "@/features/catalog/slices/variantSlice"
-import type { Attribute, AttributeValue, Variant, VariantStatus } from "@/features/catalog/types"
-import type { DisplayVariant, DraftVariant } from "@/features/catalog/productFormSchema"
+import { History, Layers, Loader2, PlusIcon, Wand2 } from "lucide-react"
 
-interface ProductVariantsSectionProps {
-  isEditing: boolean
-  /** Id of the saved product being edited; undefined while creating. */
-  productId: string | undefined
-  /** Saved base price of the product being edited (default price for new variants). */
-  existingBasePrice: string | undefined
-  /** Saved variants of the product being edited. */
-  variants: Variant[]
-  draftVariants: DraftVariant[]
-  setDraftVariants: React.Dispatch<React.SetStateAction<DraftVariant[]>>
-  allAttributes: Attribute[]
-  allAttributeValues: AttributeValue[]
-  formName: string
-  formSlug: string
-  formBasePrice: number
+import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { DataTable } from "@/components/common/data-table"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { TableActions } from "@/components/common/TableActions"
+import { getApiErrorMessage } from "@/lib/api/client"
+import { formatCurrency } from "@/lib/format"
+
+import { deleteVariant, generateVariants, listProductVariants } from "../api"
+import type { ProductVariant } from "../types"
+import { VariantFormDialog } from "./VariantFormDialog"
+
+const PAGE_SIZE = 25
+
+interface Props {
+  productId: string
+  productType: string
+  canManage: boolean
+  canViewInventory: boolean
+  /** Called after any variant change so the parent can refresh product totals. */
+  onChanged: () => void
 }
 
-export function ProductVariantsSection({
-  isEditing,
-  productId,
-  existingBasePrice,
-  variants,
-  draftVariants,
-  setDraftVariants,
-  allAttributes,
-  allAttributeValues,
-  formName,
-  formSlug,
-  formBasePrice,
-}: ProductVariantsSectionProps) {
-  const dispatch = useAppDispatch()
+export function ProductVariantsSection({ productId, productType, canManage, canViewInventory, onChanged }: Props) {
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<unknown>(null)
+  const [editing, setEditing] = useState<ProductVariant | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
-  // Variation builder state
-  const [variationMode, setVariationMode] = useState<"manual" | "generator">("manual")
-  const [selectedAttributeId, setSelectedAttributeId] = useState<string>("")
-  const [selectedAttrValueIds, setSelectedAttrValueIds] = useState<string[]>([])
-  const [newVariantSku, setNewVariantSku] = useState("")
-  const [newVariantName, setNewVariantName] = useState("")
-  const [newVariantPrice, setNewVariantPrice] = useState("")
-  const [newVariantStock, setNewVariantStock] = useState("10")
-  const [newVariantStatus, setNewVariantStatus] = useState<VariantStatus>("active")
-
-  // Editing variant state
-  const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
-  const [editSku, setEditSku] = useState("")
-  const [editName, setEditName] = useState("")
-  const [editPrice, setEditPrice] = useState("")
-  const [editStock, setEditStock] = useState("")
-  const [editStatus, setEditStatus] = useState<VariantStatus>("active")
-
-  // Computed display variants
-  const displayVariants: DisplayVariant[] = isEditing
-    ? variants.map((v) => ({
-        key: v.id,
-        sku: v.sku,
-        name: v.name,
-        price: v.price,
-        stock_quantity: String(v.stock_quantity),
-        status: v.status,
-      }))
-    : draftVariants.map((v) => ({ key: v.tempId, ...v }))
-
-  // --- Variation Handlers ---
-  const handleAddManualVariant = async () => {
-    if (!newVariantSku.trim() || !newVariantName.trim()) {
-      toast.error("Please provide both SKU and Variation Name")
-      return
-    }
-
-    if (!isEditing) {
-      setDraftVariants((prev) => [
-        ...prev,
-        {
-          tempId: crypto.randomUUID(),
-          sku: newVariantSku.trim(),
-          name: newVariantName.trim(),
-          price: newVariantPrice.trim() || String(formBasePrice || "0"),
-          stock_quantity: newVariantStock.trim() || "10",
-          status: newVariantStatus,
-        },
-      ])
-      setNewVariantSku("")
-      setNewVariantName("")
-      setNewVariantPrice("")
-      setNewVariantStock("10")
-      toast.success("Variation added to draft")
-      return
-    }
-
-    if (!productId) return
-    try {
-      await dispatch(
-        postVariant({
-          payload: {
-            product: productId,
-            sku: newVariantSku.trim(),
-            name: newVariantName.trim(),
-            price: newVariantPrice.trim() || String(existingBasePrice),
-            stock_quantity: Number(newVariantStock) || 0,
-            status: newVariantStatus,
-            image: "",
-          },
-        })
-      ).unwrap()
-      setNewVariantSku("")
-      setNewVariantName("")
-      setNewVariantPrice("")
-      setNewVariantStock("10")
-      toast.success("Variation added successfully")
-    } catch {
-      toast.error("Failed to add variation")
-    }
-  }
-
-  const handleGenerateVariations = () => {
-    if (!selectedAttributeId || selectedAttrValueIds.length === 0) {
-      toast.error("Please select an attribute and at least one attribute value")
-      return
-    }
-
-    const attribute = allAttributes.find((a) => a.id === selectedAttributeId)
-    const baseName = formName || "Product"
-    const baseSku = (formSlug || "PROD").toUpperCase()
-    const basePrice = String(formBasePrice || "0")
-
-    const newGenerated: DraftVariant[] = selectedAttrValueIds.map((valId) => {
-      const val = allAttributeValues.find((v) => v.id === valId)
-      const valName = val?.value || "Option"
-      return {
-        tempId: crypto.randomUUID(),
-        sku: `${baseSku}-${valName.toUpperCase().replace(/\s+/g, "")}`,
-        name: `${baseName} - ${attribute ? attribute.name + " " : ""}${valName}`,
-        price: basePrice,
-        stock_quantity: "10",
-        status: "active",
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const res = await listProductVariants(productId, { page, page_size: PAGE_SIZE })
+        if (cancelled) return
+        setVariants(res.items)
+        setTotal(res.meta.count)
+        setError(null)
+      } catch (err) {
+        if (!cancelled) setError(err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
-    })
-
-    if (!isEditing) {
-      setDraftVariants((prev) => [...prev, ...newGenerated])
-      toast.success(`Generated ${newGenerated.length} variation(s)`)
-    } else if (productId) {
-      Promise.all(
-        newGenerated.map((g) =>
-          dispatch(
-            postVariant({
-              payload: {
-                product: productId,
-                sku: g.sku,
-                name: g.name,
-                price: g.price,
-                stock_quantity: Number(g.stock_quantity),
-                status: "active",
-                image: "",
-              },
-            })
-          ).unwrap()
-        )
-      )
-        .then(() => toast.success(`Generated and saved ${newGenerated.length} variation(s)`))
-        .catch(() => toast.error("Failed to save some generated variations"))
     }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [productId, page, reloadKey])
 
-    setSelectedAttrValueIds([])
+  const reload = useCallback(() => {
+    setIsLoading(true)
+    setReloadKey((k) => k + 1)
+  }, [])
+
+  const afterChange = () => {
+    reload()
+    onChanged()
   }
 
-  const startEditVariant = (v: DisplayVariant) => {
-    setEditingVariantId(v.key)
-    setEditSku(v.sku)
-    setEditName(v.name)
-    setEditPrice(v.price)
-    setEditStock(v.stock_quantity)
-    setEditStatus(v.status)
-  }
-
-  const cancelEditVariant = () => setEditingVariantId(null)
-
-  const saveEditVariant = async () => {
-    if (!editingVariantId || !editSku.trim() || !editName.trim()) return
-
-    if (!isEditing) {
-      setDraftVariants((prev) =>
-        prev.map((v) =>
-          v.tempId === editingVariantId
-            ? {
-                ...v,
-                sku: editSku.trim(),
-                name: editName.trim(),
-                price: editPrice.trim() || "0",
-                stock_quantity: editStock.trim() || "0",
-                status: editStatus,
-              }
-            : v
-        )
-      )
-      setEditingVariantId(null)
-      toast.success("Variation updated")
-      return
-    }
-
-    try {
-      await dispatch(
-        patchVariant({
-          id: editingVariantId,
-          payload: {
-            sku: editSku.trim(),
-            name: editName.trim(),
-            price: editPrice.trim() || "0",
-            stock_quantity: Number(editStock) || 0,
-            status: editStatus,
-          },
-        })
-      ).unwrap()
-      toast.success("Variation updated")
-      setEditingVariantId(null)
-    } catch {
-      toast.error("Failed to update variation")
-    }
-  }
-
-  const handleDeleteVariant = async (variantId: string) => {
-    if (!isEditing) {
-      setDraftVariants((prev) => prev.filter((v) => v.tempId !== variantId))
-      return
-    }
-    try {
-      await dispatch(deleteVariant(variantId)).unwrap()
-      toast.success("Variation removed")
-    } catch {
-      toast.error("Failed to remove variation")
-    }
-  }
-
-  // Filter attribute values for the selected attribute
-  const availableAttrValues = allAttributeValues.filter(
-    (v) => v.attribute === selectedAttributeId
-  )
+  const columns: ColumnDef<ProductVariant>[] = [
+    {
+      accessorKey: "sku",
+      header: "SKU",
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <div className="truncate font-mono text-sm">{row.original.sku}</div>
+          {row.original.barcode && (
+            <div className="truncate text-xs text-muted-foreground">{row.original.barcode}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "options",
+      header: "OPTIONS",
+      cell: ({ row }) => (
+        <span className="text-sm">
+          {[row.original.color, row.original.size].filter(Boolean).join(" / ") || "—"}
+        </span>
+      ),
+    },
+    {
+      id: "price",
+      header: "PRICE",
+      cell: ({ row }) => (
+        <div className="text-sm">
+          <span className="font-semibold">{formatCurrency(row.original.effective_price)}</span>
+          {row.original.effective_price !== row.original.price && (
+            <span className="ml-1.5 text-xs text-muted-foreground line-through">
+              {formatCurrency(row.original.price)}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "cost_price",
+      header: "COST",
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatCurrency(row.original.cost_price)}</span>,
+    },
+    {
+      accessorKey: "stock",
+      header: "AVAILABLE",
+      cell: ({ row }) => (
+        <span
+          className={
+            row.original.stock <= 0
+              ? "text-sm font-medium text-destructive"
+              : row.original.is_low_stock
+                ? "text-sm font-medium text-amber-600 dark:text-amber-400"
+                : "text-sm"
+          }
+        >
+          {row.original.stock}
+          {row.original.is_low_stock && row.original.stock > 0 && " (low)"}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "STATUS",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          <StatusBadge status={row.original.is_active ? "active" : "inactive"} />
+          {row.original.is_preorder_active && <StatusBadge status="pre-order" tone="info" />}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "ACTION",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1" data-no-row-click>
+          {canViewInventory && (
+            <Button variant="ghost" size="icon" asChild aria-label={`Stock ledger for ${row.original.sku}`}>
+              <Link to={`/inventory/ledger?variant_id=${row.original.id}&sku=${encodeURIComponent(row.original.sku)}`}>
+                <History className="size-4" />
+              </Link>
+            </Button>
+          )}
+          {canManage && (
+            <TableActions
+              itemName={row.original.sku}
+              onEdit={() => {
+                setEditing(row.original)
+                setFormOpen(true)
+              }}
+              onDelete={async () => {
+                try {
+                  await deleteVariant(row.original.id)
+                  toast.success(`${row.original.sku} deactivated`)
+                  afterChange()
+                } catch (err) {
+                  toast.error(getApiErrorMessage(err, "Failed to delete variant"))
+                }
+              }}
+            />
+          )}
+        </div>
+      ),
+    },
+  ]
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle level={2} className="flex items-center gap-2">
-            <Layers className="h-5 w-5" /> Product Variations
-          </CardTitle>
-          <CardDescription>
-            Define size, color, storage, or custom product variations with dedicated SKUs and prices.
-          </CardDescription>
-        </div>
-        <div className="flex rounded-lg bg-muted p-0.5 text-xs">
-          <button
-            type="button"
-            onClick={() => setVariationMode("manual")}
-            className={`px-3 py-1 font-medium rounded-md transition-all ${
-              variationMode === "manual" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
-            }`}
-          >
-            Custom Variation
-          </button>
-          <button
-            type="button"
-            onClick={() => setVariationMode("generator")}
-            className={`px-3 py-1 font-medium rounded-md transition-all ${
-              variationMode === "generator" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"
-            }`}
-          >
-            <Sparkles className="h-3 w-3 inline mr-1" /> Generate Matrix
-          </button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {variationMode === "generator" ? (
-          /* Attribute Combinator / Generator */
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
-            <h3 className="text-sm font-semibold flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-primary" /> Generate Variations from Attribute
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-foreground mb-1 block">Select Attribute (e.g. Size, Color)</label>
-                <Select
-                  value={selectedAttributeId}
-                  onValueChange={(val) => {
-                    setSelectedAttributeId(val)
-                    setSelectedAttrValueIds([])
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose attribute..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allAttributes.map((attr) => (
-                      <SelectItem key={attr.id} value={attr.id}>
-                        {attr.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedAttributeId && (
-                <div>
-                  <label className="text-xs font-medium text-foreground mb-1 block">Choose Values to Generate</label>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {availableAttrValues.map((val) => {
-                      const isSelected = selectedAttrValueIds.includes(val.id)
-                      return (
-                        <button
-                          key={val.id}
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedAttrValueIds(selectedAttrValueIds.filter((id) => id !== val.id))
-                            } else {
-                              setSelectedAttrValueIds([...selectedAttrValueIds, val.id])
-                            }
-                          }}
-                          className={`px-2.5 py-1 text-xs rounded-md border font-medium transition-all ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-foreground border-border hover:bg-muted"
-                          }`}
-                        >
-                          {val.value}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleGenerateVariations}
-              disabled={!selectedAttributeId || selectedAttrValueIds.length === 0}
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Generate {selectedAttrValueIds.length} Variation(s)
-            </Button>
-          </div>
-        ) : (
-          /* Manual Variation Creator */
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-            <h3 className="text-sm font-semibold">Add Custom Variation</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">SKU</label>
-                <Input
-                  placeholder="e.g. IP15-256-BLU"
-                  value={newVariantSku}
-                  onChange={(e) => setNewVariantSku(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Variation Name</label>
-                <Input
-                  placeholder="e.g. 256GB - Blue"
-                  value={newVariantName}
-                  onChange={(e) => setNewVariantName(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Price ($)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={String(formBasePrice || "0.00")}
-                  value={newVariantPrice}
-                  onChange={(e) => setNewVariantPrice(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Initial Stock</label>
-                <Input
-                  type="number"
-                  value={newVariantStock}
-                  onChange={(e) => setNewVariantStock(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-                <Select value={newVariantStatus} onValueChange={(v) => setNewVariantStatus(v as VariantStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleAddManualVariant}
-              disabled={!newVariantSku.trim() || !newVariantName.trim()}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Variation
-            </Button>
-          </div>
-        )}
-
-        {/* List of Variations */}
-        {displayVariants.length > 0 ? (
-          <div className="divide-y rounded-xl border border-border bg-card overflow-hidden">
-            {displayVariants.map((variant) =>
-              editingVariantId === variant.key ? (
-                <div key={variant.key} className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3 items-center bg-muted/40">
-                  <Input
-                    placeholder="SKU"
-                    aria-label={`SKU for ${variant.name || variant.sku || "this variant"}`}
-                    value={editSku}
-                    onChange={(e) => setEditSku(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Name"
-                    aria-label={`Variant name for ${variant.name || variant.sku || "this variant"}`}
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Price"
-                    aria-label={`Price for ${variant.name || variant.sku || "this variant"}`}
-                    type="number"
-                    step="0.01"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Stock"
-                    aria-label={`Stock for ${variant.name || variant.sku || "this variant"}`}
-                    type="number"
-                    value={editStock}
-                    onChange={(e) => setEditStock(e.target.value)}
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <Select value={editStatus} onValueChange={(v) => setEditStatus(v as VariantStatus)}>
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" size="sm" onClick={saveEditVariant}>
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={cancelEditVariant}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div key={variant.key} className="flex items-center justify-between p-3 text-sm">
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-foreground">{variant.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      SKU: <span className="font-mono">{variant.sku}</span> · Stock: {variant.stock_quantity} units
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-foreground">${Number(variant.price).toFixed(2)}</span>
-                    <StatusBadge status={variant.status} />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => startEditVariant(variant)}
-                      className="h-8 text-xs text-primary"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteVariant(variant.key)}
-                      className="h-8 w-8 text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              )
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Layers className="size-4" /> Variants
+        </CardTitle>
+        <CardDescription>
+          {productType === "simple"
+            ? "A simple product sells as a single SKU."
+            : "Each colour/size combination is its own SKU with its own stock."}
+        </CardDescription>
+        {canManage && (
+          <CardAction className="flex flex-wrap gap-2">
+            {productType === "variant" && (
+              <Button variant="outline" size="sm" onClick={() => setGenerateOpen(true)}>
+                <Wand2 /> Generate
+              </Button>
             )}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            No variations configured. You can generate multiple variations or add custom variants above.
-          </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <PlusIcon /> Add variant
+            </Button>
+          </CardAction>
         )}
+      </CardHeader>
+      <CardContent>
+        <DataTable
+          columns={columns}
+          data={variants}
+          isLoading={isLoading}
+          error={error}
+          onRetry={reload}
+          manualPagination
+          pageSize={PAGE_SIZE}
+          pageIndex={page - 1}
+          pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+          totalCount={total}
+          onPageChange={(i) => {
+            setIsLoading(true)
+            setPage(i + 1)
+          }}
+          showPagination={total > PAGE_SIZE}
+          emptyIcon={Layers}
+          emptyTitle="No variants yet"
+          emptyDescription="Add a variant (or set a price on the product) to make it sellable."
+          minWidth="860px"
+          columnWidths={["180px", "130px", "150px", "110px", "110px", "150px", "140px"]}
+          unlabelledColumns={["actions"]}
+        />
       </CardContent>
+
+      <VariantFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        productId={productId}
+        variant={editing}
+        onSaved={afterChange}
+      />
+      <GenerateVariantsDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        productId={productId}
+        onDone={afterChange}
+      />
     </Card>
+  )
+}
+
+const splitList = (raw: string) =>
+  raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+function GenerateVariantsDialog({
+  open,
+  onOpenChange,
+  productId,
+  onDone,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  productId: string
+  onDone: () => void
+}) {
+  const [colors, setColors] = useState("")
+  const [sizes, setSizes] = useState("")
+  const [price, setPrice] = useState("")
+  const [costPrice, setCostPrice] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const colorList = splitList(colors)
+  const sizeList = splitList(sizes)
+  const combos = Math.max(colorList.length, 1) * Math.max(sizeList.length, 1)
+  const priceValid = /^\d+(\.\d{1,2})?$/.test(price.trim())
+  const costValid = costPrice.trim() === "" || /^\d+(\.\d{1,2})?$/.test(costPrice.trim())
+  const canSubmit = (colorList.length > 0 || sizeList.length > 0) && priceValid && costValid && !busy
+
+  const submit = async () => {
+    setBusy(true)
+    try {
+      const res = await generateVariants(productId, {
+        colors: colorList,
+        sizes: sizeList,
+        price: price.trim(),
+        ...(costPrice.trim() ? { cost_price: costPrice.trim() } : {}),
+      })
+      toast.success(
+        `${res.created.length} created, ${res.skipped_existing.length} already existed` +
+          (res.stale.length ? `, ${res.stale.length} no longer in the matrix` : "")
+      )
+      onDone()
+      onOpenChange(false)
+      setColors("")
+      setSizes("")
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to generate variants"))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Generate variants</DialogTitle>
+          <DialogDescription>
+            Creates one SKU for every colour × size combination. Existing combinations are skipped.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <Field>
+            <FieldLabel htmlFor="gen-colors">Colours</FieldLabel>
+            <FieldContent>
+              <Input id="gen-colors" value={colors} onChange={(e) => setColors(e.target.value)} placeholder="Black, White, Navy" />
+              <FieldDescription>Comma separated.</FieldDescription>
+            </FieldContent>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="gen-sizes">Sizes</FieldLabel>
+            <FieldContent>
+              <Input id="gen-sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" />
+              <FieldDescription>Comma separated.</FieldDescription>
+            </FieldContent>
+          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel htmlFor="gen-price">Price (BDT)</FieldLabel>
+              <FieldContent>
+                <Input id="gen-price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="gen-cost">Cost price</FieldLabel>
+              <FieldContent>
+                <Input id="gen-cost" inputMode="decimal" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="0.00" />
+              </FieldContent>
+            </Field>
+          </div>
+          {(colorList.length > 0 || sizeList.length > 0) && (
+            <p className="text-sm text-muted-foreground">
+              Up to <span className="font-medium text-foreground">{combos}</span> variant{combos === 1 ? "" : "s"} will be
+              generated.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={!canSubmit}>
+            {busy && <Loader2 className="size-4 animate-spin" />}
+            Generate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

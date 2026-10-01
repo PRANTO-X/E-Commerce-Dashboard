@@ -1,26 +1,16 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios"
-import {
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-  clearTokens,
-} from "./tokenStore"
-import { MOCK_API_ENABLED, mockAdapter } from "./mockAdapter"
+import { getAccessToken, setAccessToken, clearTokens } from "./tokenStore"
 
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1"
 
+// The kull-mart backend keeps the refresh token in an HttpOnly cookie scoped to
+// /api/v1/customer/auth/, so requests must carry credentials for refresh/logout to work.
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
 })
-
-// Swap in the dev-only mock backend when the real one is unreachable. Guarded by
-// import.meta.env.DEV inside the module, so this branch compiles away in production.
-if (MOCK_API_ENABLED) {
-  api.defaults.adapter = mockAdapter
-}
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken()
@@ -31,33 +21,24 @@ api.interceptors.request.use((config) => {
 })
 
 // Interceptor-free instance for the refresh call itself, so a 401 from /refresh can't
-// recurse into another refresh. Shares the mock adapter in dev.
-const refreshClient = axios.create({ baseURL: API_BASE_URL })
-if (MOCK_API_ENABLED) {
-  refreshClient.defaults.adapter = mockAdapter
-}
+// recurse into another refresh.
+const refreshClient = axios.create({ baseURL: API_BASE_URL, withCredentials: true })
 
 // Dedup concurrent 401s so only one refresh call is ever in flight at a time.
 let refreshPromise: Promise<string> | null = null
 
-/** Exchanges the stored refresh token for a new access token (and stores a rotated refresh token if issued). */
-export async function performRefresh(): Promise<string> {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) {
-    throw new Error("No refresh token available")
-  }
-  const res = await refreshClient.post("/customer/auth/refresh/", { refresh: refreshToken })
+/**
+ * Exchanges the refresh cookie for a new access token. The backend rotates the cookie
+ * on every call (and blacklists the old one), so concurrent refreshes must be avoided —
+ * use `refreshAccessToken()` rather than calling this directly.
+ */
+async function performRefresh(): Promise<string> {
+  const res = await refreshClient.post("/customer/auth/refresh/")
   const newAccessToken = res.data?.data?.access as string | undefined
   if (!newAccessToken) {
     throw new Error("Refresh response missing access token")
   }
   setAccessToken(newAccessToken)
-  // Backends with refresh-token rotation return a new refresh token; the old one is
-  // blacklisted, so keeping it would log the user out on the next refresh.
-  const rotated = res.data?.data?.refresh as string | undefined
-  if (rotated) {
-    setRefreshToken(rotated)
-  }
   return newAccessToken
 }
 
@@ -105,26 +86,71 @@ api.interceptors.response.use(
   }
 )
 
-export function extractApiError(err: unknown): unknown {
-  if (axios.isAxiosError(err)) {
-    return err.response?.data ?? { error: err.message }
-  }
-  return { error: String(err) }
+/** Normalised API error carried by rejected thunks (`rejectWithValue(extractApiError(err))`). */
+export interface ApiError {
+  /** HTTP status, or 0 for network failures. */
+  status: number
+  /** Backend error code, e.g. "not_found", "invalid", "permission_denied". */
+  code: string
+  message: string
+  /** Field-level validation messages, keyed by field name. */
+  fields: Record<string, string[]>
 }
 
-// The backend's error shape varies by failure type (DRF field errors, a plain
-// detail/message string, or a generic envelope) — pull out whatever it actually
-// says rather than showing a generic message for every kind of failure.
+// Kull-mart errors look like { error: { code, message, fields } } (apps/common/exception_handler.py).
+export function extractApiError(err: unknown): ApiError {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status ?? 0
+    const body = err.response?.data as Record<string, unknown> | undefined
+    const envelope = (body?.error && typeof body.error === "object" ? body.error : body) as
+      | Record<string, unknown>
+      | undefined
+
+    const rawFields = (envelope?.fields ?? {}) as Record<string, unknown>
+    const fields: Record<string, string[]> = {}
+    for (const [key, value] of Object.entries(rawFields)) {
+      fields[key] = Array.isArray(value) ? value.map(String) : [String(value)]
+    }
+
+    const message =
+      (typeof envelope?.message === "string" && envelope.message) ||
+      (typeof envelope?.detail === "string" && envelope.detail) ||
+      (status === 0 ? "Can't reach the server. Check your connection." : err.message)
+
+    const code =
+      (typeof envelope?.code === "string" && envelope.code) || (status === 404 ? "not_found" : "error")
+
+    return { status, code, message, fields }
+  }
+  return { status: 0, code: "error", message: String(err), fields: {} }
+}
+
+/**
+ * Best human-readable message for an error: the first field error when the backend's
+ * generic "Validation failed." would otherwise hide what actually went wrong.
+ */
 export function getApiErrorMessage(err: unknown, fallback = "Something went wrong. Please try again."): string {
   if (err && typeof err === "object") {
-    const data = err as Record<string, unknown>
-    const detail = data.message ?? data.detail ?? data.error
-    if (typeof detail === "string" && detail.trim()) return detail
-
-    for (const key of ["non_field_errors", "email", "password"]) {
-      const value = data[key]
-      if (Array.isArray(value) && typeof value[0] === "string") return value[0]
+    const e = err as Partial<ApiError> & Record<string, unknown>
+    const firstField = e.fields ? Object.entries(e.fields).find(([, msgs]) => msgs?.length) : undefined
+    if (firstField) {
+      const [field, msgs] = firstField
+      return field === "non_field_errors" ? msgs[0] : `${field.replace(/_/g, " ")}: ${msgs[0]}`
     }
+    const detail = e.message ?? e.detail ?? e.error
+    if (typeof detail === "string" && detail.trim()) return detail
   }
   return fallback
+}
+
+/** Field errors from a rejected request, for mapping onto react-hook-form fields. */
+export function getApiFieldErrors(err: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  const fields = (err as Partial<ApiError> | null)?.fields
+  if (fields) {
+    for (const [field, msgs] of Object.entries(fields)) {
+      if (msgs?.length) out[field] = msgs[0]
+    }
+  }
+  return out
 }

@@ -41,3 +41,6 @@ coverage/
 # Local agent & skills artifacts
 .agents/
 skills-lock.json
+
+# Playwright MCP browser session logs
+.playwright-mcp/

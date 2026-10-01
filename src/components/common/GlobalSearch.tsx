@@ -2,7 +2,6 @@ import React, { useState, useEffect, useId, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAppSelector } from "@/app/hooks"
 import { cn } from "@/lib/utils"
-import type { Expense } from "@/features/finance/types"
 import {
   Sheet,
   SheetClose,
@@ -10,351 +9,14 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Search, CornerDownLeft, X, Loader2 } from "lucide-react"
 import {
-  Search,
-  LayoutDashboard,
-  Boxes,
-  PackagePlus,
-  Layers,
-  Warehouse,
-  BookmarkCheck,
-  SlidersHorizontal,
-  ShoppingCart,
-  Receipt,
-  CreditCard,
-  RotateCcw,
-  Truck,
-  Package,
-  Users,
-  User,
-  UserCheck,
-  Ticket,
-  Megaphone,
-  Zap,
-  UsersRound,
-  Workflow,
-  Star,
-  Image,
-  BookOpen,
-  FileText,
-  BarChart3,
-  Settings,
-  ShieldAlert,
-  KeyRound,
-  Bell,
-  History,
-  CornerDownLeft,
-  X,
-} from "lucide-react"
+  useNavDestinations,
+  useRecordSearch,
+  type SearchDestination,
+} from "./globalSearchSources"
 
-export interface SearchDestination {
-  id: string
-  title: string
-  subtitle?: string
-  section: string
-  url: string
-  icon: React.ElementType
-  keywords: string[]
-}
-
-const STATIC_ROUTES: SearchDestination[] = [
-  // Home & Dashboard
-  {
-    id: "nav-dashboard",
-    title: "Overview Dashboard",
-    subtitle: "Main performance metrics & sales summary",
-    section: "Navigation",
-    url: "/",
-    icon: LayoutDashboard,
-    keywords: ["home", "dashboard", "overview", "analytics", "stats", "main"],
-  },
-  // Catalog
-  {
-    id: "nav-products",
-    title: "Products Catalog",
-    subtitle: "Browse, filter, and manage catalog items",
-    section: "Catalog",
-    url: "/products",
-    icon: Boxes,
-    keywords: ["products", "items", "goods", "catalog", "sku", "inventory"],
-  },
-  {
-    id: "nav-product-new",
-    title: "Add New Product",
-    subtitle: "Create product, combo bundle, or variations",
-    section: "Catalog",
-    url: "/product_form/new",
-    icon: PackagePlus,
-    keywords: ["create product", "new product", "add product", "combo bundle", "variation"],
-  },
-  {
-    id: "nav-categories",
-    title: "Categories",
-    subtitle: "Organize products into hierarchical categories",
-    section: "Catalog",
-    url: "/categories",
-    icon: Layers,
-    keywords: ["categories", "category", "collections", "taxonomy"],
-  },
-  {
-    id: "nav-inventory",
-    title: "Inventory Stock",
-    subtitle: "Track on-hand, reserved, and available quantities",
-    section: "Catalog",
-    url: "/inventory",
-    icon: Package,
-    keywords: ["inventory", "stock", "quantity", "warehouse balance"],
-  },
-  {
-    id: "nav-warehouses",
-    title: "Warehouses",
-    subtitle: "Fulfillment hubs and storage facilities",
-    section: "Catalog",
-    url: "/warehouses",
-    icon: Warehouse,
-    keywords: ["warehouses", "locations", "depots", "fulfillment"],
-  },
-  {
-    id: "nav-reservations",
-    title: "Stock Reservations",
-    subtitle: "Orders holding reserved item quantities",
-    section: "Catalog",
-    url: "/inventory/reservations",
-    icon: BookmarkCheck,
-    keywords: ["reservations", "reserved stock", "held inventory"],
-  },
-  {
-    id: "nav-attributes",
-    title: "Attributes & Options",
-    subtitle: "Colors, sizes, and custom specification types",
-    section: "Catalog",
-    url: "/attributes",
-    icon: SlidersHorizontal,
-    keywords: ["attributes", "options", "colors", "sizes", "specifications"],
-  },
-  // Sales & Finance
-  {
-    id: "nav-orders",
-    title: "Orders",
-    subtitle: "View and process customer transactions",
-    section: "Sales",
-    url: "/orders",
-    icon: ShoppingCart,
-    keywords: ["orders", "sales", "invoices", "purchases", "receipts"],
-  },
-  {
-    id: "nav-expenses",
-    title: "Business Expenses",
-    subtitle: "Operational spending, receipts, and category breakdown",
-    section: "Sales",
-    url: "/expenses",
-    icon: Receipt,
-    keywords: ["expenses", "spending", "costs", "finance", "receipts", "budget", "operations"],
-  },
-  {
-    id: "nav-payments",
-    title: "Payments & Transactions",
-    subtitle: "Gateway payments, captures, and refund logs",
-    section: "Sales",
-    url: "/payments",
-    icon: CreditCard,
-    keywords: ["payments", "transactions", "gateway", "stripe", "bkash", "refunds"],
-  },
-  {
-    id: "nav-returns",
-    title: "Returns & RMA",
-    subtitle: "Process return requests and exchanges",
-    section: "Sales",
-    url: "/returns",
-    icon: RotateCcw,
-    keywords: ["returns", "refunds", "rma", "exchanges"],
-  },
-  {
-    id: "nav-couriers",
-    title: "Couriers & Delivery",
-    subtitle: "Shipping providers and delivery partners",
-    section: "Sales",
-    url: "/couriers",
-    icon: Truck,
-    keywords: ["couriers", "delivery", "shipping partners", "logistics"],
-  },
-  {
-    id: "nav-shipments",
-    title: "Shipments & Tracking",
-    subtitle: "Courier consignments and tracking numbers",
-    section: "Sales",
-    url: "/shipments",
-    icon: Package,
-    keywords: ["shipments", "tracking", "packages", "consignments"],
-  },
-  // Users
-  {
-    id: "nav-customers",
-    title: "Customers",
-    subtitle: "Registered accounts, profiles, and order history",
-    section: "Users",
-    url: "/customers",
-    icon: Users,
-    keywords: ["customers", "users", "clients", "buyers", "accounts"],
-  },
-  {
-    id: "nav-staffs",
-    title: "Staff Members",
-    subtitle: "Admin accounts and access management",
-    section: "Users",
-    url: "/staffs",
-    icon: UserCheck,
-    keywords: ["staff", "staffs", "team", "employees", "administrators"],
-  },
-  // Marketing
-  {
-    id: "nav-coupons",
-    title: "Coupons & Discounts",
-    subtitle: "Promo codes, percentage, and fixed discounts",
-    section: "Marketing",
-    url: "/coupons",
-    icon: Ticket,
-    keywords: ["coupons", "discounts", "promo", "voucher", "promotions"],
-  },
-  {
-    id: "nav-campaigns",
-    title: "Marketing Campaigns",
-    subtitle: "Seasonal promotions, banners, and targets",
-    section: "Marketing",
-    url: "/campaigns",
-    icon: Megaphone,
-    keywords: ["campaigns", "marketing", "promotions", "ad campaigns"],
-  },
-  {
-    id: "nav-flash-sales",
-    title: "Flash Sales",
-    subtitle: "Time-limited discounted deal events",
-    section: "Marketing",
-    url: "/flash-sales",
-    icon: Zap,
-    keywords: ["flash sales", "limited time", "hot deals", "countdown"],
-  },
-  {
-    id: "nav-group-buys",
-    title: "Group Buys",
-    subtitle: "Tiered community quantity discounts",
-    section: "Marketing",
-    url: "/group-buys",
-    icon: UsersRound,
-    keywords: ["group buys", "bulk orders", "community deals"],
-  },
-  {
-    id: "nav-automations",
-    title: "Marketing Automations",
-    subtitle: "Email triggers, cart recovery, and workflows",
-    section: "Marketing",
-    url: "/automations",
-    icon: Workflow,
-    keywords: ["automations", "triggers", "workflows", "drip emails"],
-  },
-  {
-    id: "nav-reviews",
-    title: "Customer Reviews",
-    subtitle: "Product feedback, ratings, and moderation",
-    section: "Marketing",
-    url: "/reviews",
-    icon: Star,
-    keywords: ["reviews", "ratings", "feedback", "testimonials", "stars"],
-  },
-  // CMS
-  {
-    id: "nav-banners",
-    title: "Homepage Banners",
-    subtitle: "Hero sliders, promo banners, and category links",
-    section: "CMS",
-    url: "/banners",
-    icon: Image,
-    keywords: ["banners", "hero slider", "homepage banner", "promos"],
-  },
-  {
-    id: "nav-blog-posts",
-    title: "Blog Posts",
-    subtitle: "Content marketing, articles, and updates",
-    section: "CMS",
-    url: "/blog-posts",
-    icon: BookOpen,
-    keywords: ["blog", "posts", "articles", "news", "stories"],
-  },
-  {
-    id: "nav-pages",
-    title: "Content Pages",
-    subtitle: "About us, Terms, Privacy Policy, and static pages",
-    section: "CMS",
-    url: "/pages",
-    icon: FileText,
-    keywords: ["pages", "static pages", "terms", "privacy", "about"],
-  },
-  // Analytics
-  {
-    id: "nav-reports",
-    title: "Analytics & Reports",
-    subtitle: "Financial trends, top products, and revenue graphs",
-    section: "Analytics",
-    url: "/reports",
-    icon: BarChart3,
-    keywords: ["reports", "analytics", "revenue", "sales stats", "charts"],
-  },
-  // System
-  {
-    id: "nav-profile",
-    title: "Administrator Profile",
-    subtitle: "Personal information, security credentials, and permissions",
-    section: "System",
-    url: "/profile",
-    icon: User,
-    keywords: ["profile", "account", "my profile", "admin profile", "avatar", "password", "user", "me"],
-  },
-  {
-    id: "nav-settings",
-    title: "General Settings",
-    subtitle: "Store logo, WhatsApp number, and social links",
-    section: "System",
-    url: "/settings",
-    icon: Settings,
-    keywords: ["settings", "general settings", "store logo", "whatsapp", "social media", "store details"],
-  },
-  {
-    id: "nav-auth-settings",
-    title: "Authentication Settings",
-    subtitle: "OTP, Social login, and password policies",
-    section: "System",
-    url: "/auth-settings",
-    icon: KeyRound,
-    keywords: ["auth settings", "security", "otp", "login methods", "passwords"],
-  },
-  {
-    id: "nav-roles",
-    title: "Roles & Permissions",
-    subtitle: "Granular access controls and staff privileges",
-    section: "System",
-    url: "/roles",
-    icon: ShieldAlert,
-    keywords: ["roles", "permissions", "access control", "privileges"],
-  },
-  {
-    id: "nav-notifications",
-    title: "Notifications",
-    subtitle: "System alerts and customer broadcast logs",
-    section: "System",
-    url: "/notifications",
-    icon: Bell,
-    keywords: ["notifications", "alerts", "system messages"],
-  },
-  {
-    id: "nav-audit-logs",
-    title: "Audit Logs",
-    subtitle: "Track administrative activities and events",
-    section: "System",
-    url: "/audit-logs",
-    icon: History,
-    keywords: ["audit logs", "logs", "activity history", "security events"],
-  },
-]
+export type { SearchDestination }
 
 export interface GlobalSearchProps {
   mobileOpen?: boolean
@@ -452,6 +114,7 @@ interface SearchResultsProps {
   listboxId: string
   query: string
   results: SearchDestination[]
+  isSearching: boolean
   selectedIndex: number
   optionRefs: React.RefObject<Map<string, HTMLDivElement>>
   onHighlight: (index: number) => void
@@ -463,6 +126,7 @@ const SearchResults = ({
   listboxId,
   query,
   results,
+  isSearching,
   selectedIndex,
   optionRefs,
   onHighlight,
@@ -498,11 +162,20 @@ const SearchResults = ({
       >
         {results.length === 0 ? (
           <div role="status" className="px-4 py-8 text-center">
-            <Search className="size-8 mx-auto text-muted-foreground/50 mb-2" />
-            <p className="text-sm font-medium text-foreground">No matches found</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Try searching for products, orders, expenses, customers, or settings.
-            </p>
+            {isSearching ? (
+              <>
+                <Loader2 className="size-6 mx-auto text-muted-foreground mb-2 animate-spin" />
+                <p className="text-sm text-muted-foreground">Searching…</p>
+              </>
+            ) : (
+              <>
+                <Search className="size-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm font-medium text-foreground">No matches found</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Search pages, or orders, products and customers by name, number or email.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div
@@ -604,11 +277,10 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   const sheetInputId = `${instanceId}-sheet-search-input`
   const sheetListboxId = `${instanceId}-sheet-search-listbox`
 
-  // Redux entities for dynamic lookup
-  const products = useAppSelector((state) => state.products.data)
-  const orders = useAppSelector((state) => state.orders.data)
-  const customers = useAppSelector((state) => state.customers.data)
-  const expenses = useAppSelector((state) => state.expenses.data)
+  // Pages come from the module registry; records from live backend search.
+  const permissions = useAppSelector((state) => state.auth.user?.permissions)
+  const navDestinations = useNavDestinations(permissions)
+  const { results: recordResults, isSearching } = useRecordSearch(query, permissions)
 
   // Register global Cmd+K / Ctrl+K keyboard shortcut
   useEffect(() => {
@@ -688,112 +360,13 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   // Compute matched items
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) {
-      // Return top quick links
-      return STATIC_ROUTES.slice(0, 8)
-    }
+    if (!q) return navDestinations.slice(0, 8)
 
-    const matchedStatic: SearchDestination[] = STATIC_ROUTES.filter((route) => {
-      const titleMatch = route.title.toLowerCase().includes(q)
-      const subtitleMatch = route.subtitle?.toLowerCase().includes(q)
-      const sectionMatch = route.section.toLowerCase().includes(q)
-      const keywordMatch = route.keywords.some((k) => k.includes(q))
-      return titleMatch || subtitleMatch || sectionMatch || keywordMatch
-    })
-
-    const dynamicResults: SearchDestination[] = []
-
-    // Match products
-    if (products && products.length > 0) {
-      products.forEach((prod) => {
-        if (
-          prod.name?.toLowerCase().includes(q) ||
-          prod.slug?.toLowerCase().includes(q) ||
-          prod.description?.toLowerCase().includes(q)
-        ) {
-          dynamicResults.push({
-            id: `prod-${prod.id}`,
-            title: prod.name,
-            subtitle: `Product • $${prod.base_price || "0.00"} • Status: ${prod.status}`,
-            section: "Products",
-            url: `/product_detail/${prod.id}`,
-            icon: Boxes,
-            keywords: [prod.name, prod.slug || ""],
-          })
-        }
-      })
-    }
-
-    // Match orders
-    if (orders && orders.length > 0) {
-      orders.forEach((order) => {
-        const custName = order.customer
-          ? [order.customer.first_name, order.customer.last_name].filter(Boolean).join(" ") || order.customer.email
-          : "Customer"
-
-        if (
-          order.order_number?.toLowerCase().includes(q) ||
-          order.status?.toLowerCase().includes(q) ||
-          custName.toLowerCase().includes(q)
-        ) {
-          dynamicResults.push({
-            id: `ord-${order.id}`,
-            title: `Order #${order.order_number}`,
-            subtitle: `Order • ${custName} • ${order.status} • $${order.total_amount || "0.00"}`,
-            section: "Orders",
-            url: `/order_detail/${order.id}`,
-            icon: ShoppingCart,
-            keywords: [order.order_number, custName],
-          })
-        }
-      })
-    }
-
-    // Match customers
-    if (customers && customers.length > 0) {
-      customers.forEach((cust) => {
-        const name = [cust.first_name, cust.last_name].filter(Boolean).join(" ")
-        if (
-          name.toLowerCase().includes(q) ||
-          cust.email?.toLowerCase().includes(q) ||
-          cust.phone?.toLowerCase().includes(q)
-        ) {
-          dynamicResults.push({
-            id: `cust-${cust.id}`,
-            title: name || cust.email,
-            subtitle: `Customer • ${cust.email} • ${cust.phone || "No phone"}`,
-            section: "Customers",
-            url: `/customer_detail/${cust.id}`,
-            icon: Users,
-            keywords: [name, cust.email, cust.phone || ""],
-          })
-        }
-      })
-    }
-
-    // Match expenses
-    if (expenses && expenses.length > 0) {
-      expenses.forEach((exp: Expense) => {
-        if (
-          exp.title?.toLowerCase().includes(q) ||
-          exp.category?.toLowerCase().includes(q) ||
-          exp.vendor?.toLowerCase().includes(q)
-        ) {
-          dynamicResults.push({
-            id: `exp-${exp.id}`,
-            title: exp.title,
-            subtitle: `Expense • ${exp.category} • ${exp.vendor || "Vendor"} • $${exp.amount.toFixed(2)}`,
-            section: "Expenses",
-            url: `/expenses`,
-            icon: Receipt,
-            keywords: [exp.title, exp.category, exp.vendor || ""],
-          })
-        }
-      })
-    }
-
-    return [...matchedStatic, ...dynamicResults.slice(0, 6)]
-  }, [query, products, orders, customers, expenses])
+    const matchedNav = navDestinations.filter(
+      (route) => route.title.toLowerCase().includes(q) || route.keywords.some((k) => k.includes(q))
+    )
+    return [...matchedNav.slice(0, 5), ...recordResults]
+  }, [query, navDestinations, recordResults])
 
   // Reset selection index when results change (adjusted during render, not in an effect,
   // so the list never paints once with a stale highlight).
@@ -839,12 +412,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
       } else if (query.trim()) {
         // Smart fallback: try to find matching route by query
         const q = query.trim().toLowerCase()
-        const fallback = STATIC_ROUTES.find((r) => r.keywords.some((k) => k.includes(q)) || r.title.toLowerCase().includes(q))
+        const fallback = navDestinations.find((r) => r.keywords.some((k) => k.includes(q)) || r.title.toLowerCase().includes(q))
         if (fallback) {
           handleSelect(fallback)
-        } else {
-          navigate("/products")
-          closeSearch()
         }
       }
     } else if (e.key === "Escape") {
@@ -887,6 +457,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
           listboxId={inlineListboxId}
           query={query}
           results={results}
+          isSearching={isSearching}
           selectedIndex={selectedIndex}
           optionRefs={optionRefs}
           onHighlight={setSelectedIndex}
@@ -959,6 +530,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
               listboxId={sheetListboxId}
               query={query}
               results={results}
+              isSearching={isSearching}
               selectedIndex={selectedIndex}
               optionRefs={optionRefs}
               onHighlight={setSelectedIndex}

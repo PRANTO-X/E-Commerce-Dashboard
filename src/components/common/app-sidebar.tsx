@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAppSelector } from "@/app/hooks"
@@ -11,115 +11,22 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 
-import {
-  LayoutDashboard,
-  Boxes,
-  ShoppingCart,
-  Users,
-  BarChart3,
-  Settings,
-  ChevronDown,
-  Megaphone,
-  FileText,
-  Store,
-} from "lucide-react"
+import { ChevronDown, Store } from "lucide-react"
+import { getNavGroups } from "@/app/modules"
+import type { NavItem } from "@/app/moduleTypes"
 
-const sidebarItems = [
-  {
-    label: "Home",
-    icon: LayoutDashboard,
-    items: [{ title: "Overview", url: "/" }],
-  },
-  {
-    label: "Catalog",
-    icon: Boxes,
-    items: [
-      { title: "Products", url: "/products" },
-      { title: "Categories", url: "/categories" },
-      { title: "Attributes", url: "/attributes" },
-      { title: "Inventory", url: "/inventory" },
-      { title: "Warehouses", url: "/warehouses" },
-      { title: "Reservations", url: "/inventory/reservations" },
-    ],
-  },
-  {
-    label: "Sales",
-    icon: ShoppingCart,
-    items: [
-      { title: "Orders", url: "/orders" },
-      { title: "Payments", url: "/payments" },
-      { title: "Expenses", url: "/expenses" },
-      { title: "Returns", url: "/returns" },
-      { title: "Couriers", url: "/couriers" },
-      { title: "Shipments", url: "/shipments" },
-    ],
-  },
-  {
-    label: "Users",
-    icon: Users,
-    items: [
-      { title: "Customers", url: "/customers" },
-      { title: "Staffs", url: "/staffs" },
-    ],
-  },
-  {
-    label: "Marketing",
-    icon: Megaphone,
-    items: [
-      { title: "Coupons", url: "/coupons" },
-      { title: "Campaigns", url: "/campaigns" },
-      { title: "Reviews", url: "/reviews" },
-      { title: "Flash Sales", url: "/flash-sales" },
-      { title: "Group Buys", url: "/group-buys" },
-      { title: "Automations", url: "/automations" },
-    ],
-  },
-  {
-    label: "CMS",
-    icon: FileText,
-    items: [
-      { title: "Banners", url: "/banners" },
-      { title: "Blog Posts", url: "/blog-posts" },
-      { title: "Pages", url: "/pages" },
-    ],
-  },
-  {
-    label: "Analytics",
-    icon: BarChart3,
-    items: [{ title: "Reports", url: "/reports" }],
-  },
-  {
-    label: "System",
-    icon: Settings,
-    items: [
-      { title: "General Settings", url: "/settings" },
-      { title: "Authentication", url: "/auth-settings" },
-      { title: "Roles & Permissions", url: "/roles" },
-      { title: "Notifications", url: "/notifications" },
-      { title: "Audit Logs", url: "/audit-logs" },
-    ],
-  },
-]
-
-const groups: { label: string; sections: string[] }[] = [
-  {
-    label: "MAIN",
-    sections: ["Home", "Catalog", "Sales"],
-  },
-  {
-    label: "CONTENT",
-    sections: ["Users", "Marketing", "CMS"],
-  },
-  {
-    label: "GROWTH",
-    sections: ["Analytics", "System"],
-  },
-]
+// Detail/form routes (e.g. /order_detail/:id) don't appear in the nav; a link stays
+// active for its own path and anything nested under it.
+const isItemActive = (item: NavItem, pathname: string) =>
+  item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
 
 export function AppSidebar() {
   const location = useLocation()
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar()
   const user = useAppSelector((state) => state.auth.user)
+  const permissions = user?.permissions
+  const navGroups = useMemo(() => getNavGroups(permissions), [permissions])
+  const sidebarItems = useMemo(() => navGroups.flatMap((g) => g.sections), [navGroups])
 
   const isCollapsed = state === "collapsed"
 
@@ -163,7 +70,7 @@ export function AppSidebar() {
       setOpenSections([])
     } else {
       const active = sidebarItems.find((section) =>
-        section.items.some((item) => item.url === location.pathname),
+        section.items.some((item) => isItemActive(item, location.pathname)),
       )
       if (active) {
         setOpenSections((prev) =>
@@ -184,9 +91,6 @@ export function AppSidebar() {
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     )
   }
-
-  const sectionFor = (label: string) =>
-    sidebarItems.find((s) => s.label === label)
 
   return (
     <Sidebar variant="floating" collapsible="icon" className="z-30">
@@ -213,20 +117,18 @@ export function AppSidebar() {
 
       {/* CONTENT */}
       <SidebarContent className="overflow-x-hidden px-3 group-data-[collapsible=icon]:px-0">
-        {groups.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label} className="mb-4 last:mb-0">
             <p className="mb-2 px-3 text-xs font-normal uppercase text-gray-400 dark:text-gray-500 group-data-[collapsible=icon]:hidden">
               {group.label}
             </p>
 
             <div className="space-y-1">
-              {group.sections.map((label) => {
-                const section = sectionFor(label)
-                if (!section) return null
+              {group.sections.map((section) => {
 
                 const isOpen = openSections.includes(section.label)
                 const isActive = section.items.some(
-                  (item) => item.url === location.pathname,
+                  (item) => isItemActive(item, location.pathname),
                 )
 
                 return (

@@ -9,8 +9,7 @@ import {
   Plus,
   Package,
   Ticket,
-  Megaphone,
-  FileText,
+  UserPlus,
   SearchIcon,
 } from "lucide-react"
 import { GlobalSearch } from "./GlobalSearch"
@@ -29,13 +28,14 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { logout } from "@/features/authentication/slices/authSlice"
+import { hasPermission } from "@/app/modules"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+// Each entry is shown only when the user holds `permission` (see hasPermission).
 const quickCreateItems = [
-  { label: "New Product", icon: Package, url: "/product_form/new" },
-  { label: "New Coupon", icon: Ticket, url: "/coupon_form/new" },
-  { label: "New Campaign", icon: Megaphone, url: "/campaign_form/new" },
-  { label: "New Page", icon: FileText, url: "/page_form/new" },
+  { label: "New Product", icon: Package, url: "/product_form/new", permission: "catalog.manage" },
+  { label: "New Coupon", icon: Ticket, url: "/coupon_form/new", permission: "orders.manage" },
+  { label: "New Staff Member", icon: UserPlus, url: "/staff_form/new", permission: "*" },
 ]
 
 const Navbar = () => {
@@ -49,6 +49,7 @@ const Navbar = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
+  const visibleQuickCreate = quickCreateItems.filter((item) => hasPermission(user?.permissions, item.permission))
 
   const handleLogout = async () => {
     await dispatch(logout())
@@ -137,7 +138,7 @@ const Navbar = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48 p-1.5">
               <DropdownMenuGroup>
-                {quickCreateItems.map((item) => (
+                {visibleQuickCreate.map((item) => (
                   <DropdownMenuItem
                     key={item.label}
                     className="flex items-center gap-2.5 rounded-lg py-2"

@@ -1,125 +1,134 @@
-import { useEffect, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { PlusIcon } from "lucide-react"
+import { useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import type { ColumnDef } from "@tanstack/react-table"
-import { TableActions } from "@/components/common/TableActions"
+import { toast } from "sonner"
+import { CornerDownRight, FolderTree, PlusIcon, RotateCcw } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { DataTable } from "@/components/common/data-table"
 import FilterToolbar from "@/components/common/FilterToolBar"
 import { ExampleComboboxCustomItems } from "@/components/common/ComboBox"
-import type { Category } from "@/features/catalog/types"
-import { DataTable } from "@/components/common/data-table"
-import { StatusBadge } from "@/components/common/StatusBadge"
 import { PageHeading } from "@/components/common/PageHeading"
-import { useNavigate } from "react-router-dom"
-import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { fetchAll, deleteData } from "@/features/catalog/slices/categorySlice"
-import { toast } from "sonner"
+import { StatusBadge } from "@/components/common/StatusBadge"
+import { TableActions } from "@/components/common/TableActions"
 import { useDocumentTitle } from "@/hooks/use-document-title"
+import { getApiErrorMessage } from "@/lib/api/client"
 
-const statusOptions = [
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
-]
+import { deleteCategory, restoreCategory } from "../api"
+import { categoryTypeOptions } from "../types"
+import { useCategoryOptions, type CategoryOption } from "../lib/useCategoryOptions"
+import { usePermission } from "../lib/usePermission"
+
+type Option = { label: string; value: string }
 
 const Categories = () => {
   useDocumentTitle("Categories")
-
   const navigate = useNavigate()
-  const dispatch = useAppDispatch()
-  const { data: categories, isLoading, error } = useAppSelector((state) => state.categories)
-
+  const canManage = usePermission("catalog.manage")
+  const [includeDeleted, setIncludeDeleted] = useState(false)
+  const { options, isLoading, error, reload } = useCategoryOptions(includeDeleted)
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<{ label: string; value: string } | null>(null)
+  const [type, setType] = useState<Option | null>(null)
 
-  const loadCategories = useCallback(() => {
-    dispatch(fetchAll({ page: 1, page_size: 1000 }))
-  }, [dispatch])
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return options.filter(
+      (o) =>
+        (!type || o.category.category_type === type.value) &&
+        (!q || o.category.name.toLowerCase().includes(q) || o.category.slug.toLowerCase().includes(q))
+    )
+  }, [options, search, type])
+  const flat = Boolean(search.trim())
 
-  useEffect(() => {
-    loadCategories()
-  }, [loadCategories])
+  const handleDelete = async (o: CategoryOption) => {
+    try {
+      await deleteCategory(o.value)
+      toast.success(`${o.label} deleted`)
+      reload()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to delete category"))
+    }
+  }
 
-  const filteredCategories = categories.filter((category) => {
-    if (search && !category.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (statusFilter && category.is_active !== (statusFilter.value === "active")) return false
-    return true
-  })
+  const handleRestore = async (o: CategoryOption) => {
+    try {
+      await restoreCategory(o.value)
+      toast.success(`${o.label} restored`)
+      reload()
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to restore category"))
+    }
+  }
 
-  const columns: ColumnDef<Category>[] = [
+  const columns: ColumnDef<CategoryOption>[] = [
     {
-      accessorKey: "name",
-      header: "CATEGORY NAME",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground">
-          {row.getValue("name")}
-        </span>
-      ),
-    },
-
-    {
-      accessorKey: "slug",
-      header: "SLUG",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.getValue("slug")}
-        </span>
-      ),
-    },
-
-    {
-      accessorKey: "parent",
-      header: "PARENT CATEGORY",
+      id: "name",
+      header: "CATEGORY",
       cell: ({ row }) => {
-        const parentId = row.getValue("parent") as string | null
-        const parent = categories.find((c) => c.id === parentId)
-
+        const depth = flat ? 0 : row.original.depth
         return (
-          <span className="text-sm text-muted-foreground">{parent?.name ?? "—"}</span>
+          <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: depth * 20 }}>
+            {depth > 0 && <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" />}
+            {row.original.category.image ? (
+              <img
+                src={row.original.category.image}
+                alt=""
+                className="size-8 shrink-0 rounded-md border border-border object-cover"
+              />
+            ) : null}
+            <span className="truncate text-sm font-medium">{row.original.label}</span>
+          </div>
         )
       },
     },
-
     {
-      accessorKey: "sort_order",
-      header: "SORT ORDER",
+      id: "slug",
+      header: "SLUG",
+      cell: ({ row }) => <span className="truncate text-sm text-muted-foreground">{row.original.category.slug}</span>,
+    },
+    {
+      id: "type",
+      header: "TYPE",
       cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.getValue("sort_order")}</span>
+        <StatusBadge
+          status={row.original.category.category_type}
+          tone={row.original.category.category_type === "preorder" ? "info" : "secondary"}
+          label={row.original.category.category_type === "preorder" ? "Pre-order" : "Stock"}
+        />
       ),
     },
-
     {
-      accessorKey: "is_active",
+      id: "status",
       header: "STATUS",
-      cell: ({ row }) => (
-        <StatusBadge status={row.getValue("is_active") ? "active" : "inactive"} />
-      ),
+      cell: ({ row }) =>
+        row.original.category.deleted_at ? (
+          <StatusBadge status="deleted" tone="destructive" />
+        ) : (
+          <StatusBadge status={row.original.category.is_active ? "active" : "inactive"} />
+        ),
     },
-
-    {
-      accessorKey: "created_at",
-      header: "CREATED AT",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {new Date(row.getValue("created_at")).toLocaleDateString()}
-        </span>
-      ),
-    },
-
     {
       id: "actions",
       header: "ACTION",
       cell: ({ row }) => {
-        const category = row.original
-
-        const handleDelete = async () => {
-          try {
-            await dispatch(deleteData(category.id)).unwrap()
-            toast.success(`${category.name} deleted`)
-          } catch {
-            toast.error("Failed to delete category")
-          }
+        const o = row.original
+        if (!canManage) return null
+        if (o.category.deleted_at) {
+          return (
+            <Button variant="outline" size="sm" onClick={() => void handleRestore(o)}>
+              <RotateCcw /> Restore
+            </Button>
+          )
         }
-
-        return <TableActions itemName={category.name} onDelete={handleDelete} editUrl={`/category_form/${category.id}`}/>
+        return (
+          <TableActions
+            itemName={o.label}
+            editUrl={`/category_form/${o.value}`}
+            onDelete={() => void handleDelete(o)}
+          />
+        )
       },
     },
   ]
@@ -127,52 +136,59 @@ const Categories = () => {
   return (
     <div className="section-container">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeading
-          title="Categories"
-          description="Organize and manage product categories to structure your catalog efficiently"
-        />
-
-        <Button variant="apply" size="action" onClick={() => navigate("/category_form/new")}>
-          <PlusIcon className="size-5" />
-          Add Category
-        </Button>
+        <PageHeading title="Categories" description="Organise products into a category tree" />
+        {canManage && (
+          <Button size="action" onClick={() => navigate("/category_form/new")}>
+            <PlusIcon className="size-5" /> Add Category
+          </Button>
+        )}
       </div>
 
       <FilterToolbar
-        searchPlaceholder="search category..."
+        searchPlaceholder="Search categories…"
         searchValue={search}
         onSearchChange={setSearch}
         filters={[
           {
             component: (
               <ExampleComboboxCustomItems
-                placeholder="status"
-                frameworks={statusOptions}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
+                placeholder="Category type"
+                frameworks={categoryTypeOptions}
+                value={type}
+                onValueChange={setType}
               />
             ),
           },
+          ...(canManage
+            ? [
+                {
+                  component: (
+                    <div className="flex items-center gap-2">
+                      <Switch id="categories-include-deleted" checked={includeDeleted} onCheckedChange={setIncludeDeleted} />
+                      <Label htmlFor="categories-include-deleted" className="whitespace-nowrap text-sm">
+                        Show deleted
+                      </Label>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 
       <DataTable
         columns={columns}
-        data={filteredCategories}
+        data={rows}
         isLoading={isLoading}
         error={error}
-        onRetry={loadCategories}
-        onRowClick={(category) => navigate(`/category_form/${category.id}`)}
-        minWidth="1080px"
-        columnWidths={[
-          "220px", // CATEGORY NAME
-          "160px", // SLUG
-          "180px", // PARENT CATEGORY
-          "120px", // SORT ORDER
-          "120px", // STATUS
-          "160px", // CREATED AT
-          "120px", // ACTION
-        ]}
+        onRetry={reload}
+        pageSize={50}
+        emptyIcon={FolderTree}
+        emptyTitle="No categories"
+        emptyDescription="Create a root category, then nest subcategories under it."
+        minWidth="760px"
+        columnWidths={["320px", "200px", "110px", "110px", "120px"]}
+        unlabelledColumns={["actions"]}
       />
     </div>
   )

@@ -1,64 +1,37 @@
-// The admin returns endpoints are documented as `additionalProperties: {}` in the OpenAPI
-// schema (drf-spectacular couldn't infer a response type for them), but the underlying
-// `ReturnRequest` component schema exists and is used by the same serializer — this is
-// hand-transcribed from that, not live-verified against a real return (creating one via
-// the customer API hit an unrelated backend validation quirk). Render defensively.
+// Mirrors kull-mart api/v1/admin/orders/serializers.py → AdminRMASerializer / AdminRMALineSerializer.
+// apps/orders/models/return_rma.py (ReturnRMA.Status, ReturnRMALine.Condition).
 
-export type ReturnStatus =
-  | "pending_review"
-  | "approved"
-  | "rejected"
-  | "awaiting_return"
-  | "in_transit"
-  | "received"
-  | "processed"
-  | "refunded"
-  | "replaced"
-  | "completed"
+export type RmaStatus = "requested" | "approved" | "rejected" | "received" | "closed"
 
-export type ReturnReason = "damaged" | "wrong_item" | "missing_item" | "defective" | "other"
-export type ReturnResolution = "refund" | "replacement" | "store_credit"
+/** "" until staff grade the line after it physically arrives. */
+export type RmaCondition = "" | "sellable" | "damaged"
 
-export interface ReturnItem {
-  order_item: string
-  quantity: number
-  reason: ReturnReason
-  condition_notes: string
-}
-
-export interface ReturnStatusHistoryEntry {
-  from_status: string
-  to_status: string
-  reason: string
-  created_at: string
-}
-
-export interface ReturnRequest {
+export interface RmaLine {
   id: string
-  return_number: string
-  order: string
-  customer: string
-  status: ReturnStatus
-  reason: ReturnReason
-  resolution: ReturnResolution | null
-  comments: string
-  admin_notes: string
-  rejection_reason: string
-  refund_amount: string | null
-  items: ReturnItem[]
-  images: string[]
-  status_history: ReturnStatusHistoryEntry[]
-  created_at: string
-  updated_at: string
+  order_line_id: string
+  quantity: number
+  condition: RmaCondition
 }
 
-export interface ApproveReturnPayload {
-  resolution: ReturnResolution
-  refund_amount?: string
-  admin_notes?: string
+export interface Rma {
+  id: string
+  rma_number: string
+  order_id: string
+  status: RmaStatus
+  reason: string
+  lines: RmaLine[]
 }
 
-export interface RejectReturnPayload {
-  rejection_reason: string
-  admin_notes?: string
+export const RMA_STATUS_OPTIONS: { label: string; value: RmaStatus }[] = [
+  { label: "Requested", value: "requested" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Received", value: "received" },
+  { label: "Closed", value: "closed" },
+]
+
+/** POST /admin/orders/{id}/returns/ (CreateRMASerializer). */
+export interface CreateRmaPayload {
+  reason?: string
+  lines: { order_line_id: string; quantity: number }[]
 }

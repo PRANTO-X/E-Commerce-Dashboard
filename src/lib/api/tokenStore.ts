@@ -1,13 +1,12 @@
-// Single source of truth for auth tokens, kept outside Redux so the axios client
+// Single source of truth for the access token, kept outside Redux so the axios client
 // (client.ts) never needs to import the store/authSlice and risk a circular import.
-// authSlice mirrors these values into Redux state for components to read/react to.
 //
-// The access token lives only in memory. The refresh token is persisted in localStorage
-// so sessions survive reloads; moving it to an httpOnly cookie (immune to XSS theft)
-// needs the backend to set/read that cookie on /auth/login and /auth/refresh.
+// The access token lives only in memory. The refresh token is an HttpOnly cookie set by
+// the backend, so JavaScript can neither read nor steal it; a session is restored on
+// reload by calling /auth/refresh/ and letting the browser send the cookie.
 
-export const REFRESH_TOKEN_KEY = "refreshToken"
-const REFRESH_KEY = REFRESH_TOKEN_KEY
+/** localStorage key used only to broadcast logout to other open tabs. */
+export const LOGOUT_BROADCAST_KEY = "auth:logout"
 
 let accessToken: string | null = null
 
@@ -19,19 +18,15 @@ export function setAccessToken(token: string | null): void {
   accessToken = token
 }
 
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_KEY)
-}
-
-export function setRefreshToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(REFRESH_KEY, token)
-  } else {
-    localStorage.removeItem(REFRESH_KEY)
-  }
-}
-
 export function clearTokens(): void {
   accessToken = null
-  setRefreshToken(null)
+}
+
+/** Tells other tabs this session ended (they listen for the `storage` event). */
+export function broadcastLogout(): void {
+  try {
+    localStorage.setItem(LOGOUT_BROADCAST_KEY, String(Date.now()))
+  } catch {
+    // storage unavailable (private mode); other tabs will notice on their next 401
+  }
 }

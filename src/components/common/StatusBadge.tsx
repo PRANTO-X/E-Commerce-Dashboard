@@ -5,7 +5,7 @@ import { getStatusTone, type StatusTone } from "./status-tones"
 
 export interface StatusBadgeProps extends Omit<BadgeProps, "variant"> {
   /** The raw status/enum value, e.g. "pending_payment" or "active". */
-  status: string
+  status: string | null | undefined
   /** Override the tone the canonical map would otherwise resolve to. */
   tone?: StatusTone
   /** Override the default label (title-cased, underscores replaced with spaces). */
@@ -16,7 +16,7 @@ export function StatusBadge({ status, tone, label, className, ...props }: Status
   const resolvedTone = tone ?? getStatusTone(status)
   return (
     <Badge variant={resolvedTone} className={cn("capitalize", className)} {...props}>
-      {label ?? status.replace(/_/g, " ")}
+      {label ?? (status ? status.replace(/_/g, " ") : "—")}
     </Badge>
   )
 }

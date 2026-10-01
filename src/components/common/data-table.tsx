@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -91,7 +90,6 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const navigate = useNavigate()
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const headerScrollRef = React.useRef<HTMLDivElement>(null)
 
   const table = useReactTable({
     data,
@@ -127,13 +125,6 @@ export function DataTable<TData, TValue>({
       fn()
     }
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  // Sync horizontal scroll between header and body
-  const handleBodyScroll = () => {
-    if (headerScrollRef.current && scrollRef.current) {
-      headerScrollRef.current.scrollLeft = scrollRef.current.scrollLeft
-    }
   }
 
   const widths = columnWidths ?? columns.map(() => "auto")
@@ -211,36 +202,9 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-      {/* ---- Desktop: real table, horizontally scrollable, header scroll synced to body ---- */}
+      {/* ---- Desktop: one table in one scroll container. The header is sticky, so it stays
+           pinned while rows scroll vertically and moves with them horizontally. ---- */}
       <div className="hidden sm:block">
-        <div
-          ref={headerScrollRef}
-          className="bg-card overflow-x-auto"
-          style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
-        >
-          <div style={{ minWidth }}>
-            <Table className="table-fixed w-full">
-              <ColGroup />
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="border-b-0 hover:bg-transparent">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide py-3"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-            </Table>
-          </div>
-        </div>
-
         {/* Stale-data error banner — shown above existing rows when a refetch fails but we still have data to show */}
         {Boolean(error) && data.length > 0 && (
           <div className="flex items-center gap-2 border-b border-border bg-destructive/5 px-4 py-2 text-xs text-destructive">
@@ -258,15 +222,31 @@ export function DataTable<TData, TValue>({
           </div>
         )}
 
-        {/* Scrollable body — vertical + horizontal */}
-        <div
-          ref={scrollRef}
-          onScroll={handleBodyScroll}
-          className="overflow-auto max-h-[500px] table-scroll"
-        >
-          <div style={{ minWidth }}>
-            <Table className="table-fixed w-full">
-              <ColGroup />
+        <div ref={scrollRef} className="overflow-auto max-h-[500px] table-scroll">
+          {/* A plain <table>, not <Table>: that wrapper adds its own overflow container, which
+              would scroll on its own and break the sticky header. */}
+          <table
+            data-slot="table"
+            className="w-full table-fixed caption-bottom text-sm"
+            style={{ minWidth }}
+          >
+            <ColGroup />
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="border-b-0 hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide py-3"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
               <TableBody
                 className={cn(
                   isLoading && data.length > 0 && "pointer-events-none opacity-60 transition-opacity"
@@ -331,8 +311,7 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </div>
+          </table>
         </div>
       </div>
 

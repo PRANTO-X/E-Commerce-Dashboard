@@ -1,48 +1,64 @@
-// Hand-transcribed from the OpenAPI schema examples (the admin users/staff endpoints are
-// documented as `additionalProperties: {}` but the examples show the real shape). Not
-// reused from src/assets/Data.ts — the real User model has no totalOrders/totalSpent/
-// address/notes fields; those either don't exist server-side or belong to a separate
-// /customer/addresses/ resource not covered by this batch.
+// Mirrors api/v1/admin/users/serializers.py and api/v1/admin/staff/serializers.py (kull-mart).
 
 export type UserRole = "admin" | "staff" | "customer"
 
-// The fixed permission codes the backend actually recognizes (PermissionsEnum) — distinct
-// from the "*" wildcard a superuser account may carry.
-export type PermissionCode =
-  | "products.view"
-  | "products.create"
-  | "products.update"
-  | "orders.view"
-  | "orders.update_status"
-  | "returns.view"
-  | "support.view_customers"
-  | "inventory.view"
-
-export const permissionCodes: PermissionCode[] = [
-  "products.view",
-  "products.create",
-  "products.update",
-  "orders.view",
-  "orders.update_status",
-  "returns.view",
-  "support.view_customers",
-  "inventory.view",
-]
-
+/** AdminUserSerializer — shared by /admin/users/ and /admin/staff/. */
 export interface AdminUser {
   id: string
   email: string
   first_name: string
   last_name: string
+  display_name: string
   role: UserRole
   phone: string
+  contact_phone: string
   profile_picture: string
   is_active: boolean
   is_email_verified: boolean
+  is_phone_verified: boolean
   is_superuser: boolean
+  date_joined: string
+  last_login: string | null
   permissions: string[]
+  deleted_at: string | null
+  /** Only on GET /admin/users/{id}/ (customer_order_summary). */
+  order_summary?: OrderSummary
 }
 
+export interface OrderSummary {
+  total_orders: number
+  completed_orders: number
+  cancelled_orders: number
+  pending_orders: number
+  total_spent: string
+}
+
+/** AdminAddressSerializer — GET /admin/users/{id}/addresses/ */
+export interface AdminAddress {
+  id: string
+  address_type: "shipping" | "billing" | "other"
+  full_name: string
+  phone: string
+  line1: string
+  line2: string
+  delivery_note: string
+  city: string
+  state: string
+  postal_code: string
+  country: string
+  is_default: boolean
+}
+
+/** One entry of GET /admin/staff/permission-codes/ */
+export interface PermissionCodeInfo {
+  id: string
+  code: string
+  label: string
+  domain: string
+  domain_label: string
+}
+
+/** StaffCreateSerializer */
 export interface StaffCreatePayload {
   email: string
   password: string
@@ -50,9 +66,10 @@ export interface StaffCreatePayload {
   last_name?: string
   phone?: string
   profile_picture?: string
-  permissions?: PermissionCode[]
+  permissions?: string[]
 }
 
+/** StaffUpdateSerializer */
 export interface StaffUpdatePayload {
   first_name?: string
   last_name?: string
@@ -61,11 +78,14 @@ export interface StaffUpdatePayload {
   is_active?: boolean
 }
 
-export interface AdminUserUpdatePayload {
-  first_name?: string
-  last_name?: string
-  phone?: string
-  profile_picture?: string
-  is_active?: boolean
-  is_email_verified?: boolean
+/** The subset of AdminSalesOrderSerializer the customer page shows (GET /admin/orders/?customer_id=). */
+export interface CustomerOrderRow {
+  id: string
+  order_number: string
+  status: string
+  grand_total: string
+  created_at: string
 }
+
+export const displayNameOf = (user: Pick<AdminUser, "display_name" | "first_name" | "last_name" | "email">) =>
+  user.display_name || [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email

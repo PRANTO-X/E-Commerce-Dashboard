@@ -2,12 +2,11 @@ import { getApiErrorMessage } from "@/lib/api/client"
 
 export type SingleStatus = "idle" | "loading" | "succeeded" | "failed"
 
-/**
- * A rejected detail fetch carries the response body (see extractApiError), not the HTTP status,
- * so "not found" is recognised from the message DRF / the mock adapter send for a 404.
- */
+/** True when a rejected request (see extractApiError) was a 404 / "not_found". */
 export function isNotFoundError(err: unknown): boolean {
-  return /not\s*found|no mock route|no .* matches/i.test(getApiErrorMessage(err, ""))
+  const e = err as { status?: number; code?: string } | null
+  if (e?.status === 404 || e?.code === "not_found") return true
+  return /not\s*found/i.test(getApiErrorMessage(err, ""))
 }
 
 /**
